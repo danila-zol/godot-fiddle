@@ -21,7 +21,7 @@
 ## Анти-цели
 
 * Оптимизация рекомендации контента через алгоритмы, ведь тогда они становятся самоцелью для создателей, и качество контента падает  
-* ![][image1]
+* <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_KDoJ5Ey7JhlNkVlEi8civJt5_xVsRBT6Vw&s" height=32/>
 
 ## Монетизация
 
@@ -36,5 +36,3 @@
 Возможно:
 
 * Создание образовательной платформы на базе существующих функций
-
-[image1]: <data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAIAAABuYg/PAAABrElEQVR4XqWUsXWDQAyGNQYFE3iGVFkgM1AnI7BOOsosQOER2IDC7unyXogTgdDpF4fwfY+Gk359d2BDFKMmmol+4JptYxmuA69SK457TRsa2MozyrfzeW09wVmNRpSh7DO7A0I+MRXK6NCn31OuL0xu07q2KRW62aDbNm4334enQZ8qWpQhBcb+4W7B+KZpsh3Aqtiwk33/f9L4bAeAbUvc3BvGceSk9tkmAGWk59c7Mo5xMu47kGWeoY6JL48rY8WV1hEvabltW4wth9NLAKYe3CXo7pczJjar97cHppgl5YbdzOOnf+hzg5SRccDN8HrGtxc8kPV9ny5vJfHhVFd2MbJG1WRiBgm6G03X6Ft2xr9Lqaczc5Dnk5KGez71DcPdmc+glhH4MjJ703Wd260ZhsH0aJ8bT2TyJLkVuw3YJj6M8/odl7i1afTPxQFllPpwPYEPh60uVVUZGd+a88mKMzEuIzicmb74Pt6dYwm5WhjxHUyTh1lISEbKV9tKlK91Qux9nOpOiZ7JcDZ2tt8iR5SD6v/mZf3Cmp4ijHLvSr4R5VxBPMu3PMYvP7T7hiK3PAgAAAAASUVORK5CYII=>
