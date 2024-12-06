@@ -16,6 +16,7 @@ import (
 
 //go:embed data/*.sql
 var migrationFiles embed.FS
+var dbpool *pgxpool.Pool
 
 func migrateDatabase(conn *pgx.Conn, schemaVersion string) {
 	migrator, err := migrate.NewMigrator(context.Background(), conn, schemaVersion)
@@ -43,12 +44,15 @@ func migrateDatabase(conn *pgx.Conn, schemaVersion string) {
 }
 
 func SetupDB(dsn string) {
-	dbpool, err := pgxpool.New(context.Background(), dsn)
+	var err error
+	dbpool, err = pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
+
 	conn, err := dbpool.Acquire(context.Background())
+	defer conn.Release()
 	if err != nil {
 		log.Fatalf("Unable to acquire a database connection: %v\n", err)
 	}

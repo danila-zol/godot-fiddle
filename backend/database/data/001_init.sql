@@ -45,13 +45,13 @@ CREATE TABLE "demos" (
   "id" integer  PRIMARY KEY,
   "name" varchar(255) NOT NULL,
   "description" varchar NOT NULL,
-  "user_id" integer NOT NULL REFERENCES "users" ("id"),
+  -- "user_id" integer NOT NULL REFERENCES "users" ("id"),
   "link" varchar(255) NOT NULL,
   "created_at" timestamp NOT NULL,
   "updated_at" timestamp NOT NULL,
   "upvotes" integer NOT NULL,
-  "downvotes" integer NOT NULL,
-  "topic_id" integer NOT NULL REFERENCES "topics" ("id")
+  "downvotes" integer NOT NULL
+  -- "topic_id" integer NOT NULL REFERENCES "topics" ("id")
 );
 
 CREATE TABLE "demo_access" (
