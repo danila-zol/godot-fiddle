@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/tern/v2/migrate"
 )
 
@@ -42,16 +43,20 @@ func migrateDatabase(conn *pgx.Conn, schemaVersion string) {
 }
 
 func SetupDB(dsn string) {
-	conn, err := pgx.Connect(context.Background(), dsn)
+	dbpool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
+	}
+	conn, err := dbpool.Acquire(context.Background())
+	if err != nil {
+		log.Fatalf("Unable to acquire a database connection: %v\n", err)
 	}
 
 	autoMigrate, err := strconv.ParseBool(os.Getenv("MIGRATE_DB"))
 	if err == nil {
 		if autoMigrate == true {
-			migrateDatabase(conn, os.Getenv("MIGRATE_SCHEMA"))
+			migrateDatabase(conn.Conn(), os.Getenv("MIGRATE_SCHEMA"))
 		}
 	} else {
 		log.Println("WARNING! Missing env variable DB_MIGRATE. Assuming false")
