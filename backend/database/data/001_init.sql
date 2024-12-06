@@ -31,6 +31,16 @@ CREATE TABLE "topics" (
   "total_downvotes" integer NOT NULL
 );
 
+CREATE TABLE "messages" (
+  "id" integer PRIMARY KEY,
+  "topic_id" integer NOT NULL REFERENCES "topics" ("id"),
+  "user_id" integer NOT NULL REFERENCES "users" ("id"),
+  "title" varchar(255) NOT NULL,
+  "body" varchar NOT NULL,
+  "upvotes" integer NOT NULL,
+  "downvotes" integer NOT NULL
+);
+
 CREATE TABLE "demos" (
   "id" integer  PRIMARY KEY,
   "name" varchar(255) NOT NULL,
@@ -47,16 +57,6 @@ CREATE TABLE "demos" (
 CREATE TABLE "demo_access" (
   "demo_id" integer NOT NULL REFERENCES "demos" ("id"),
   "user_id" integer NOT NULL REFERENCES "users" ("id")
-);
-
-CREATE TABLE "messages" (
-  "id" integer PRIMARY KEY,
-  "topic_id" integer NOT NULL REFERENCES "topics" ("id"),
-  "user_id" integer NOT NULL REFERENCES "users" ("id"),
-  "title" varchar(255) NOT NULL,
-  "body" varchar NOT NULL,
-  "upvotes" integer NOT NULL,
-  "downvotes" integer NOT NULL
 );
 
 CREATE TABLE "assets" (
