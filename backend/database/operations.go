@@ -13,12 +13,12 @@ func CreateDemo(demo Demo) (string, error) {
 
 	row := conn.QueryRow(context.Background(),
 		`INSERT INTO demos
-			(id, name, description, link, created_at, updated_at, upvotes, downvotes) 
+			(id, name, description, link, user_id, created_at, updated_at, upvotes, downvotes, topic_id) 
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8)
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id`,
-		demo.ID, demo.Name, demo.Description, demo.Link,
-		demo.Created_at, demo.Updated_at, demo.Upvotes, demo.Downvotes,
+		demo.ID, demo.Name, demo.Description, demo.Link, demo.User_id,
+		demo.Created_at, demo.Updated_at, demo.Upvotes, demo.Downvotes, demo.Topic_id,
 	)
 
 	var id string
@@ -47,6 +47,8 @@ func FindFirstDemo(id string) (*Demo, error) {
 	}
 	return &demo, nil
 }
+
+// TODO: MapNameToUser + assert one unique user per username!
 
 // func FindDemos(w http.ResponseWriter, r *http.Request) (*[]Demo, bool) {
 // 	return &[]demos, true
