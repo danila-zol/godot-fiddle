@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 
 	database "game-hangar/database"
+	_ "game-hangar/docs"
 	"game-hangar/server"
 )
 
@@ -26,6 +27,14 @@ func getDsn() string {
 	)
 	return dsn
 }
+
+//	@title			Game Hangar
+//	@version		1.0
+//	@description	A backend for game catalogue
+//	@contact.name	Mikhail Pecherkin
+//	@contact.email	m.pecherkin.sas@gmail.com
+//	@host			localhost:8080
+//	@BasePath		/
 
 func main() {
 	database.SetupDB(getDsn())

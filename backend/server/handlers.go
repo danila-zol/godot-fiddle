@@ -6,9 +6,26 @@ import (
 	"log"
 	"net/http"
 	"time"
-	// "github.com/google/uuid"
+
+	_ "game-hangar/docs"
+	"github.com/google/uuid"
 )
 
+type ResponseHTTP struct {
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data"`
+	Message string      `json:"message"`
+}
+
+//	@Summary	Creates a new demo.
+//	@Tags		Demos
+//	@Accept		json
+//	@Produce	json
+//	@Param		Demo	body		database.Demo	true	"Create Demo"
+//	@Success	200		{object}	ResponseHTTP{data=database.Demo}
+//	@Failure	400		{object}	ResponseHTTP{}
+//	@Failure	500		{object}	ResponseHTTP{}
+//	@Router		/demos [post]
 func postDemo(w http.ResponseWriter, r *http.Request) {
 	var demo operations.Demo
 	err := json.NewDecoder(r.Body).Decode(&demo)
@@ -19,7 +36,7 @@ func postDemo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// demo.ID = "demo_" + uuid.NewString()
+	demo.ID = "demo_" + uuid.NewString()
 	demo.Created_at, demo.Updated_at = time.Now(), time.Now()
 	demo.Upvotes, demo.Downvotes = 0, 0
 
@@ -34,6 +51,15 @@ func postDemo(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Demo successfully created under ID " + id + "!\n"))
 }
 
+//	@Summary	Fetches a demo by its ID.
+//	@Tags		Demos
+//	@Accept		text/plain
+//	@Produce	json
+//	@Param		id	path		string	true	"Get Demo by ID"
+//	@Success	200	{object}	ResponseHTTP{data=database.Demo}
+//	@Failure	400	{object}	ResponseHTTP{}
+//	@Failure	500	{object}	ResponseHTTP{}
+//	@Router		/demos/{id} [get]
 func getDemoById(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 

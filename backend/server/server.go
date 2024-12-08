@@ -3,6 +3,9 @@ package server
 import (
 	"log"
 	"net/http"
+
+	_ "game-hangar/docs"
+	"github.com/swaggo/http-swagger"
 )
 
 func coolest(w http.ResponseWriter, r *http.Request) {
@@ -15,6 +18,14 @@ func Setup() {
 	router.HandleFunc("GET /demos/{id}", getDemoById)
 	// router.HandleFunc("GET /demos", GetDemos)
 	router.HandleFunc("DELETE /demos/{id}", coolest)
+
+	router.HandleFunc("GET /docs/", httpSwagger.Handler(
+		httpSwagger.URL("/docs/doc.json"),
+		httpSwagger.UIConfig(map[string]string{
+			"defaultModelRendering":    `"example"`,
+			"defaultModelsExpandDepth": "3",
+		}),
+	))
 
 	server := http.Server{
 		Addr:    ":8080",
