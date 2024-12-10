@@ -3,8 +3,10 @@ package server
 import (
 	"log"
 	"net/http"
+	"time"
 
 	_ "game-hangar/docs"
+
 	"github.com/swaggo/http-swagger"
 )
 
@@ -28,8 +30,10 @@ func Setup() {
 	))
 
 	server := http.Server{
-		Addr:    ":8080",
-		Handler: router,
+		Addr:              ":8080",
+		ReadHeaderTimeout: 500 * time.Millisecond,
+		ReadTimeout:       500 * time.Millisecond,
+		Handler:           http.TimeoutHandler(router, time.Second, "Read Timeout reached!"),
 	}
 	log.Println("Starting server on port :8080")
 	server.ListenAndServe()
