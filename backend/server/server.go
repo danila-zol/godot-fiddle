@@ -10,16 +10,13 @@ import (
 	"github.com/swaggo/http-swagger"
 )
 
-func coolest(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Getting the coolest!\n"))
-}
-
 func Setup() {
 	router := http.NewServeMux()
 	router.HandleFunc("POST /demos/", postDemo)
 	router.HandleFunc("GET /demos/{id}", getDemoById)
-	// router.HandleFunc("GET /demos", GetDemos)
-	router.HandleFunc("DELETE /demos/{id}", coolest)
+	router.HandleFunc("GET /demos/", getDemos)
+	router.HandleFunc("PATCH /demos/", patchDemo)
+	router.HandleFunc("DELETE /demos/{id}", deleteDemo)
 
 	router.HandleFunc("GET /docs/", httpSwagger.Handler(
 		httpSwagger.URL("/docs/doc.json"),
@@ -33,7 +30,7 @@ func Setup() {
 		Addr:              ":8080",
 		ReadHeaderTimeout: 500 * time.Millisecond,
 		ReadTimeout:       500 * time.Millisecond,
-		Handler:           http.TimeoutHandler(router, time.Second, "Read Timeout reached!"),
+		Handler:           http.TimeoutHandler(router, time.Second, ""),
 	}
 	log.Println("Starting server on port :8080")
 	server.ListenAndServe()
