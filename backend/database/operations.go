@@ -93,7 +93,7 @@ func UpdateDemo(demo Demo) (*Demo, error) {
 	ct, err := conn.Exec(context.Background(),
 		`UPDATE demos SET 
 		name=$1, description=$2, link=$3, user_id=$4, created_at=$5, updated_at=$6, upvotes=$7, downvotes=$8, topic_id=$9 
-		WHERE id=$10`,
+		WHERE id = $10`,
 		demo.Name, demo.Description, demo.Link, demo.User_id, demo.Created_at,
 		demo.Updated_at, demo.Upvotes, demo.Downvotes, demo.Topic_id, demo.ID,
 	)

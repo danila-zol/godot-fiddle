@@ -18,15 +18,15 @@ type ResponseHTTP struct {
 	Message string      `json:"message"`
 }
 
-//	@Summary	Creates a new demo.
-//	@Tags		Demos
-//	@Accept		application/json
-//	@Produce	application/json
-//	@Param		Demo	body		database.Demo	true	"Create Demo"
-//	@Success	200		{object}	ResponseHTTP{data=database.Demo}
-//	@Failure	400		{object}	ResponseHTTP{}
-//	@Failure	500		{object}	ResponseHTTP{}
-//	@Router		/demos/ [post]
+// @Summary	Creates a new demo.
+// @Tags		Demos
+// @Accept		application/json
+// @Produce	application/json
+// @Param		Demo	body		database.Demo	true	"Create Demo"
+// @Success	200		{object}	ResponseHTTP{data=database.Demo}
+// @Failure	400		{object}	ResponseHTTP{}
+// @Failure	500		{object}	ResponseHTTP{}
+// @Router		/demos/ [post]
 func postDemo(w http.ResponseWriter, r *http.Request) {
 	var demo operations.Demo
 	err := json.NewDecoder(r.Body).Decode(&demo)
@@ -57,19 +57,17 @@ func postDemo(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error in postDemo operation \n%s", err)
 		return
 	}
-	w.WriteHeader(201)
-	w.Write([]byte("Demo successfully created under ID " + newDemo.ID + "!\n"))
 }
 
-//	@Summary	Fetches a demo by its ID.
-//	@Tags		Demos
-//	@Accept		text/plain
-//	@Produce	application/json
-//	@Param		id	path		string	true	"Get Demo of ID"
-//	@Success	200	{object}	ResponseHTTP{data=database.Demo}
-//	@Failure	400	{object}	ResponseHTTP{}
-//	@Failure	500	{object}	ResponseHTTP{}
-//	@Router		/demos/{id} [get]
+// @Summary	Fetches a demo by its ID.
+// @Tags		Demos
+// @Accept		text/plain
+// @Produce	application/json
+// @Param		id	path		string	true	"Get Demo of ID"
+// @Success	200	{object}	ResponseHTTP{data=database.Demo}
+// @Failure	400	{object}	ResponseHTTP{}
+// @Failure	500	{object}	ResponseHTTP{}
+// @Router		/demos/{id} [get]
 func getDemoById(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
@@ -95,17 +93,15 @@ func getDemoById(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error in getDemoById operation \n%s", err)
 		return
 	}
-	w.WriteHeader(200)
-	w.Write([]byte("recieved request for item: " + id + "\n"))
 }
 
-//	@Summary	Fetches all demos.
-//	@Tags		Demos
-//	@Produce	application/json
-//	@Success	200	{object}	ResponseHTTP{data=[]database.Demo}
-//	@Failure	400	{object}	ResponseHTTP{}
-//	@Failure	500	{object}	ResponseHTTP{}
-//	@Router		/demos/ [get]
+// @Summary	Fetches all demos.
+// @Tags		Demos
+// @Produce	application/json
+// @Success	200	{object}	ResponseHTTP{data=[]database.Demo}
+// @Failure	400	{object}	ResponseHTTP{}
+// @Failure	500	{object}	ResponseHTTP{}
+// @Router		/demos/ [get]
 func getDemos(w http.ResponseWriter, r *http.Request) {
 	demo, err := operations.FindDemos()
 	if err == pgx.ErrNoRows {
@@ -129,18 +125,17 @@ func getDemos(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error in getDemos operation \n%s", err)
 		return
 	}
-	w.WriteHeader(200)
 }
 
-//	@Summary	Updates a demo.
-//	@Tags		Demos
-//	@Accept		application/json
-//	@Produce	application/json
-//	@Param		Demo	body		database.Demo	true	"Update Demo"
-//	@Success	200		{object}	ResponseHTTP{data=database.Demo}
-//	@Failure	400		{object}	ResponseHTTP{}
-//	@Failure	500		{object}	ResponseHTTP{}
-//	@Router		/demos/ [patch]
+// @Summary	Updates a demo.
+// @Tags		Demos
+// @Accept		application/json
+// @Produce	application/json
+// @Param		Demo	body		database.Demo	true	"Update Demo"
+// @Success	200		{object}	ResponseHTTP{data=database.Demo}
+// @Failure	400		{object}	ResponseHTTP{}
+// @Failure	500		{object}	ResponseHTTP{}
+// @Router		/demos/ [patch]
 func patchDemo(w http.ResponseWriter, r *http.Request) {
 	var demo operations.Demo
 	err := json.NewDecoder(r.Body).Decode(&demo)
@@ -174,18 +169,17 @@ func patchDemo(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error in patchDemo handler \n%s", err)
 		return
 	}
-	w.WriteHeader(200)
 }
 
-//	@Summary	Deletes the specified demo.
-//	@Tags		Demos
-//	@Accept		text/plain
-//	@Produce	text/plain
-//	@Param		id	path		string	true	"Delete Demo of ID"
-//	@Success	200	{object}	ResponseHTTP{}
-//	@Failure	400	{object}	ResponseHTTP{}
-//	@Failure	500	{object}	ResponseHTTP{}
-//	@Router		/demos/{id} [delete]
+// @Summary	Deletes the specified demo.
+// @Tags		Demos
+// @Accept		text/plain
+// @Produce	text/plain
+// @Param		id	path		string	true	"Delete Demo of ID"
+// @Success	200	{object}	ResponseHTTP{}
+// @Failure	400	{object}	ResponseHTTP{}
+// @Failure	500	{object}	ResponseHTTP{}
+// @Router		/demos/{id} [delete]
 func deleteDemo(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
@@ -202,6 +196,4 @@ func deleteDemo(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error in FindFirstDemo operation \n%s", err)
 		return
 	}
-
-	w.WriteHeader(200)
 }
