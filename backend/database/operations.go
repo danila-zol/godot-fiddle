@@ -69,12 +69,12 @@ func FindDemos() (*[]Demo, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var demo Demo
-		demos = append(demos, demo)
 		err = rows.Scan(&demo.ID, &demo.Name, &demo.Description, &demo.Link, &demo.User_id,
 			&demo.Created_at, &demo.Updated_at, &demo.Upvotes, &demo.Downvotes, &demo.Topic_id)
 		if err != nil {
 			return nil, err
 		}
+		demos = append(demos, demo)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -98,7 +98,7 @@ func UpdateDemo(demo Demo) (*Demo, error) {
 		demo.Updated_at, demo.Upvotes, demo.Downvotes, demo.Topic_id, demo.ID,
 	)
 	if ct.RowsAffected() == 0 {
-		return nil, err
+		return nil, pgx.ErrNoRows
 	}
 	if err != nil {
 		return nil, err
