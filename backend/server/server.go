@@ -10,7 +10,7 @@ import (
 	"github.com/swaggo/http-swagger"
 )
 
-func Setup() {
+func Setup(host string) {
 	router := http.NewServeMux()
 	router.HandleFunc("POST /demos/", postDemo)
 	router.HandleFunc("GET /demos/{id}", getDemoById)
@@ -27,11 +27,11 @@ func Setup() {
 	))
 
 	server := http.Server{
-		Addr:              ":8080",
+		Addr:              host,
 		ReadHeaderTimeout: 500 * time.Millisecond,
 		ReadTimeout:       500 * time.Millisecond,
 		Handler:           http.TimeoutHandler(router, time.Second, ""),
 	}
-	log.Println("Starting server on port :8080")
+	log.Printf("Starting server on port: %s\n", host)
 	server.ListenAndServe()
 }

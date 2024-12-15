@@ -38,5 +38,5 @@ func getDsn() string {
 
 func main() {
 	database.SetupDB(getDsn())
-	server.Setup()
+	server.Setup(os.Getenv("HOST"))
 }
