@@ -5,8 +5,10 @@ import (
 	operations "game-hangar/database"
 	"log"
 	"net/http"
+	"time"
 
 	_ "game-hangar/docs"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -214,6 +216,8 @@ func postThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	thread.ID = "thread_" + uuid.NewString()
+	thread.Created_at, thread.Last_update = time.Now(), time.Now()
+	thread.Total_upvotes, thread.Total_downvotes = 0, 0
 
 	newThread, err := operations.CreateThread(thread)
 	if err != nil {
@@ -319,6 +323,7 @@ func patchThread(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error in patchThread handler \n%s", err)
 		return
 	}
+	thread.Last_update = time.Now()
 
 	updThread, err := operations.UpdateThread(thread)
 	if err == pgx.ErrNoRows {
@@ -391,6 +396,8 @@ func postMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message.ID = "message_" + uuid.NewString()
+	message.Created_at, message.Updated_at = time.Now(), time.Now()
+	message.Upvotes, message.Downvotes = 0, 0
 
 	newMessage, err := operations.CreateMessage(message)
 	if err != nil {
@@ -496,6 +503,7 @@ func patchMessage(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error in patchMessage handler \n%s", err)
 		return
 	}
+	message.Updated_at = time.Now()
 
 	updMessage, err := operations.UpdateMessage(message)
 	if err == pgx.ErrNoRows {
