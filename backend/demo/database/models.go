@@ -14,3 +14,11 @@ type Demo struct {
 	Downvotes   uint      `json:"downvotes"`
 	Topic_id    string    `json:"topic_id"`
 }
+
+type Asset struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Link        string    `json:"link"`
+	Created_at  time.Time `json:"created_at"`
+}

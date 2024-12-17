@@ -17,7 +17,7 @@ func CreateDemo(demo Demo) (*Demo, error) {
 	defer conn.Release()
 
 	row := conn.QueryRow(context.Background(),
-		`INSERT INTO demos
+		`INSERT INTO demo.demos
 			(id, name, description, link, user_id, created_at, updated_at, upvotes, downvotes, topic_id) 
 		VALUES
 			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -43,7 +43,7 @@ func FindFirstDemo(id string) (*Demo, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM demos WHERE id = $1 LIMIT 1`,
+		`SELECT * FROM demo.demos WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&demo.ID, &demo.Name, &demo.Description, &demo.Link, &demo.User_id,
 		&demo.Created_at, &demo.Updated_at, &demo.Upvotes, &demo.Downvotes, &demo.Topic_id)
@@ -62,7 +62,7 @@ func FindDemos() (*[]Demo, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(), `SELECT * FROM demos`)
+	rows, err := conn.Query(context.Background(), `SELECT * FROM demo.demos`)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func UpdateDemo(demo Demo) (*Demo, error) {
 	defer conn.Release()
 
 	ct, err := conn.Exec(context.Background(),
-		`UPDATE demos SET 
+		`UPDATE demo.demos SET 
 		name=$1, description=$2, link=$3, user_id=$4, created_at=$5, updated_at=$6, upvotes=$7, downvotes=$8, topic_id=$9 
 		WHERE id = $10`,
 		demo.Name, demo.Description, demo.Link, demo.User_id, demo.Created_at,
@@ -113,7 +113,7 @@ func DeleteDemo(id string) error {
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(), `DELETE FROM demos WHERE id=$1`, id)
+	ct, err := conn.Exec(context.Background(), `DELETE FROM demo.demos WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
 		return pgx.ErrNoRows
 	}

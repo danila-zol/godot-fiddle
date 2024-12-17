@@ -30,10 +30,10 @@ func getDsn() string {
 
 //	@title			Game Hangar
 //	@version		1.0
-//	@description	A backend for game catalogue
+//	@description	A backend for user service
 //	@contact.name	Mikhail Pecherkin
 //	@contact.email	m.pecherkin.sas@gmail.com
-//	@host			localhost:8080
+//	@host			localhost:8550
 //	@BasePath		/
 
 func main() {
