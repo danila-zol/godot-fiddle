@@ -13,14 +13,6 @@ CREATE TABLE demo.demos (
   "thread_id" varchar(64) NOT NULL     -- Links to a thread in the forums
 );
 
-CREATE TABLE demo.assets (
-  "id" varchar(64) PRIMARY KEY,
-  "name" varchar(255) NOT NULL,
-  "description" varchar NOT NULL,
-  "link" varchar(255) NOT NULL,
-  "created_at" timestamp NOT NULL
-);
-
 ---- create above / drop below ----
 
 DROP SCHEMA demo CASCADE;
