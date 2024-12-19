@@ -33,7 +33,6 @@ func getDsn() string {
 //	@description	A backend for game catalogue
 //	@contact.name	Mikhail Pecherkin
 //	@contact.email	m.pecherkin.sas@gmail.com
-//	@host			localhost:9238
 //	@BasePath		/
 
 func main() {
