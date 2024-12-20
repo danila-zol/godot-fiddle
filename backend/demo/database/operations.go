@@ -18,13 +18,13 @@ func CreateDemo(demo Demo) (*Demo, error) {
 
 	row := conn.QueryRow(context.Background(),
 		`INSERT INTO demo.demos
-			(id, name, description, link, user_id, created_at, updated_at, upvotes, downvotes, topic_id) 
+			(id, name, description, link, user_id, created_at, updated_at, upvotes, downvotes, thread_id) 
 		VALUES
 			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING
-			(id, name, description, link, user_id, created_at, updated_at, upvotes, downvotes, topic_id)`,
+			(id, name, description, link, user_id, created_at, updated_at, upvotes, downvotes, thread_id)`,
 		demo.ID, demo.Name, demo.Description, demo.Link, demo.User_id,
-		demo.Created_at, demo.Updated_at, demo.Upvotes, demo.Downvotes, demo.Topic_id,
+		demo.Created_at, demo.Updated_at, demo.Upvotes, demo.Downvotes, demo.Thread_id,
 	)
 
 	err = row.Scan(&demo)
@@ -46,7 +46,7 @@ func FindFirstDemo(id string) (*Demo, error) {
 		`SELECT * FROM demo.demos WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&demo.ID, &demo.Name, &demo.Description, &demo.Link, &demo.User_id,
-		&demo.Created_at, &demo.Updated_at, &demo.Upvotes, &demo.Downvotes, &demo.Topic_id)
+		&demo.Created_at, &demo.Updated_at, &demo.Upvotes, &demo.Downvotes, &demo.Thread_id)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func FindDemos() (*[]Demo, error) {
 	for rows.Next() {
 		var demo Demo
 		err = rows.Scan(&demo.ID, &demo.Name, &demo.Description, &demo.Link, &demo.User_id,
-			&demo.Created_at, &demo.Updated_at, &demo.Upvotes, &demo.Downvotes, &demo.Topic_id)
+			&demo.Created_at, &demo.Updated_at, &demo.Upvotes, &demo.Downvotes, &demo.Thread_id)
 		if err != nil {
 			return nil, err
 		}
@@ -92,10 +92,10 @@ func UpdateDemo(demo Demo) (*Demo, error) {
 
 	ct, err := conn.Exec(context.Background(),
 		`UPDATE demo.demos SET 
-		name=$1, description=$2, link=$3, user_id=$4, created_at=$5, updated_at=$6, upvotes=$7, downvotes=$8, topic_id=$9 
+		name=$1, description=$2, link=$3, user_id=$4, created_at=$5, updated_at=$6, upvotes=$7, downvotes=$8, thread_id=$9 
 		WHERE id = $10`,
 		demo.Name, demo.Description, demo.Link, demo.User_id, demo.Created_at,
-		demo.Updated_at, demo.Upvotes, demo.Downvotes, demo.Topic_id, demo.ID,
+		demo.Updated_at, demo.Upvotes, demo.Downvotes, demo.Thread_id, demo.ID,
 	)
 	if ct.RowsAffected() == 0 {
 		return nil, pgx.ErrNoRows
