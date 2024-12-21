@@ -18,8 +18,8 @@ func Setup(host string) {
 	router.HandleFunc("PATCH /demos/", patchDemo)
 	router.HandleFunc("DELETE /demos/{id}", deleteDemo)
 
-	router.HandleFunc("GET /docs/", httpSwagger.Handler(
-		httpSwagger.URL("/docs/doc.json"),
+	router.HandleFunc("GET /docs/demos/", httpSwagger.Handler(
+		httpSwagger.URL("/docs/demos/doc.json"),
 		httpSwagger.UIConfig(map[string]string{
 			"defaultModelRendering":    `"example"`,
 			"defaultModelsExpandDepth": "3",
@@ -28,9 +28,9 @@ func Setup(host string) {
 
 	server := http.Server{
 		Addr:              host,
-		ReadHeaderTimeout: 500 * time.Millisecond,
-		ReadTimeout:       500 * time.Millisecond,
-		Handler:           http.TimeoutHandler(router, time.Second, ""),
+		ReadHeaderTimeout: 5000 * time.Millisecond,
+		ReadTimeout:       5000 * time.Millisecond,
+		Handler:           http.TimeoutHandler(router, 5*time.Second, ""),
 	}
 	log.Printf("Starting server on port: %s\n", host)
 	server.ListenAndServe()
