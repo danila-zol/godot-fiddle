@@ -42,11 +42,11 @@ func postDemo(w http.ResponseWriter, r *http.Request) {
 	demo.Created_at, demo.Updated_at = time.Now(), time.Now()
 	demo.Upvotes, demo.Downvotes = 0, 0
 
-	err = SendPostThread(&demo)
+	/* err = SendPostThread(&demo)
 	if err != nil {
 		log.Printf("Error in postDemo handler: could not send message: \n%s", err)
 		return
-	}
+	} */
 
 	newDemo, err := operations.CreateDemo(demo)
 	if err != nil {
@@ -154,11 +154,11 @@ func patchDemo(w http.ResponseWriter, r *http.Request) {
 	}
 	demo.Updated_at = time.Now()
 
-	err = SendPatchThread(&demo)
+	/* err = SendPatchThread(&demo)
 	if err != nil {
 		log.Printf("Error in patchDemo handler: could not send message: \n%s", err)
 		return
-	}
+	} */
 
 	updDemo, err := operations.UpdateDemo(demo)
 	if err == pgx.ErrNoRows {
@@ -196,13 +196,13 @@ func patchDemo(w http.ResponseWriter, r *http.Request) {
 func deleteDemo(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
-	err := SendDeleteThread(id)
+	/* err := SendDeleteThread(id)
 	if err != nil {
 		log.Printf("Error in deleteDemo handler: could not send message: \n%s", err)
 		return
-	}
+	} */
 
-	err = operations.DeleteDemo(id)
+	err := operations.DeleteDemo(id)
 	if err == pgx.ErrNoRows {
 		w.WriteHeader(404)
 		w.Write([]byte("Error: Demo not found!\n"))
