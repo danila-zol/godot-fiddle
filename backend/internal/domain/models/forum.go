@@ -8,26 +8,26 @@ type Topic struct {
 }
 
 type Thread struct { // TODO: Message relation as an array of Messages, so you can count Messages in a Thread
-	ID              string    `json:"id"`
-	Title           string    `json:"title"`
-	UserID          string    `json:"userID"`
-	TopicID         string    `json:"topicID"`
-	Tag             []string  `json:"tag"`
-	Created_at      time.Time `json:"created_at"`
-	Last_update     time.Time `json:"last_update"`
-	Total_upvotes   uint      `json:"total_upvotes"`
-	Total_downvotes uint      `json:"total_downvotes"`
+	ID             string    `json:"id"`
+	Title          string    `json:"title"`
+	UserID         string    `json:"userID"`
+	TopicID        string    `json:"topicID"`
+	Tags           []string  `json:"tags"`
+	CreatedAt      time.Time `json:"createdAt"`
+	LastUpdate     time.Time `json:"lastUpdate"`
+	TotalUpvotes   uint      `json:"totalUpvotes"`
+	TotalDownvotes uint      `json:"totalDownvotes"`
 }
 
 type Message struct {
-	ID         string    `json:"id"`
-	ThreadID   string    `json:"threadID"`
-	UserID     string    `json:"userID"`
-	Title      string    `json:"title"`
-	Body       string    `json:"body"`
-	Tag        []string  `json:"tag"`
-	Created_at time.Time `json:"created_at"`
-	Updated_at time.Time `json:"updated_at"`
-	Upvotes    uint      `json:"upvotes"`
-	Downvotes  uint      `json:"downvotes"`
+	ID        string    `json:"id"`
+	ThreadID  string    `json:"threadID"`
+	UserID    string    `json:"userID"`
+	Title     string    `json:"title"`
+	Body      string    `json:"body"`
+	Tags      []string  `json:"tags"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+	Upvotes   uint      `json:"upvotes"`
+	Downvotes uint      `json:"downvotes"`
 }
