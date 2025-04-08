@@ -1,20 +1,9 @@
 package database
 
-import "embed"
+import "gamehangar/internal/config"
 
-//go:embed migrations/*.sql
-var migrationFiles embed.FS
-
-type DatabaseClient struct {
-	Migrations embed.FS
-	Connstring string
-}
-
-func NewDatabaseClient(connstring string) (*DatabaseClient, error) {
-	var dbClient = &DatabaseClient{
-		Migrations: migrationFiles,
-		Connstring: connstring,
-	}
-
-	return dbClient, nil
+// More of a guideline on how to setup a DatabaseClient
+type DatabaseClient interface {
+	NewDatabaseClient(connstring string, config *config.DatabaseConfig) any
+	Setup() error
 }
