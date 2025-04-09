@@ -1,28 +1,28 @@
-package database
+package psqlDatabase
 
 import (
 	"context"
 	"embed"
 	"errors"
-	"gamehangar/internal/config"
+	"gamehangar/internal/config/psqlDatabseConfig"
 	"gamehangar/pkg/ternMigrate"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-//go:embed psqlMigrations/*.sql
+//go:embed migrations/*.sql
 var MigrationFiles embed.FS
 
-type Psql struct{} // PostgreSQL-related database clients and methods
+type PsqlDatabase struct{} // PostgreSQL-related database clients and methods
 
 type PsqlDatabaseClient struct {
-	config     *config.PsqlDatabaseConfig
+	config     *psqlDatabseConfig.PsqlDatabaseConfig
 	connstring string
 	ConnPool   *pgxpool.Pool // nil until Setup() is called
 }
 
-func (p Psql) NewDatabaseClient(connstring string, config *config.PsqlDatabaseConfig) *PsqlDatabaseClient {
+func (p PsqlDatabase) NewDatabaseClient(connstring string, config *psqlDatabseConfig.PsqlDatabaseConfig) *PsqlDatabaseClient {
 	var dbClient = &PsqlDatabaseClient{
 		config:     config,
 		connstring: connstring,
@@ -31,7 +31,7 @@ func (p Psql) NewDatabaseClient(connstring string, config *config.PsqlDatabaseCo
 	return dbClient
 }
 
-func (p Psql) Setup(pdc *PsqlDatabaseClient) error {
+func (p PsqlDatabase) Setup(pdc *PsqlDatabaseClient) error {
 	var err error
 
 	pdc.ConnPool, err = pgxpool.New(context.Background(), pdc.connstring)

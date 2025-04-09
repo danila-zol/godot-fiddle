@@ -1,11 +1,11 @@
-package config
+package psqlDatabseConfig
 
 import (
 	"os"
 	"strconv"
 )
 
-type Psql struct{} // PostgreSQL-related configs and mehtods
+type PsqlConfig struct{} // PostgreSQL-related configs and mehtods
 
 type PsqlDatabaseConfig struct {
 	MigrateDatabse  bool
@@ -15,7 +15,7 @@ type PsqlDatabaseConfig struct {
 	VersionTable    string
 }
 
-func (p Psql) NewConfig(migrations any, migrationsRoot string) (*PsqlDatabaseConfig, error) {
+func (p PsqlConfig) NewConfig(migrations any, migrationsRoot string) (*PsqlDatabaseConfig, error) {
 	migrateDatabase, err := strconv.ParseBool(os.Getenv("PSQL_MIGRATE_DATABASE"))
 	if err != nil {
 		return nil, err

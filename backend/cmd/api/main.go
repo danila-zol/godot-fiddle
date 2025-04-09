@@ -1,8 +1,8 @@
 package main
 
 import (
-	"gamehangar/internal/config"
-	"gamehangar/internal/database"
+	"gamehangar/internal/config/psqlDatabseConfig"
+	"gamehangar/internal/database/psqlDatabase"
 	"os"
 	"strconv"
 
@@ -49,13 +49,17 @@ func main() {
 		validator: e.Validator,
 	}
 
-	// Might not look pretty to avoid passing around a pointer, but Psql{} structs are empty
-	databaseConfig, err := config.Psql{}.NewConfig(database.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"))
+	// Might not look pretty to avoid passing around a pointer, but Psql*{} structs are empty
+	databaseConfig, err := psqlDatabseConfig.PsqlConfig{}.NewConfig(
+		psqlDatabase.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"),
+	)
 	if err != nil {
 		app.logger.Fatalf("Error loading PSQL database Config: %v", err)
 	}
-	databaseClient := database.Psql{}.NewDatabaseClient(os.Getenv("PSQL_CONNSTRING"), databaseConfig)
-	err = database.Psql{}.Setup(databaseClient)
+	databaseClient := psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
+		os.Getenv("PSQL_CONNSTRING"), databaseConfig,
+	)
+	err = psqlDatabase.PsqlDatabase{}.Setup(databaseClient)
 	if err != nil {
 		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
 	}
