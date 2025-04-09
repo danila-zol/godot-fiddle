@@ -2,49 +2,62 @@ package main
 
 import (
 	"gamehangar/internal/config"
-	"gamehangar/internal/database/psql"
+	"gamehangar/internal/database"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 )
 
+// Exclusive to package main since it is a central app config
 type appConfig struct {
+	host string
 	port int
-	env  string
 }
 
 type application struct {
-	appConfig appConfig
+	appConfig *appConfig
 	logger    echo.Logger
 	validator echo.Validator
 }
 
-func (a *application) getEnv() {
+func getEnv() {
 	err := godotenv.Load(".env")
 	if err != nil {
-		a.logger.Fatalf("Error loading .env file: %v", err)
+		panic("Error loading .env file")
 	}
 }
 
 func main() {
-	var cfg appConfig
 	e := echo.New()
+	getEnv()
+
+	port, err := strconv.ParseUint(os.Getenv("PORT"), 10, 32)
+	if err != nil {
+		panic("Could not parse app config: Invalid port")
+	}
+
+	cfg := &appConfig{
+		host: os.Getenv("HOST"),
+		port: int(port),
+	}
 
 	app := &application{
 		appConfig: cfg,
 		logger:    e.Logger,
 		validator: e.Validator,
 	}
-	app.getEnv()
 
-	databaseConfig, err := config.NewConfig(psql.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"))
+	// Might not look pretty to avoid passing around a pointer, but Psql{} structs are empty
+	databaseConfig, err := config.Psql{}.NewConfig(database.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"))
 	if err != nil {
 		app.logger.Fatalf("Error loading PSQL database Config: %v", err)
 	}
-	err = psql.NewDatabaseClient(os.Getenv("PSQL_CONNSTRING"), databaseConfig).Setup()
+	databaseClient := database.Psql{}.NewDatabaseClient(os.Getenv("PSQL_CONNSTRING"), databaseConfig)
+	err = database.Psql{}.Setup(databaseClient)
 	if err != nil {
-		app.logger.Fatalf("Error creating new DatabaseClient: %v", err)
+		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
 	}
 	app.logger.Info("Database setup successful!")
 	os.Exit(0)

@@ -1,4 +1,4 @@
-package psql
+package database
 
 import (
 	"context"
@@ -11,8 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-//go:embed migrations/*.sql
+//go:embed psqlMigrations/*.sql
 var MigrationFiles embed.FS
+
+type Psql struct{} // PostgreSQL-related database clients and methods
 
 type PsqlDatabaseClient struct {
 	config     *config.PsqlDatabaseConfig
@@ -20,7 +22,7 @@ type PsqlDatabaseClient struct {
 	ConnPool   *pgxpool.Pool // nil until Setup() is called
 }
 
-func NewDatabaseClient(connstring string, config *config.PsqlDatabaseConfig) *PsqlDatabaseClient {
+func (p Psql) NewDatabaseClient(connstring string, config *config.PsqlDatabaseConfig) *PsqlDatabaseClient {
 	var dbClient = &PsqlDatabaseClient{
 		config:     config,
 		connstring: connstring,
@@ -29,7 +31,7 @@ func NewDatabaseClient(connstring string, config *config.PsqlDatabaseConfig) *Ps
 	return dbClient
 }
 
-func (pdc *PsqlDatabaseClient) Setup() error {
+func (p Psql) Setup(pdc *PsqlDatabaseClient) error {
 	var err error
 
 	pdc.ConnPool, err = pgxpool.New(context.Background(), pdc.connstring)
@@ -66,7 +68,6 @@ func (pdc *PsqlDatabaseClient) autoMigrate() error {
 		MigrationRoot:  pdc.config.MigrationsRoot,
 		VersionTable:   pdc.config.VersionTable,
 	}
-	// TODO: Fix logic! ConnPool is nil until Setup() is complete!
 	conn, err := pdc.ConnPool.Acquire(context.Background())
 	defer conn.Release()
 	if err != nil {

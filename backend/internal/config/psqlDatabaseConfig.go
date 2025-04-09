@@ -5,15 +5,17 @@ import (
 	"strconv"
 )
 
+type Psql struct{} // PostgreSQL-related configs and mehtods
+
 type PsqlDatabaseConfig struct {
 	MigrateDatabse  bool
 	Migrations      any
-	MigrationsRoot  string // TODO: Relative to where?
+	MigrationsRoot  string
 	ExpectedVersion int
 	VersionTable    string
 }
 
-func NewConfig(migrations any, migrationsRoot string) (*PsqlDatabaseConfig, error) {
+func (p Psql) NewConfig(migrations any, migrationsRoot string) (*PsqlDatabaseConfig, error) {
 	migrateDatabase, err := strconv.ParseBool(os.Getenv("PSQL_MIGRATE_DATABASE"))
 	if err != nil {
 		return nil, err
