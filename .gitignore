@@ -1,5 +1,4 @@
 .env
 backend/docs/
 backend/tern.conf
-backend/bin/
 tags
