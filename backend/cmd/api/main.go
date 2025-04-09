@@ -38,13 +38,14 @@ func main() {
 	}
 	app.getEnv()
 
-	databaseConfig, err := config.NewConfig(psql.MigrationFiles, os.Getenv("PSQL_MIGRATE_FILE_DIR"))
+	databaseConfig, err := config.NewConfig(psql.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"))
 	if err != nil {
 		app.logger.Fatalf("Error loading PSQL database Config: %v", err)
 	}
-	databaseClient, err := psql.NewDatabaseClient(os.Getenv("PSQL_CONNSTRING"), databaseConfig).Setup()
+	err = psql.NewDatabaseClient(os.Getenv("PSQL_CONNSTRING"), databaseConfig).Setup()
 	if err != nil {
 		app.logger.Fatalf("Error creating new DatabaseClient: %v", err)
 	}
-	println(databaseClient)
+	app.logger.Info("Database setup successful!")
+	os.Exit(0)
 }

@@ -3,7 +3,7 @@ CREATE SCHEMA "user";
 CREATE TABLE "user".roles (
 	"id" varchar(64) PRIMARY KEY,
 	"name" varchar(255) NOT NULL,
-	"permissions" []varchar(64)
+	"permissions" varchar(64)[]
 );
 
 CREATE TABLE "user".users (
@@ -49,7 +49,7 @@ CREATE TABLE forum.threads (
 	"title" varchar(255) NOT NULL,
 	"userID" varchar(64) NOT NULL,
 	"topicID" varchar(64) NOT NULL REFERENCES forum.topics (id) ON DELETE CASCADE,
-	"tags" []varchar(255) NOT NULL,
+	"tags" varchar(255)[] NOT NULL,
 	"createdAt" timestamp NOT NULL,
 	"lastUpdate" timestamp NOT NULL,
 	"totalUpvotes" integer NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE forum.messages (
 	"userID" varchar(64) NOT NULL,
 	"title" varchar(255) NOT NULL,
 	"body" varchar NOT NULL,
-	"tags" []varchar(255) NOT NULL,
+	"tags" varchar(255)[] NOT NULL,
 	"createdAt" timestamp NOT NULL,
 	"updatedAt" timestamp NOT NULL,
 	"upvotes" integer NOT NULL,

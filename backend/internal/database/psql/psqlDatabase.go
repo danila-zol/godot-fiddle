@@ -29,29 +29,31 @@ func NewDatabaseClient(connstring string, config *config.PsqlDatabaseConfig) *Ps
 	return dbClient
 }
 
-func (pdc *PsqlDatabaseClient) Setup() (*pgxpool.Pool, error) {
-	dbpool, err := pgxpool.New(context.Background(), pdc.connstring)
+func (pdc *PsqlDatabaseClient) Setup() error {
+	var err error
+
+	pdc.ConnPool, err = pgxpool.New(context.Background(), pdc.connstring)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	err = dbpool.Ping(ctx)
+	err = pdc.ConnPool.Ping(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Migrate database
 	if pdc.config.MigrateDatabse {
 		err := pdc.autoMigrate()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return dbpool, nil
+	return nil
 }
 
 func (pdc *PsqlDatabaseClient) autoMigrate() error {
@@ -61,7 +63,7 @@ func (pdc *PsqlDatabaseClient) autoMigrate() error {
 	}
 	migrator := &ternMigrate.Migrator{
 		MigrationFiles: migrationFiles,
-		MigrationDir:   pdc.config.MigrationsDir,
+		MigrationRoot:  pdc.config.MigrationsRoot,
 		VersionTable:   pdc.config.VersionTable,
 	}
 	// TODO: Fix logic! ConnPool is nil until Setup() is complete!

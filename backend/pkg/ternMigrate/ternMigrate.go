@@ -13,7 +13,7 @@ import (
 // A simple tern Migrator wrapper
 type Migrator struct {
 	MigrationFiles embed.FS
-	MigrationDir   string
+	MigrationRoot  string
 	VersionTable   string
 }
 
@@ -23,7 +23,7 @@ func (m Migrator) MigrateDatabase(conn *pgx.Conn, expected int32) {
 		log.Fatalf("Unable to create a migrator: %v\n", err)
 	}
 
-	migrationRoot, err := fs.Sub(m.MigrationFiles, m.MigrationDir)
+	migrationRoot, err := fs.Sub(m.MigrationFiles, m.MigrationRoot)
 	if err != nil {
 		log.Fatalf("Unable to load migrations: %v\n", err)
 	}
