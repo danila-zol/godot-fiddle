@@ -15,12 +15,12 @@ import (
 var MigrationFiles embed.FS
 
 type PsqlDatabaseClient struct {
-	config     *config.DatabaseConfig
+	config     *config.PsqlDatabaseConfig
 	connstring string
 	ConnPool   *pgxpool.Pool // nil until Setup() is called
 }
 
-func NewDatabaseClient(connstring string, config *config.DatabaseConfig) *PsqlDatabaseClient {
+func NewDatabaseClient(connstring string, config *config.PsqlDatabaseConfig) *PsqlDatabaseClient {
 	var dbClient = &PsqlDatabaseClient{
 		config:     config,
 		connstring: connstring,
@@ -64,6 +64,7 @@ func (pdc *PsqlDatabaseClient) autoMigrate() error {
 		MigrationDir:   pdc.config.MigrationsDir,
 		VersionTable:   pdc.config.VersionTable,
 	}
+	// TODO: Fix logic! ConnPool is nil until Setup() is complete!
 	conn, err := pdc.ConnPool.Acquire(context.Background())
 	defer conn.Release()
 	if err != nil {
