@@ -2,8 +2,7 @@ package models
 
 import (
 	"time"
-
-	"github.com/mikespook/gorbac"
+	// "github.com/mikespook/gorbac"
 )
 
 type Session struct {
@@ -12,20 +11,20 @@ type Session struct {
 }
 
 type Role struct {
-	ID          string              `json:"id"`
-	Name        string              `json:"name"`
-	Permissions []gorbac.Permission `json:"permissions"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Permissions []gorbac.Permission `json:"permissions"`
 	//TODO: How do we manage permissions?
 }
 
 type User struct {
-	ID           string    `json:"id"`
-	Username     string    `json:"username"`
-	Display_name string    `json:"displayName"`
-	Email        string    `json:"email"`
-	Password     string    `json:"-"`
-	Salt         string    `json:"-"`
-	Role_id      string    `json:"roleID"`
-	Created_at   time.Time `json:"createdAt"`
-	Karma        int       `json:"karma"`
+	ID          string    `json:"id"`
+	Username    string    `json:"username"`
+	DisplayName string    `json:"displayName"`
+	Email       string    `json:"email"`
+	Password    string    `json:"-"`
+	Salt        string    `json:"-"`
+	RoleID      string    `json:"roleID"`
+	CreatedAt   time.Time `json:"createdAt"`
+	Karma       int       `json:"karma"`
 }

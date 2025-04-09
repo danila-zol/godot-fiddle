@@ -1,0 +1,131 @@
+package psqlRepository
+
+import (
+	"context"
+	"errors"
+
+	"gamehangar/internal/database"
+	"gamehangar/internal/domain/models"
+)
+
+type PsqlDemoRepository struct {
+	databaseClient *database.PsqlDatabaseClient
+	notFoundErr    error
+}
+
+func NewPsqlDemoRepository(dbClient database.PsqlDatabaseClient) (*PsqlDemoRepository, error) {
+	return &PsqlDemoRepository{
+		databaseClient: &dbClient,
+		notFoundErr:    errors.New("Not Found"),
+	}, nil
+}
+
+func (pdr *PsqlDemoRepository) CreateDemo(demo models.Demo) error {
+	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(context.Background(),
+		`INSERT INTO demo.demos
+		(id, name, description, link, userID, createdAt, updatedAt, upvotes, downvotes, threadID) 
+		VALUES
+		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		demo.ID, demo.Name, demo.Description, demo.Link, demo.UserID,
+		demo.CreatedAt, demo.UpdatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (pdr *PsqlDemoRepository) FindDemoByID(id string) (*models.Demo, error) {
+	var demo models.Demo
+	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	err = conn.QueryRow(context.Background(),
+		`SELECT * FROM demo.demos WHERE id = $1 LIMIT 1`,
+		id,
+	).Scan(&demo.ID, &demo.Name, &demo.Description, &demo.Link, &demo.UserID,
+		&demo.CreatedAt, &demo.UpdatedAt, &demo.Upvotes, &demo.Downvotes, &demo.ThreadID)
+	if err != nil {
+		return nil, err
+	}
+	return &demo, nil
+}
+
+func (pdr *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
+	var demos []models.Demo
+
+	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	rows, err := conn.Query(context.Background(), `SELECT * FROM demo.demos`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var demo models.Demo
+		err = rows.Scan(&demo.ID, &demo.Name, &demo.Description, &demo.Link, &demo.UserID,
+			&demo.CreatedAt, &demo.UpdatedAt, &demo.Upvotes, &demo.Downvotes, &demo.ThreadID)
+		if err != nil {
+			return nil, err
+		}
+		demos = append(demos, demo)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return &demos, nil
+}
+
+func (pdr *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) error {
+	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ct, err := conn.Exec(context.Background(),
+		`UPDATE demo.demos SET 
+		name=$1, description=$2, link=$3, userID=$4, createdAt=$5, updatedAt=$6, upvotes=$7, downvotes=$8, threadID=$9 
+		WHERE id = $10`,
+		demo.Name, demo.Description, demo.Link, demo.UserID, demo.CreatedAt,
+		demo.UpdatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID, id,
+	)
+	if ct.RowsAffected() == 0 {
+		return pdr.notFoundErr
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (pdr *PsqlDemoRepository) DeleteDemo(id string) error {
+	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ct, err := conn.Exec(context.Background(), `DELETE FROM demo.demos WHERE id=$1`, id)
+	if ct.RowsAffected() == 0 {
+		return pdr.notFoundErr
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
