@@ -31,6 +31,7 @@ func (p PsqlDatabase) NewDatabaseClient(connstring string, config *psqlDatabseCo
 	return dbClient
 }
 
+// TODO: nil ConnPool seems to be a bad design
 func (p PsqlDatabase) Setup(pdc *PsqlDatabaseClient) error {
 	var err error
 
@@ -75,4 +76,12 @@ func (pdc *PsqlDatabaseClient) autoMigrate() error {
 	}
 	migrator.MigrateDatabase(conn.Conn(), int32(pdc.config.ExpectedVersion))
 	return nil
+}
+
+func (pdc *PsqlDatabaseClient) AcquireConn() (*pgxpool.Conn, error) {
+	conn, err := pdc.ConnPool.Acquire(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
 }

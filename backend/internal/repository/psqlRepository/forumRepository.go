@@ -3,17 +3,16 @@ package psqlRepository
 import (
 	"context"
 	"errors"
-	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlForumRepository struct {
-	databaseClient *psqlDatabase.PsqlDatabaseClient
+	databaseClient psqlDatabaseClient
 	notFoundErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlForumRepository(dbClient *psqlDatabase.PsqlDatabaseClient) (*PsqlForumRepository, error) {
+func NewPsqlForumRepository(dbClient psqlDatabaseClient) (*PsqlForumRepository, error) {
 	return &PsqlForumRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
@@ -21,7 +20,7 @@ func NewPsqlForumRepository(dbClient *psqlDatabase.PsqlDatabaseClient) (*PsqlFor
 }
 
 func (pfr *PsqlForumRepository) CreateTopic(topic models.Topic) (*models.Topic, error) {
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +44,7 @@ func (pfr *PsqlForumRepository) CreateTopic(topic models.Topic) (*models.Topic, 
 
 func (pfr *PsqlForumRepository) FindByTopicID(id string) (*models.Topic, error) {
 	var topic models.Topic
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +63,7 @@ func (pfr *PsqlForumRepository) FindByTopicID(id string) (*models.Topic, error) 
 func (pfr *PsqlForumRepository) FindTopics() (*[]models.Topic, error) {
 	var topics []models.Topic
 
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +90,7 @@ func (pfr *PsqlForumRepository) FindTopics() (*[]models.Topic, error) {
 }
 
 func (pfr *PsqlForumRepository) UpdateTopic(topic models.Topic) (*models.Topic, error) {
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +111,7 @@ func (pfr *PsqlForumRepository) UpdateTopic(topic models.Topic) (*models.Topic, 
 }
 
 func (pfr *PsqlForumRepository) DeleteTopic(id string) error {
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
@@ -129,7 +128,7 @@ func (pfr *PsqlForumRepository) DeleteTopic(id string) error {
 }
 
 func (pfr *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread, error) {
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +153,7 @@ func (pfr *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thre
 
 func (pfr *PsqlForumRepository) FindByThreadID(id string) (*models.Thread, error) {
 	var thread models.Thread
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +173,7 @@ func (pfr *PsqlForumRepository) FindByThreadID(id string) (*models.Thread, error
 func (pfr *PsqlForumRepository) FindThreads() (*[]models.Thread, error) {
 	var threads []models.Thread
 
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +202,7 @@ func (pfr *PsqlForumRepository) FindThreads() (*[]models.Thread, error) {
 }
 
 func (pfr *PsqlForumRepository) UpdateThread(id string, thread models.Thread) (*models.Thread, error) {
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +224,7 @@ func (pfr *PsqlForumRepository) UpdateThread(id string, thread models.Thread) (*
 }
 
 func (pfr *PsqlForumRepository) DeleteThread(id string) error {
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
@@ -242,7 +241,7 @@ func (pfr *PsqlForumRepository) DeleteThread(id string) error {
 }
 
 func (pfr *PsqlForumRepository) CreateMessage(message models.Message) (*models.Message, error) {
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +266,7 @@ func (pfr *PsqlForumRepository) CreateMessage(message models.Message) (*models.M
 
 func (pfr *PsqlForumRepository) FindByMessageID(id string) (*models.Message, error) {
 	var message models.Message
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +287,7 @@ func (pfr *PsqlForumRepository) FindByMessageID(id string) (*models.Message, err
 func (pfr *PsqlForumRepository) FindMessages() (*[]models.Message, error) {
 	var messages []models.Message
 
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +318,7 @@ func (pfr *PsqlForumRepository) FindMessages() (*[]models.Message, error) {
 func (pfr *PsqlForumRepository) FindMessagesByThreadID(threadID string) (*[]models.Message, error) {
 	var messages []models.Message
 
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +350,7 @@ func (pfr *PsqlForumRepository) FindMessagesByThreadID(threadID string) (*[]mode
 }
 
 func (pfr *PsqlForumRepository) UpdateMessage(id string, message models.Message) (*models.Message, error) {
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -374,7 +373,7 @@ func (pfr *PsqlForumRepository) UpdateMessage(id string, message models.Message)
 }
 
 func (pfr *PsqlForumRepository) DeleteMessage(id string) error {
-	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pfr.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}

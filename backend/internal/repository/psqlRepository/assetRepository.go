@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 
-	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlAssetRepository struct {
-	databaseClient *psqlDatabase.PsqlDatabaseClient
+	databaseClient psqlDatabaseClient
 	notFoundErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlAssetRepository(dbClient *psqlDatabase.PsqlDatabaseClient) (*PsqlAssetRepository, error) {
+func NewPsqlAssetRepository(dbClient psqlDatabaseClient) (*PsqlAssetRepository, error) {
 	return &PsqlAssetRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
@@ -22,7 +21,7 @@ func NewPsqlAssetRepository(dbClient *psqlDatabase.PsqlDatabaseClient) (*PsqlAss
 }
 
 func (par *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, error) {
-	conn, err := par.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := par.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +45,7 @@ func (par *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, 
 
 func (par *PsqlAssetRepository) FindAssetByID(id string) (*models.Asset, error) {
 	var asset models.Asset
-	conn, err := par.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := par.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +64,7 @@ func (par *PsqlAssetRepository) FindAssetByID(id string) (*models.Asset, error) 
 func (par *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	var assets []models.Asset
 
-	conn, err := par.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := par.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +91,7 @@ func (par *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 }
 
 func (par *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) (*models.Asset, error) {
-	conn, err := par.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := par.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +114,7 @@ func (par *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) (*mod
 }
 
 func (par *PsqlAssetRepository) DeleteAsset(id string) error {
-	conn, err := par.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := par.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}

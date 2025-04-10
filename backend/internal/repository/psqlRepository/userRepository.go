@@ -3,17 +3,16 @@ package psqlRepository
 import (
 	"context"
 	"errors"
-	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlUserRepository struct {
-	databaseClient *psqlDatabase.PsqlDatabaseClient
+	databaseClient psqlDatabaseClient
 	notFoundErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func (pur *PsqlUserRepository) NewPsqlUserRepository(dbClient *psqlDatabase.PsqlDatabaseClient) (*PsqlUserRepository, error) {
+func (pur *PsqlUserRepository) NewPsqlUserRepository(dbClient psqlDatabaseClient) (*PsqlUserRepository, error) {
 	return &PsqlUserRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
@@ -23,7 +22,7 @@ func (pur *PsqlUserRepository) NewPsqlUserRepository(dbClient *psqlDatabase.Psql
 // TODO: MapNameToUser + assert one unique user per username!
 
 func (pur *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +46,7 @@ func (pur *PsqlUserRepository) CreateUser(user models.User) (*models.User, error
 
 func (pur *PsqlUserRepository) FindFirstUser(id string) (*models.User, error) {
 	var user models.User
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +66,7 @@ func (pur *PsqlUserRepository) FindFirstUser(id string) (*models.User, error) {
 func (pur *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 	var users []models.User
 
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +94,7 @@ func (pur *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 }
 
 func (pur *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.User, error) {
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +116,7 @@ func (pur *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.
 }
 
 func (pur *PsqlUserRepository) DeleteUser(id string) error {
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
@@ -134,7 +133,7 @@ func (pur *PsqlUserRepository) DeleteUser(id string) error {
 }
 
 func (pur *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error) {
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +156,7 @@ func (pur *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error
 
 func (pur *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 	var role models.Role
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +173,7 @@ func (pur *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 }
 
 func (pur *PsqlUserRepository) UpdateRole(role models.Role) (*models.Role, error) {
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +194,7 @@ func (pur *PsqlUserRepository) UpdateRole(role models.Role) (*models.Role, error
 }
 
 func (pur *PsqlUserRepository) DeleteRole(id string) error {
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
@@ -212,7 +211,7 @@ func (pur *PsqlUserRepository) DeleteRole(id string) error {
 }
 
 func (pur *PsqlUserRepository) CreateSession(session models.Session) (*models.Session, error) {
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +234,7 @@ func (pur *PsqlUserRepository) CreateSession(session models.Session) (*models.Se
 
 func (pur *PsqlUserRepository) FindSessionByID(id string) (*models.Session, error) {
 	var session models.Session
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +251,7 @@ func (pur *PsqlUserRepository) FindSessionByID(id string) (*models.Session, erro
 }
 
 func (pur *PsqlUserRepository) DeleteSession(id string) error {
-	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pur.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}

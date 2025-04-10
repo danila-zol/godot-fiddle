@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gamehangar/internal/config"
 	"gamehangar/internal/config/psqlDatabseConfig"
 	"gamehangar/internal/database/psqlDatabase"
 	v1 "gamehangar/internal/delivery/http/v1"
@@ -22,6 +23,11 @@ type application struct {
 	appConfig *appConfig
 	logger    echo.Logger
 	validator echo.Validator
+}
+
+type databaseClientCreator interface {
+	NewDatabaseClient(connstring string, config *config.DatabaseConfig) any
+	Setup() error
 }
 
 func getEnv() {

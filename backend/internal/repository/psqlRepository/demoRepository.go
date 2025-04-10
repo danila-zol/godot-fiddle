@@ -4,25 +4,24 @@ import (
 	"context"
 	"errors"
 
-	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlDemoRepository struct {
-	databaseClient *psqlDatabase.PsqlDatabaseClient
+	databaseClient psqlDatabaseClient
 	notFoundErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlDemoRepository(dbClient psqlDatabase.PsqlDatabaseClient) (*PsqlDemoRepository, error) {
+func NewPsqlDemoRepository(dbClient psqlDatabaseClient) (*PsqlDemoRepository, error) {
 	return &PsqlDemoRepository{
-		databaseClient: &dbClient,
+		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
 	}, nil
 }
 
 func (pdr *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) {
-	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pdr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +45,7 @@ func (pdr *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error
 
 func (pdr *PsqlDemoRepository) FindDemoByID(id string) (*models.Demo, error) {
 	var demo models.Demo
-	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pdr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +65,7 @@ func (pdr *PsqlDemoRepository) FindDemoByID(id string) (*models.Demo, error) {
 func (pdr *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 	var demos []models.Demo
 
-	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pdr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +93,7 @@ func (pdr *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 }
 
 func (pdr *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.Demo, error) {
-	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pdr.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +115,7 @@ func (pdr *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.
 }
 
 func (pdr *PsqlDemoRepository) DeleteDemo(id string) error {
-	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
+	conn, err := pdr.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
