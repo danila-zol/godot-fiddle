@@ -3,40 +3,44 @@ package psqlRepository
 import (
 	"context"
 	"errors"
-	"gamehangar/internal/database"
+	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlForumRepository struct {
-	databaseClient *database.PsqlDatabaseClient
+	databaseClient *psqlDatabase.PsqlDatabaseClient
 	notFoundErr    error
 }
 
-func NewPsqlForumRepository(dbClient *database.PsqlDatabaseClient) (*PsqlForumRepository, error) {
+// Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
+func NewPsqlForumRepository(dbClient *psqlDatabase.PsqlDatabaseClient) (*PsqlForumRepository, error) {
 	return &PsqlForumRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
 	}, nil
 }
 
-func (pfr *PsqlForumRepository) CreateTopic(topic models.Topic) error {
+func (pfr *PsqlForumRepository) CreateTopic(topic models.Topic) (*models.Topic, error) {
 	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	_, err = conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.topics
 		(id, name) 
 		VALUES
-		($1, $2)`,
-		topic.ID, topic.Name)
+		($1, $2)
+		RETURNING
+		(id, name)`,
+		topic.ID, topic.Name,
+	).Scan(&topic)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &topic, nil
 }
 
 func (pfr *PsqlForumRepository) FindByTopicID(id string) (*models.Topic, error) {
@@ -86,26 +90,25 @@ func (pfr *PsqlForumRepository) FindTopics() (*[]models.Topic, error) {
 	return &topics, nil
 }
 
-func (pfr *PsqlForumRepository) UpdateTopic(topic models.Topic) error {
+func (pfr *PsqlForumRepository) UpdateTopic(topic models.Topic) (*models.Topic, error) {
 	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.topics SET 
 		name=$1
-		WHERE id = $2`,
+		WHERE id = $2
+		RETURNING
+		(id, name)`,
 		topic.Name, topic.ID,
-	)
-	if ct.RowsAffected() == 0 {
-		return pfr.notFoundErr
-	}
+	).Scan(&topic)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &topic, err
 }
 
 func (pfr *PsqlForumRepository) DeleteTopic(id string) error {
@@ -125,26 +128,28 @@ func (pfr *PsqlForumRepository) DeleteTopic(id string) error {
 	return nil
 }
 
-func (pfr *PsqlForumRepository) CreateThread(thread models.Thread) error {
+func (pfr *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread, error) {
 	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	_, err = conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.threads
 		(id, title, userID, topicID, tags, createdAt, lastUpdate, totalUpvotes, totalDownvotes) 
 		VALUES
-		($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING
+		(id, title, userID, topicID, tags, createdAt, lastUpdate, totalUpvotes, totalDownvotes)`,
 		thread.ID, thread.Title, thread.UserID, thread.TopicID, thread.Tags,
 		thread.CreatedAt, thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes,
-	)
+	).Scan(&thread)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &thread, err
 }
 
 func (pfr *PsqlForumRepository) FindByThreadID(id string) (*models.Thread, error) {
@@ -197,27 +202,26 @@ func (pfr *PsqlForumRepository) FindThreads() (*[]models.Thread, error) {
 	return &threads, nil
 }
 
-func (pfr *PsqlForumRepository) UpdateThread(id string, thread models.Thread) error {
+func (pfr *PsqlForumRepository) UpdateThread(id string, thread models.Thread) (*models.Thread, error) {
 	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.threads SET 
 		name=$1, userID=$2, topicID=$3, tag=$4, createdAt=$5, lastUpdate=$6, totalUpvotes=$7, totalDownvotes=$8
-		WHERE id = $9`,
+		WHERE id = $9
+		RETURNING
+		(id, title, userID, topicID, tags, createdAt, lastUpdate, totalUpvotes, totalDownvotes)`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags, thread.CreatedAt,
 		thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes, thread.ID,
-	)
-	if ct.RowsAffected() == 0 {
-		return pfr.notFoundErr
-	}
+	).Scan(&thread)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &thread, nil
 }
 
 func (pfr *PsqlForumRepository) DeleteThread(id string) error {
@@ -237,27 +241,28 @@ func (pfr *PsqlForumRepository) DeleteThread(id string) error {
 	return nil
 }
 
-func (pfr *PsqlForumRepository) CreateMessage(message models.Message) error {
+func (pfr *PsqlForumRepository) CreateMessage(message models.Message) (*models.Message, error) {
 	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	_, err = conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.messages
 		(id, threadID, userID, title, body, tags, createdAt, updatedAt, upvotes, downvotes) 
 		VALUES
-		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING
+		(id, threadID, userID, title, body, tags, createdAt, updatedAt, upvotes, downvotes)`,
 		message.ID, message.ThreadID, message.UserID, message.Title, message.Body,
 		message.Tags, message.CreatedAt, message.UpdatedAt, message.Upvotes,
 		message.Downvotes,
-	)
-
+	).Scan(&message)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &message, nil
 }
 
 func (pfr *PsqlForumRepository) FindByMessageID(id string) (*models.Message, error) {
@@ -345,28 +350,27 @@ func (pfr *PsqlForumRepository) FindMessagesByThreadID(threadID string) (*[]mode
 	return &messages, nil
 }
 
-func (pfr *PsqlForumRepository) UpdateMessage(id string, message models.Message) error {
+func (pfr *PsqlForumRepository) UpdateMessage(id string, message models.Message) (*models.Message, error) {
 	conn, err := pfr.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.messages SET 
 		threadID=$1, userID=$2, title=$3, body=$4, tags=$5, createdAt=$6, updatedAt=$7, upvotes=$8, downvotes=$9
-		WHERE id = $10`,
+		WHERE id = $10
+		RETURNING
+		(id, threadID, userID, title, body, tags, createdAt, updatedAt, upvotes, downvotes)`,
 		message.ThreadID, message.UserID, message.Title, message.Body,
 		message.Tags, message.CreatedAt, message.UpdatedAt, message.Upvotes,
 		message.Downvotes, message.ID,
-	)
-	if ct.RowsAffected() == 0 {
-		return pfr.notFoundErr
-	}
+	).Scan(&message)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &message, nil
 }
 
 func (pfr *PsqlForumRepository) DeleteMessage(id string) error {

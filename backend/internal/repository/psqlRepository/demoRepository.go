@@ -4,41 +4,44 @@ import (
 	"context"
 	"errors"
 
-	"gamehangar/internal/database"
+	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlDemoRepository struct {
-	databaseClient *database.PsqlDatabaseClient
+	databaseClient *psqlDatabase.PsqlDatabaseClient
 	notFoundErr    error
 }
 
-func NewPsqlDemoRepository(dbClient database.PsqlDatabaseClient) (*PsqlDemoRepository, error) {
+// Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
+func NewPsqlDemoRepository(dbClient psqlDatabase.PsqlDatabaseClient) (*PsqlDemoRepository, error) {
 	return &PsqlDemoRepository{
 		databaseClient: &dbClient,
 		notFoundErr:    errors.New("Not Found"),
 	}, nil
 }
 
-func (pdr *PsqlDemoRepository) CreateDemo(demo models.Demo) error {
+func (pdr *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) {
 	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	_, err = conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`INSERT INTO demo.demos
 		(id, name, description, link, userID, createdAt, updatedAt, upvotes, downvotes, threadID) 
 		VALUES
-		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING
+		(id, name, description, link, userID, createdAt, updatedAt, upvotes, downvotes, threadID)`,
 		demo.ID, demo.Name, demo.Description, demo.Link, demo.UserID,
 		demo.CreatedAt, demo.UpdatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID,
-	)
+	).Scan(&demo)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &demo, nil
 }
 
 func (pdr *PsqlDemoRepository) FindDemoByID(id string) (*models.Demo, error) {
@@ -90,27 +93,26 @@ func (pdr *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 	return &demos, nil
 }
 
-func (pdr *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) error {
+func (pdr *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.Demo, error) {
 	conn, err := pdr.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`UPDATE demo.demos SET 
 		name=$1, description=$2, link=$3, userID=$4, createdAt=$5, updatedAt=$6, upvotes=$7, downvotes=$8, threadID=$9 
-		WHERE id = $10`,
+		WHERE id = $10
+		RETURNING
+		(id, name, description, link, userID, createdAt, updatedAt, upvotes, downvotes, threadID)`,
 		demo.Name, demo.Description, demo.Link, demo.UserID, demo.CreatedAt,
 		demo.UpdatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID, id,
-	)
-	if ct.RowsAffected() == 0 {
-		return pdr.notFoundErr
-	}
+	).Scan(&demo)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &demo, err
 }
 
 func (pdr *PsqlDemoRepository) DeleteDemo(id string) error {

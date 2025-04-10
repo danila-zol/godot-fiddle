@@ -4,40 +4,44 @@ import (
 	"context"
 	"errors"
 
-	"gamehangar/internal/database"
+	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlAssetRepository struct {
-	databaseClient *database.PsqlDatabaseClient
+	databaseClient *psqlDatabase.PsqlDatabaseClient
 	notFoundErr    error
 }
 
-func NewPsqlAssetRepository(dbClient *database.PsqlDatabaseClient) (*PsqlAssetRepository, error) {
+// Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
+func NewPsqlAssetRepository(dbClient *psqlDatabase.PsqlDatabaseClient) (*PsqlAssetRepository, error) {
 	return &PsqlAssetRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
 	}, nil
 }
 
-func (par *PsqlAssetRepository) CreateAsset(asset models.Asset) error {
+func (par *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, error) {
 	conn, err := par.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	_, err = conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`INSERT INTO asset.assets
 		(id, name, description, link, createdAt) 
 		VALUES
-		($1, $2, $3, $4, $5)`,
+		($1, $2, $3, $4, $5)
+		RETURNING
+		(id, name, description, link, createdAt)`,
 		asset.ID, asset.Name, asset.Description, asset.Link, asset.CreatedAt,
-	)
+	).Scan(&asset)
+
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &asset, nil
 }
 
 func (par *PsqlAssetRepository) FindAssetByID(id string) (*models.Asset, error) {
@@ -87,27 +91,27 @@ func (par *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	return &assets, nil
 }
 
-func (par *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) error {
+func (par *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) (*models.Asset, error) {
 	conn, err := par.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`UPDATE asset.assets SET 
 		name=$1, description=$2, link=$3, createdAt=$4
-		WHERE id = $5`,
+		WHERE id = $5
+		RETURNING
+			(id, name, description, link, createdAt)`,
 		asset.Name, asset.Description, asset.Link, asset.CreatedAt,
 		id,
-	)
-	if ct.RowsAffected() == 0 {
-		return par.notFoundErr
-	}
+	).Scan(&asset)
+	// TODO: How to handle 404 error here?
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &asset, nil
 }
 
 func (par *PsqlAssetRepository) DeleteAsset(id string) error {

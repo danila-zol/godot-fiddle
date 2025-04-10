@@ -3,16 +3,17 @@ package psqlRepository
 import (
 	"context"
 	"errors"
-	"gamehangar/internal/database"
+	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlUserRepository struct {
-	databaseClient *database.PsqlDatabaseClient
+	databaseClient *psqlDatabase.PsqlDatabaseClient
 	notFoundErr    error
 }
 
-func (pur *PsqlUserRepository) NewPsqlUserRepository(dbClient *database.PsqlDatabaseClient) (*PsqlUserRepository, error) {
+// Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
+func (pur *PsqlUserRepository) NewPsqlUserRepository(dbClient *psqlDatabase.PsqlDatabaseClient) (*PsqlUserRepository, error) {
 	return &PsqlUserRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
@@ -21,25 +22,27 @@ func (pur *PsqlUserRepository) NewPsqlUserRepository(dbClient *database.PsqlData
 
 // TODO: MapNameToUser + assert one unique user per username!
 
-func (pur *PsqlUserRepository) CreateUser(user models.User) error {
+func (pur *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
 	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	_, err = conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".users
 			(id, username, displayName, email, password, roleID, createdAt, karma) 
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8)`,
+			($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING
+			(id, username, displayName, email, password, roleID, createdAt, karma)`,
 		user.ID, user.Username, user.DisplayName, user.Email, user.Password,
 		user.RoleID, user.CreatedAt, user.Karma,
-	)
+	).Scan(&user)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &user, nil
 }
 
 func (pur *PsqlUserRepository) FindFirstUser(id string) (*models.User, error) {
@@ -91,27 +94,26 @@ func (pur *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 	return &users, nil
 }
 
-func (pur *PsqlUserRepository) UpdateUser(id string, user models.User) error {
+func (pur *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.User, error) {
 	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`UPDATE "user".users SET 
 		username=$1, display_name=$2, email=$3, password=$4, role_id=$5, created_at=$6, karma=$7
-		WHERE id = $8`,
+		WHERE id = $8
+		RETURNING
+		(id, username, displayName, email, password, roleID, createdAt, karma)`,
 		user.Username, user.DisplayName, user.Email, user.Password,
 		user.RoleID, user.CreatedAt, user.Karma, id,
-	)
-	if ct.RowsAffected() == 0 {
-		return pur.notFoundErr
-	}
+	).Scan(&user)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &user, nil
 }
 
 func (pur *PsqlUserRepository) DeleteUser(id string) error {
@@ -138,13 +140,15 @@ func (pur *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error
 	}
 	defer conn.Release()
 
-	_, err = conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".roles
 		(id, name) 
 		VALUES
-		($1, $2)`,
+		($1, $2)
+		RETURNING
+		(id, name)`,
 		role.ID, role.Name,
-	)
+	).Scan(&role)
 	if err != nil {
 		return nil, err
 	}
@@ -169,26 +173,25 @@ func (pur *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 	return &role, nil
 }
 
-func (pur *PsqlUserRepository) UpdateRole(role models.Role) error {
+func (pur *PsqlUserRepository) UpdateRole(role models.Role) (*models.Role, error) {
 	conn, err := pur.databaseClient.ConnPool.Acquire(context.Background())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(),
+	err = conn.QueryRow(context.Background(),
 		`UPDATE "user".roles SET 
 		name=$1
-		WHERE id = $2`,
+		WHERE id = $2
+		RETURNING
+		(id, name)`,
 		role.Name, role.ID,
-	)
-	if ct.RowsAffected() == 0 {
-		return pur.notFoundErr
-	}
+	).Scan(&role)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &role, nil
 }
 
 func (pur *PsqlUserRepository) DeleteRole(id string) error {
@@ -217,9 +220,11 @@ func (pur *PsqlUserRepository) CreateSession(session models.Session) (*models.Se
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".sessions
-		(id, name) 
+		(id, userID) 
 		VALUES
-		($1, $2)`,
+		($1, $2)
+		RETURNING
+		(id, userID)`,
 		session.ID, session.UserID,
 	).Scan(&session.ID, &session.UserID)
 	if err != nil {

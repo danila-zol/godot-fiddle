@@ -3,6 +3,8 @@ package main
 import (
 	"gamehangar/internal/config/psqlDatabseConfig"
 	"gamehangar/internal/database/psqlDatabase"
+	v1 "gamehangar/internal/delivery/http/v1"
+	"gamehangar/internal/repository/psqlRepository"
 	"os"
 	"strconv"
 
@@ -64,5 +66,14 @@ func main() {
 		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
 	}
 	app.logger.Info("Database setup successful!")
-	os.Exit(0)
+
+	assetRepo, err := psqlRepository.NewPsqlAssetRepository(databaseClient)
+	if err != nil {
+		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
+	}
+	// TODO: Pass handler functions to the router
+	assetHandler, err := v1.NewAssetHandler(e, assetRepo)
+	if err != nil {
+		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
+	}
 }
