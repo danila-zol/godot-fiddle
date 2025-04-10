@@ -25,6 +25,10 @@ type application struct {
 	validator echo.Validator
 }
 
+type DatabaseConfigCreator interface {
+	NewConfig() (*config.DatabaseConfig, error)
+}
+
 type databaseClientCreator interface {
 	NewDatabaseClient(connstring string, config *config.DatabaseConfig) any
 	Setup() error

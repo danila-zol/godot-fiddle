@@ -6,7 +6,3 @@ type DatabaseConfig struct {
 	ExpectedVersion int
 	VersionTable    string
 }
-
-type DatabaseConfigCreator interface {
-	NewConfig() (*DatabaseConfig, error)
-}
