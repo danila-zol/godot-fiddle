@@ -7,7 +7,6 @@ import (
 	v1 "gamehangar/internal/delivery/http/v1"
 	"gamehangar/internal/repository/psqlRepository"
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -15,13 +14,14 @@ import (
 
 // Exclusive to package main since it is a central app config
 type appConfig struct {
-	host string
-	port int
+	port string
 }
 
 type application struct {
 	appConfig *appConfig
+	echo      *echo.Echo
 	logger    echo.Logger
+	appRouter *echo.Router
 	validator echo.Validator
 }
 
@@ -41,22 +41,23 @@ func getEnv() {
 	}
 }
 
+// @title			Game Hangar
+// @version		1.0
+// @description	A backend for Game Hangar game prototyping web service
+// @contact.name	Mikhail Pecherkin
+// @contact.email	m.pecherkin.sas@gmail.com
+// @BasePath		/
 func main() {
 	e := echo.New()
 	getEnv()
 
-	port, err := strconv.ParseUint(os.Getenv("PORT"), 10, 32)
-	if err != nil {
-		panic("Could not parse app config: Invalid port")
-	}
-
 	cfg := &appConfig{
-		host: os.Getenv("HOST"),
-		port: int(port),
+		port: ":" + os.Getenv("PORT"),
 	}
 
 	app := &application{
 		appConfig: cfg,
+		echo:      e,
 		logger:    e.Logger,
 		validator: e.Validator,
 	}
@@ -82,8 +83,12 @@ func main() {
 		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
 	}
 	// TODO: Pass handler functions to the router
-	assetHandler, err := v1.NewAssetHandler(e, assetRepo)
+	_, err = v1.NewAssetHandler(e, assetRepo)
 	if err != nil {
 		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
 	}
+
+	app.appRouter = app.routes(app.echo)
+
+	app.logger.Fatal(app.echo.Start(app.appConfig.port))
 }

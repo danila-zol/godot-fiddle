@@ -1,9 +1,7 @@
 package v1
 
 import (
-	"encoding/json"
 	"gamehangar/internal/domain/models"
-	"log"
 	"net/http"
 	"time"
 
@@ -12,20 +10,14 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type ResponseHTTP struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data"`
-	Message string      `json:"message"`
-}
-
 type AssetHandler struct {
-	echo       *echo.Echo
+	logger     echo.Logger
 	repository AssetRepository
 }
 
 func NewAssetHandler(e *echo.Echo, repo AssetRepository) (*AssetHandler, error) {
 	return &AssetHandler{
-		echo:       e,
+		logger:     e.Logger,
 		repository: repo,
 	}, nil
 }
@@ -38,15 +30,14 @@ func NewAssetHandler(e *echo.Echo, repo AssetRepository) (*AssetHandler, error) 
 // @Success	200		{object}	ResponseHTTP{data=models.Asset}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/assets/ [post]
-func (ah *AssetHandler) postAsset(w http.ResponseWriter, r *http.Request) {
+// @Router		/v1/asset/ [post]
+func (ah *AssetHandler) PostAsset(c echo.Context) error {
 	var asset models.Asset
-	err := json.NewDecoder(r.Body).Decode(&asset)
+
+	err := c.Bind(&asset)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Error in PostAsset handler\n"))
-		log.Printf("Error in PostAsset handler \n%s", err)
-		return
+		ah.logger.Printf("Error in PostAsset handler \n%s", err)
+		return c.String(http.StatusBadRequest, "Error in PostAsset handler")
 	}
 
 	asset.ID = uuid.NewString()
@@ -55,20 +46,11 @@ func (ah *AssetHandler) postAsset(w http.ResponseWriter, r *http.Request) {
 
 	newAsset, err := ah.repository.CreateAsset(asset)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error in CreateAsset operation\n"))
-		log.Printf("Error in CreateAsset operation \n%s", err)
-		return
+		ah.logger.Printf("Error in CreateAsset operation \n%s", err)
+		return c.String(http.StatusInternalServerError, "Error in CreateAsset repository")
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	err = json.NewEncoder(w).Encode(newAsset)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error in postAsset operation\n"))
-		log.Printf("Error in postAsset operation \n%s", err)
-		return
-	}
+	return c.JSON(http.StatusOK, &newAsset)
 }
 
 // @Summary	Fetches a asset by its ID.
@@ -79,32 +61,21 @@ func (ah *AssetHandler) postAsset(w http.ResponseWriter, r *http.Request) {
 // @Success	200	{object}	ResponseHTTP{data=models.Asset}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/assets/{id} [get]
-func (ah *AssetHandler) getAssetById(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+// @Router		/v1/asset/{id} [get]
+func (ah *AssetHandler) GetAssetById(c echo.Context) error {
+	id := c.Param("id")
 
 	asset, err := ah.repository.FindAssetByID(id)
 	if err.Error() == "Not Found" {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Error: Asset not found!\n"))
-		log.Printf("Error: Asset not found!\n%s", err)
-		return
+		ah.logger.Printf("Error: Asset not found!\n%s", err)
+		return c.String(http.StatusNotFound, "Error: Asset not found!")
 	}
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error in FindFirstAsset operation\n"))
-		log.Printf("Error in FindFirstAsset operation \n%s", err)
-		return
+		ah.logger.Printf("Error in FindAssetByID operation \n%s", err)
+		return c.String(http.StatusInternalServerError, "Error in FindAssetByID operation")
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	err = json.NewEncoder(w).Encode(asset)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error in getAssetById operation\n"))
-		log.Printf("Error in getAssetById operation \n%s", err)
-		return
-	}
+	return c.JSON(http.StatusOK, &asset)
 }
 
 // @Summary	Fetches all assets.
@@ -113,75 +84,52 @@ func (ah *AssetHandler) getAssetById(w http.ResponseWriter, r *http.Request) {
 // @Success	200	{object}	ResponseHTTP{data=[]models.Asset}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/assets/ [get]
-func (ah *AssetHandler) getAssets(w http.ResponseWriter, r *http.Request) {
-	asset, err := ah.repository.FindAssets()
+// @Router		/v1/asset/ [get]
+func (ah *AssetHandler) GetAssets(c echo.Context) error {
+	assets, err := ah.repository.FindAssets()
 	if err.Error() == "Not Found" {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Error: Assets not found!\n"))
-		log.Printf("Error: Assets not found!\n%s", err)
-		return
+		ah.logger.Printf("Error: Asset not found!\n%s", err)
+		return c.String(http.StatusNotFound, "Error: Asset not found!")
 	}
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error in FindAssets operation\n"))
-		log.Printf("Error in FindAssets operation \n%s", err)
-		return
+		ah.logger.Printf("Error in FindFirstAsset operation \n%s", err)
+		return c.String(http.StatusInternalServerError, "Error in FindAssets operation")
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	err = json.NewEncoder(w).Encode(asset)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error in getAssets operation\n"))
-		log.Printf("Error in getAssets operation \n%s", err)
-		return
-	}
+	return c.JSON(http.StatusOK, &assets)
 }
 
 // @Summary	Updates an asset.
 // @Tags		Assets
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id	path		string	true	"Delete Asset of ID"
+// @Param		id	path		string	true	"Update Asset of ID"
 // @Param		Asset	body		models.Asset	true	"Update Asset"
 // @Success	200		{object}	ResponseHTTP{data=models.Asset}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/assets/ [patch]
-func (ah *AssetHandler) patchAsset(w http.ResponseWriter, r *http.Request) {
+// @Router		/v1/asset/{id} [patch]
+func (ah *AssetHandler) PatchAsset(c echo.Context) error {
 	var asset models.Asset
-	id := r.PathValue("id")
-	err := json.NewDecoder(r.Body).Decode(&asset)
+	id := c.Param("id")
+
+	err := c.Bind(&asset)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Error in patchAsset handler\n"))
-		log.Printf("Error in patchAsset handler \n%s", err)
-		return
+		ah.logger.Printf("Error in PatchAsset handler \n%s", err)
+		return c.String(http.StatusBadRequest, "Error in PatchAsset handler")
 	}
 
 	updAsset, err := ah.repository.UpdateAsset(id, asset)
 	if err.Error() == "Not Found" {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Error: Assets not found!\n"))
-		log.Printf("Error: Assets not found!\n%s", err)
-		return
+		ah.logger.Printf("Error: Asset not found!\n%s", err)
+		return c.String(http.StatusNotFound, "Error: Asset not found!")
 	}
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error in UpdateAsset operation\n"))
-		log.Printf("Error in UpdateAsset operation \n%s", err)
-		return
+		ah.logger.Printf("Error in UpdateAsset repository \n%s", err)
+		return c.String(http.StatusInternalServerError, "Error in UpdateAsset repository")
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	err = json.NewEncoder(w).Encode(updAsset)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error in patchAsset handler\n"))
-		log.Printf("Error in patchAsset handler \n%s", err)
-		return
-	}
+	return c.JSON(http.StatusOK, &updAsset)
 }
 
 // @Summary	Deletes the specified asset.
@@ -192,21 +140,19 @@ func (ah *AssetHandler) patchAsset(w http.ResponseWriter, r *http.Request) {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/assets/{id} [delete]
-func (ah *AssetHandler) deleteAsset(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+// @Router		/v1/asset/{id} [delete]
+func (ah *AssetHandler) DeleteAsset(c echo.Context) error {
+	id := c.Param("id")
 
 	err := ah.repository.DeleteAsset(id)
 	if err.Error() == "Not Found" {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Error: Asset not found!\n"))
-		log.Printf("Error: Asset not found!\n%s", err)
-		return
+		ah.logger.Printf("Error: Asset not found!\n%s", err)
+		return c.String(http.StatusNotFound, "Error: Asset not found!")
 	}
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error in FindFirstAsset operation\n"))
-		log.Printf("Error in FindFirstAsset operation \n%s", err)
-		return
+		ah.logger.Printf("Error in DeleteAsset repository \n%s", err)
+		return c.String(http.StatusInternalServerError, "Error in DeleteAsset repository")
 	}
+
+	return c.String(http.StatusOK, "Asset sucessfully deleted!")
 }

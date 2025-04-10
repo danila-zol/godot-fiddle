@@ -1,6 +1,11 @@
 package main
 
-import "github.com/labstack/echo/v4"
+import (
+	"github.com/labstack/echo/v4"
+	"github.com/swaggo/echo-swagger"
+
+	_ "gamehangar/docs"
+)
 
 func (app *application) routes(e *echo.Echo) *echo.Router {
 	router := echo.NewRouter(e)
@@ -21,6 +26,8 @@ func (app *application) routes(e *echo.Echo) *echo.Router {
 
 	e.POST("/register", func(c echo.Context) error { return nil })
 	e.POST("/login", func(c echo.Context) error { return nil })
+
+	e.GET("/docs/*", echoSwagger.WrapHandler)
 
 	return router
 }
