@@ -20,8 +20,8 @@ func NewPsqlDemoRepository(dbClient psqlDatabaseClient) (*PsqlDemoRepository, er
 	}, nil
 }
 
-func (pdr *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) {
-	conn, err := pdr.databaseClient.AcquireConn()
+func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -43,9 +43,9 @@ func (pdr *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error
 	return &demo, nil
 }
 
-func (pdr *PsqlDemoRepository) FindDemoByID(id string) (*models.Demo, error) {
+func (r *PsqlDemoRepository) FindDemoByID(id string) (*models.Demo, error) {
 	var demo models.Demo
-	conn, err := pdr.databaseClient.AcquireConn()
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -62,10 +62,10 @@ func (pdr *PsqlDemoRepository) FindDemoByID(id string) (*models.Demo, error) {
 	return &demo, nil
 }
 
-func (pdr *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
+func (r *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 	var demos []models.Demo
 
-	conn, err := pdr.databaseClient.AcquireConn()
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func (pdr *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 	return &demos, nil
 }
 
-func (pdr *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.Demo, error) {
-	conn, err := pdr.databaseClient.AcquireConn()
+func (r *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.Demo, error) {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +114,8 @@ func (pdr *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.
 	return &demo, err
 }
 
-func (pdr *PsqlDemoRepository) DeleteDemo(id string) error {
-	conn, err := pdr.databaseClient.AcquireConn()
+func (r *PsqlDemoRepository) DeleteDemo(id string) error {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (pdr *PsqlDemoRepository) DeleteDemo(id string) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM demo.demos WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return pdr.notFoundErr
+		return r.notFoundErr
 	}
 	if err != nil {
 		return err

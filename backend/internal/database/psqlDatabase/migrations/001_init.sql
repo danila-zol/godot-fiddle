@@ -76,7 +76,7 @@ CREATE TABLE asset.assets (
   "name" varchar(255) NOT NULL,
   "description" varchar NOT NULL,
   "link" varchar(255) NOT NULL,
-  "createdAt" timestamp NOT NULL
+  "createdat" timestamp NOT NULL
 );
 
 ---- create above / drop below ----

@@ -12,7 +12,7 @@ type PsqlUserRepository struct {
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func (pur *PsqlUserRepository) NewPsqlUserRepository(dbClient psqlDatabaseClient) (*PsqlUserRepository, error) {
+func NewPsqlUserRepository(dbClient psqlDatabaseClient) (*PsqlUserRepository, error) {
 	return &PsqlUserRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
@@ -21,8 +21,8 @@ func (pur *PsqlUserRepository) NewPsqlUserRepository(dbClient psqlDatabaseClient
 
 // TODO: MapNameToUser + assert one unique user per username!
 
-func (pur *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
-	conn, err := pur.databaseClient.AcquireConn()
+func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -44,9 +44,9 @@ func (pur *PsqlUserRepository) CreateUser(user models.User) (*models.User, error
 	return &user, nil
 }
 
-func (pur *PsqlUserRepository) FindFirstUser(id string) (*models.User, error) {
+func (r *PsqlUserRepository) FindFirstUser(id string) (*models.User, error) {
 	var user models.User
-	conn, err := pur.databaseClient.AcquireConn()
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -63,10 +63,10 @@ func (pur *PsqlUserRepository) FindFirstUser(id string) (*models.User, error) {
 	return &user, nil
 }
 
-func (pur *PsqlUserRepository) FindUsers() (*[]models.User, error) {
+func (r *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 	var users []models.User
 
-	conn, err := pur.databaseClient.AcquireConn()
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -93,8 +93,8 @@ func (pur *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 	return &users, nil
 }
 
-func (pur *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.User, error) {
-	conn, err := pur.databaseClient.AcquireConn()
+func (r *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.User, error) {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +115,8 @@ func (pur *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.
 	return &user, nil
 }
 
-func (pur *PsqlUserRepository) DeleteUser(id string) error {
-	conn, err := pur.databaseClient.AcquireConn()
+func (r *PsqlUserRepository) DeleteUser(id string) error {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (pur *PsqlUserRepository) DeleteUser(id string) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".users WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return pur.notFoundErr
+		return r.notFoundErr
 	}
 	if err != nil {
 		return err
@@ -132,8 +132,8 @@ func (pur *PsqlUserRepository) DeleteUser(id string) error {
 	return nil
 }
 
-func (pur *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error) {
-	conn, err := pur.databaseClient.AcquireConn()
+func (r *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error) {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -154,9 +154,9 @@ func (pur *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error
 	return &role, nil
 }
 
-func (pur *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
+func (r *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 	var role models.Role
-	conn, err := pur.databaseClient.AcquireConn()
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +172,8 @@ func (pur *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 	return &role, nil
 }
 
-func (pur *PsqlUserRepository) UpdateRole(role models.Role) (*models.Role, error) {
-	conn, err := pur.databaseClient.AcquireConn()
+func (r *PsqlUserRepository) UpdateRole(role models.Role) (*models.Role, error) {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -193,8 +193,8 @@ func (pur *PsqlUserRepository) UpdateRole(role models.Role) (*models.Role, error
 	return &role, nil
 }
 
-func (pur *PsqlUserRepository) DeleteRole(id string) error {
-	conn, err := pur.databaseClient.AcquireConn()
+func (r *PsqlUserRepository) DeleteRole(id string) error {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func (pur *PsqlUserRepository) DeleteRole(id string) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".roles WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return pur.notFoundErr
+		return r.notFoundErr
 	}
 	if err != nil {
 		return err
@@ -210,8 +210,8 @@ func (pur *PsqlUserRepository) DeleteRole(id string) error {
 	return nil
 }
 
-func (pur *PsqlUserRepository) CreateSession(session models.Session) (*models.Session, error) {
-	conn, err := pur.databaseClient.AcquireConn()
+func (r *PsqlUserRepository) CreateSession(session models.Session) (*models.Session, error) {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -232,9 +232,9 @@ func (pur *PsqlUserRepository) CreateSession(session models.Session) (*models.Se
 	return &session, nil
 }
 
-func (pur *PsqlUserRepository) FindSessionByID(id string) (*models.Session, error) {
+func (r *PsqlUserRepository) FindSessionByID(id string) (*models.Session, error) {
 	var session models.Session
-	conn, err := pur.databaseClient.AcquireConn()
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -250,8 +250,8 @@ func (pur *PsqlUserRepository) FindSessionByID(id string) (*models.Session, erro
 	return &session, nil
 }
 
-func (pur *PsqlUserRepository) DeleteSession(id string) error {
-	conn, err := pur.databaseClient.AcquireConn()
+func (r *PsqlUserRepository) DeleteSession(id string) error {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
@@ -259,7 +259,7 @@ func (pur *PsqlUserRepository) DeleteSession(id string) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".sessions WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return pur.notFoundErr
+		return r.notFoundErr
 	}
 	if err != nil {
 		return err

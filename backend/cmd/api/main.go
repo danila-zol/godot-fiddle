@@ -4,7 +4,8 @@ import (
 	"gamehangar/internal/config"
 	"gamehangar/internal/config/psqlDatabseConfig"
 	"gamehangar/internal/database/psqlDatabase"
-	v1 "gamehangar/internal/delivery/http/v1"
+	"gamehangar/internal/delivery/http/v1/handlers"
+	"gamehangar/internal/delivery/http/v1/routes"
 	"gamehangar/internal/repository/psqlRepository"
 	"os"
 
@@ -83,10 +84,11 @@ func main() {
 		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
 	}
 	// TODO: Pass handler functions to the router
-	_, err = v1.NewAssetHandler(e, assetRepo)
+	assetHandler, err := handlers.NewAssetHandler(e, assetRepo)
 	if err != nil {
 		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
 	}
+	routes.NewAssetRoutes(assetHandler).InitRoutes(app.echo)
 
 	app.appRouter = app.routes(app.echo)
 

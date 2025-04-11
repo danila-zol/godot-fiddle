@@ -1,11 +1,11 @@
-package v1
+package handlers
 
 import (
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"time"
 
-	// _ "gamehangar/docs"
+	_ "gamehangar/docs"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
@@ -30,13 +30,13 @@ func NewAssetHandler(e *echo.Echo, repo AssetRepository) (*AssetHandler, error) 
 // @Success	200		{object}	ResponseHTTP{data=models.Asset}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/asset/ [post]
-func (ah *AssetHandler) PostAsset(c echo.Context) error {
+// @Router		/v1/asset/protected [post]
+func (h *AssetHandler) PostAsset(c echo.Context) error {
 	var asset models.Asset
 
 	err := c.Bind(&asset)
 	if err != nil {
-		ah.logger.Printf("Error in PostAsset handler \n%s", err)
+		h.logger.Printf("Error in PostAsset handler \n%s", err)
 		return c.String(http.StatusBadRequest, "Error in PostAsset handler")
 	}
 
@@ -44,9 +44,9 @@ func (ah *AssetHandler) PostAsset(c echo.Context) error {
 	asset.CreatedAt = time.Now()
 	// TODO: Hook a Service to create links to the S3 bucket
 
-	newAsset, err := ah.repository.CreateAsset(asset)
+	newAsset, err := h.repository.CreateAsset(asset)
 	if err != nil {
-		ah.logger.Printf("Error in CreateAsset operation \n%s", err)
+		h.logger.Printf("Error in CreateAsset operation \n%s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateAsset repository")
 	}
 
@@ -62,16 +62,16 @@ func (ah *AssetHandler) PostAsset(c echo.Context) error {
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/asset/{id} [get]
-func (ah *AssetHandler) GetAssetById(c echo.Context) error {
+func (h *AssetHandler) GetAssetById(c echo.Context) error {
 	id := c.Param("id")
 
-	asset, err := ah.repository.FindAssetByID(id)
-	if err.Error() == "Not Found" {
-		ah.logger.Printf("Error: Asset not found!\n%s", err)
-		return c.String(http.StatusNotFound, "Error: Asset not found!")
-	}
+	asset, err := h.repository.FindAssetByID(id)
 	if err != nil {
-		ah.logger.Printf("Error in FindAssetByID operation \n%s", err)
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Asset not found!\n%s", err)
+			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		}
+		h.logger.Printf("Error in FindAssetByID operation \n%s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindAssetByID operation")
 	}
 
@@ -84,15 +84,15 @@ func (ah *AssetHandler) GetAssetById(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=[]models.Asset}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/asset/ [get]
-func (ah *AssetHandler) GetAssets(c echo.Context) error {
-	assets, err := ah.repository.FindAssets()
-	if err.Error() == "Not Found" {
-		ah.logger.Printf("Error: Asset not found!\n%s", err)
-		return c.String(http.StatusNotFound, "Error: Asset not found!")
-	}
+// @Router		/v1/asset [get]
+func (h *AssetHandler) GetAssets(c echo.Context) error {
+	assets, err := h.repository.FindAssets()
 	if err != nil {
-		ah.logger.Printf("Error in FindFirstAsset operation \n%s", err)
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Asset not found!\n%s", err)
+			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		}
+		h.logger.Printf("Error in FindFirstAsset operation \n%s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindAssets operation")
 	}
 
@@ -108,24 +108,24 @@ func (ah *AssetHandler) GetAssets(c echo.Context) error {
 // @Success	200		{object}	ResponseHTTP{data=models.Asset}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/asset/{id} [patch]
-func (ah *AssetHandler) PatchAsset(c echo.Context) error {
+// @Router		/v1/asset/protected/{id} [patch]
+func (h *AssetHandler) PatchAsset(c echo.Context) error {
 	var asset models.Asset
 	id := c.Param("id")
 
 	err := c.Bind(&asset)
 	if err != nil {
-		ah.logger.Printf("Error in PatchAsset handler \n%s", err)
+		h.logger.Printf("Error in PatchAsset handler \n%s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchAsset handler")
 	}
 
-	updAsset, err := ah.repository.UpdateAsset(id, asset)
-	if err.Error() == "Not Found" {
-		ah.logger.Printf("Error: Asset not found!\n%s", err)
-		return c.String(http.StatusNotFound, "Error: Asset not found!")
-	}
+	updAsset, err := h.repository.UpdateAsset(id, asset)
 	if err != nil {
-		ah.logger.Printf("Error in UpdateAsset repository \n%s", err)
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Asset not found!\n%s", err)
+			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		}
+		h.logger.Printf("Error in UpdateAsset repository \n%s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateAsset repository")
 	}
 
@@ -140,17 +140,17 @@ func (ah *AssetHandler) PatchAsset(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/asset/{id} [delete]
-func (ah *AssetHandler) DeleteAsset(c echo.Context) error {
+// @Router		/v1/asset/protected/{id} [delete]
+func (h *AssetHandler) DeleteAsset(c echo.Context) error {
 	id := c.Param("id")
 
-	err := ah.repository.DeleteAsset(id)
-	if err.Error() == "Not Found" {
-		ah.logger.Printf("Error: Asset not found!\n%s", err)
-		return c.String(http.StatusNotFound, "Error: Asset not found!")
-	}
+	err := h.repository.DeleteAsset(id)
 	if err != nil {
-		ah.logger.Printf("Error in DeleteAsset repository \n%s", err)
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Asset not found!\n%s", err)
+			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		}
+		h.logger.Printf("Error in DeleteAsset repository \n%s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteAsset repository")
 	}
 

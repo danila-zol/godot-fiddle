@@ -8,6 +8,7 @@ import (
 	"gamehangar/pkg/ternMigrate"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -59,29 +60,33 @@ func (p PsqlDatabase) Setup(pdc *PsqlDatabaseClient) error {
 	return nil
 }
 
-func (pdc *PsqlDatabaseClient) autoMigrate() error {
-	migrationFiles, ok := pdc.config.Migrations.(embed.FS)
+func (c *PsqlDatabaseClient) autoMigrate() error {
+	migrationFiles, ok := c.config.Migrations.(embed.FS)
 	if !ok {
 		return errors.New("Failed to migrate PSQL Database: Invalid migration files!")
 	}
 	migrator := &ternMigrate.Migrator{
 		MigrationFiles: migrationFiles,
-		MigrationRoot:  pdc.config.MigrationsRoot,
-		VersionTable:   pdc.config.VersionTable,
+		MigrationRoot:  c.config.MigrationsRoot,
+		VersionTable:   c.config.VersionTable,
 	}
-	conn, err := pdc.ConnPool.Acquire(context.Background())
+	conn, err := c.ConnPool.Acquire(context.Background())
 	defer conn.Release()
 	if err != nil {
 		return err
 	}
-	migrator.MigrateDatabase(conn.Conn(), int32(pdc.config.ExpectedVersion))
+	migrator.MigrateDatabase(conn.Conn(), int32(c.config.ExpectedVersion))
 	return nil
 }
 
-func (pdc *PsqlDatabaseClient) AcquireConn() (*pgxpool.Conn, error) {
-	conn, err := pdc.ConnPool.Acquire(context.Background())
+func (c *PsqlDatabaseClient) AcquireConn() (*pgxpool.Conn, error) {
+	conn, err := c.ConnPool.Acquire(context.Background())
 	if err != nil {
 		return nil, err
 	}
 	return conn, nil
+}
+
+func (c *PsqlDatabaseClient) ErrNoRows() error {
+	return pgx.ErrNoRows
 }

@@ -1,4 +1,4 @@
-package v1
+package handlers
 
 import "gamehangar/internal/domain/models"
 
@@ -8,6 +8,7 @@ type AssetRepository interface {
 	FindAssetByID(id string) (*models.Asset, error)
 	UpdateAsset(id string, asset models.Asset) (*models.Asset, error)
 	DeleteAsset(id string) error
+	NotFoundErr() error
 }
 
 type DemoRepository interface {

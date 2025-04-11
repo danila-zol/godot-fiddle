@@ -2,26 +2,25 @@ package psqlRepository
 
 import (
 	"context"
-	"errors"
 
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlAssetRepository struct {
 	databaseClient psqlDatabaseClient
-	notFoundErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
 func NewPsqlAssetRepository(dbClient psqlDatabaseClient) (*PsqlAssetRepository, error) {
 	return &PsqlAssetRepository{
 		databaseClient: dbClient,
-		notFoundErr:    errors.New("Not Found"),
 	}, nil
 }
 
-func (par *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, error) {
-	conn, err := par.databaseClient.AcquireConn()
+func (r *PsqlAssetRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
+
+func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, error) {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -36,16 +35,16 @@ func (par *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, 
 		(id, name, description, link, createdAt)`,
 		asset.ID, asset.Name, asset.Description, asset.Link, asset.CreatedAt,
 	).Scan(&asset)
-
 	if err != nil {
 		return nil, err
 	}
+
 	return &asset, nil
 }
 
-func (par *PsqlAssetRepository) FindAssetByID(id string) (*models.Asset, error) {
+func (r *PsqlAssetRepository) FindAssetByID(id string) (*models.Asset, error) {
 	var asset models.Asset
-	conn, err := par.databaseClient.AcquireConn()
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +60,10 @@ func (par *PsqlAssetRepository) FindAssetByID(id string) (*models.Asset, error) 
 	return &asset, nil
 }
 
-func (par *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
+func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	var assets []models.Asset
 
-	conn, err := par.databaseClient.AcquireConn()
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +89,8 @@ func (par *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	return &assets, nil
 }
 
-func (par *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) (*models.Asset, error) {
-	conn, err := par.databaseClient.AcquireConn()
+func (r *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) (*models.Asset, error) {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
 	}
@@ -106,15 +105,14 @@ func (par *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) (*mod
 		asset.Name, asset.Description, asset.Link, asset.CreatedAt,
 		id,
 	).Scan(&asset)
-	// TODO: How to handle 404 error here?
 	if err != nil {
 		return nil, err
 	}
 	return &asset, nil
 }
 
-func (par *PsqlAssetRepository) DeleteAsset(id string) error {
-	conn, err := par.databaseClient.AcquireConn()
+func (r *PsqlAssetRepository) DeleteAsset(id string) error {
+	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
@@ -122,7 +120,7 @@ func (par *PsqlAssetRepository) DeleteAsset(id string) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM asset.assets WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return par.notFoundErr
+		return r.databaseClient.ErrNoRows()
 	}
 	if err != nil {
 		return err
