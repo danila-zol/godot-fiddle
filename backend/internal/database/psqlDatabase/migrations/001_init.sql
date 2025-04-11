@@ -74,7 +74,7 @@ CREATE SCHEMA asset;
 CREATE TABLE asset.assets (
   "id" varchar(64) PRIMARY KEY,
   "name" varchar(255) NOT NULL,
-  "description" varchar NOT NULL,
+  "description" varchar,
   "link" varchar(255) NOT NULL,
   "createdAt" timestamp NOT NULL
 );

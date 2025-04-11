@@ -98,7 +98,7 @@ func (r *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) (*model
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE asset.assets SET 
-		name=$1, description=$2, link=$3, "createdAt"=$4
+		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), "createdAt"=COALESCE($4, "createdAt")
 		WHERE id = $5
 		RETURNING
 			(id, name, description, link, "createdAt")`,

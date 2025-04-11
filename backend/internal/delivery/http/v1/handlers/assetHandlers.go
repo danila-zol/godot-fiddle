@@ -40,8 +40,15 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostAsset handler")
 	}
 
-	asset.ID = uuid.NewString()
-	asset.CreatedAt = time.Now()
+	if asset.ID == nil {
+		assetID := uuid.NewString()
+		asset.ID = &assetID
+	}
+	if asset.CreatedAt == nil {
+		currentTime := time.Now()
+		asset.CreatedAt = &currentTime
+	}
+
 	// TODO: Hook a Service to create links to the S3 bucket
 
 	newAsset, err := h.repository.CreateAsset(asset)
@@ -113,8 +120,7 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 	var asset models.Asset
 	id := c.Param("id")
 
-	err := c.Bind(&asset)
-	if err != nil {
+	if err := c.Bind(&asset); err != nil {
 		h.logger.Printf("Error in PatchAsset handler \n%s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchAsset handler")
 	}
