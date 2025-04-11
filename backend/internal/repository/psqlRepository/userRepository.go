@@ -12,14 +12,16 @@ type PsqlUserRepository struct {
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlUserRepository(dbClient psqlDatabaseClient) (*PsqlUserRepository, error) {
+func NewPsqlUserRepository(dbClient psqlDatabaseClient) *PsqlUserRepository {
 	return &PsqlUserRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
-	}, nil
+	}
 }
 
 // TODO: MapNameToUser + assert one unique user per username!
+
+func (r *PsqlUserRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
 
 func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
 	conn, err := r.databaseClient.AcquireConn()
@@ -44,7 +46,7 @@ func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) 
 	return &user, nil
 }
 
-func (r *PsqlUserRepository) FindFirstUser(id string) (*models.User, error) {
+func (r *PsqlUserRepository) FindUserByID(id string) (*models.User, error) {
 	var user models.User
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -102,7 +104,8 @@ func (r *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.Us
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE "user".users SET 
-		username=$1, "displayName"=$2, email=$3, password=$4, "roleID"=$5, "createdAt"=$6, karma=$7
+		username=COALESCE($1, username), "displayName"=COALESCE($2, "displayName"), email=COALESCE($3, email), 
+		password=COALESCE($4, password), "roleID"=COALESCE($5, "roleID"), "createdAt"=COALESCE($6, "createdAt"), karma=COALESCE($7, karma)
 		WHERE id = $8
 		RETURNING
 		(id, username, "displayName", email, password, "roleID", "createdAt", karma)`,
@@ -172,7 +175,7 @@ func (r *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 	return &role, nil
 }
 
-func (r *PsqlUserRepository) UpdateRole(role models.Role) (*models.Role, error) {
+func (r *PsqlUserRepository) UpdateRole(id string, role models.Role) (*models.Role, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -181,11 +184,11 @@ func (r *PsqlUserRepository) UpdateRole(role models.Role) (*models.Role, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE "user".roles SET 
-		name=$1
+		name=COALESCE($1, name)
 		WHERE id = $2
 		RETURNING
 		(id, name)`,
-		role.Name, role.ID,
+		role.Name, id,
 	).Scan(&role)
 	if err != nil {
 		return nil, err

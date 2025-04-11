@@ -11,10 +11,10 @@ type PsqlAssetRepository struct {
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlAssetRepository(dbClient psqlDatabaseClient) (*PsqlAssetRepository, error) {
+func NewPsqlAssetRepository(dbClient psqlDatabaseClient) *PsqlAssetRepository {
 	return &PsqlAssetRepository{
 		databaseClient: dbClient,
-	}, nil
+	}
 }
 
 func (r *PsqlAssetRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }

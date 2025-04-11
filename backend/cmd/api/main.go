@@ -79,16 +79,21 @@ func main() {
 	}
 	app.logger.Info("Database setup successful!")
 
-	assetRepo, err := psqlRepository.NewPsqlAssetRepository(databaseClient)
-	if err != nil {
-		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
-	}
-	// TODO: Pass handler functions to the router
-	assetHandler, err := handlers.NewAssetHandler(e, assetRepo)
-	if err != nil {
-		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
-	}
+	assetRepo := psqlRepository.NewPsqlAssetRepository(databaseClient)
+	assetHandler := handlers.NewAssetHandler(e, assetRepo)
 	routes.NewAssetRoutes(assetHandler).InitRoutes(app.echo)
+
+	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient)
+	demoHandler := handlers.NewDemoHandler(e, demoRepo)
+	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
+
+	forumRepo := psqlRepository.NewPsqlForumRepository(databaseClient)
+	forumHandler := handlers.NewForumHandler(e, forumRepo)
+	routes.NewForumRoutes(forumHandler).InitRoutes(app.echo)
+
+	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient)
+	userHandler := handlers.NewUserHandler(e, userRepo)
+	routes.NewUserRoutes(userHandler).InitRoutes(app.echo)
 
 	app.appRouter = app.routes(app.echo)
 

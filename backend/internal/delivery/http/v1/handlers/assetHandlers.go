@@ -15,11 +15,11 @@ type AssetHandler struct {
 	repository AssetRepository
 }
 
-func NewAssetHandler(e *echo.Echo, repo AssetRepository) (*AssetHandler, error) {
+func NewAssetHandler(e *echo.Echo, repo AssetRepository) *AssetHandler {
 	return &AssetHandler{
 		logger:     e.Logger,
 		repository: repo,
-	}, nil
+	}
 }
 
 // @Summary	Creates a new asset.
@@ -53,7 +53,7 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 
 	newAsset, err := h.repository.CreateAsset(asset)
 	if err != nil {
-		h.logger.Printf("Error in CreateAsset operation \n%s", err)
+		h.logger.Printf("Error in CreateAsset repository \n%s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateAsset repository")
 	}
 
@@ -78,8 +78,8 @@ func (h *AssetHandler) GetAssetById(c echo.Context) error {
 			h.logger.Printf("Error: Asset not found!\n%s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in FindAssetByID operation \n%s", err)
-		return c.String(http.StatusInternalServerError, "Error in FindAssetByID operation")
+		h.logger.Printf("Error in FindAssetByID repository \n%s", err)
+		return c.String(http.StatusInternalServerError, "Error in FindAssetByID repository")
 	}
 
 	return c.JSON(http.StatusOK, &asset)
@@ -99,8 +99,8 @@ func (h *AssetHandler) GetAssets(c echo.Context) error {
 			h.logger.Printf("Error: Asset not found!\n%s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in FindFirstAsset operation \n%s", err)
-		return c.String(http.StatusInternalServerError, "Error in FindAssets operation")
+		h.logger.Printf("Error in FindFirstAsset repository \n%s", err)
+		return c.String(http.StatusInternalServerError, "Error in FindAssets repository")
 	}
 
 	return c.JSON(http.StatusOK, &assets)

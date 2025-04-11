@@ -13,12 +13,14 @@ type PsqlDemoRepository struct {
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlDemoRepository(dbClient psqlDatabaseClient) (*PsqlDemoRepository, error) {
+func NewPsqlDemoRepository(dbClient psqlDatabaseClient) *PsqlDemoRepository {
 	return &PsqlDemoRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
-	}, nil
+	}
 }
+
+func (r *PsqlDemoRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
 
 func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) {
 	conn, err := r.databaseClient.AcquireConn()
@@ -101,7 +103,9 @@ func (r *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.De
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE demo.demos SET 
-		name=$1, description=$2, link=$3, "userID"=$4, "createdAt"=$5, "updatedAt"=$6, upvotes=$7, downvotes=$8, "threadID"=$9 
+		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), "userID"=COALESCE($4, "userID"),
+		"createdAt"=COALESCE($5, "createdAt"), "updatedAt"=COALESCE($6, "updatedAt"), upvotes=COALESCE($7, upvotes), 
+		downvotes=COALESCE($8, downvotes), "threadID"=COALESCE($9, "threadID") 
 		WHERE id = $10
 		RETURNING
 		(id, name, description, link, "userID", "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,

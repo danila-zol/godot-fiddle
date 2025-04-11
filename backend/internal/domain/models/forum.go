@@ -3,31 +3,31 @@ package models
 import "time"
 
 type Topic struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   *string `json:"id,omitempty"`
+	Name *string `json:"name,omitempty"`
 }
 
 type Thread struct { // TODO: Message relation as an array of Messages, so you can count Messages in a Thread
-	ID             string    `json:"id"`
-	Title          string    `json:"title"`
-	UserID         string    `json:"userID"`
-	TopicID        string    `json:"topicID"`
-	Tags           []string  `json:"tags"`
-	CreatedAt      time.Time `json:"createdAt"`
-	LastUpdate     time.Time `json:"lastUpdate"`
-	TotalUpvotes   uint      `json:"totalUpvotes"`
-	TotalDownvotes uint      `json:"totalDownvotes"`
+	ID             *string    `json:"id,omitempty"`
+	Title          *string    `json:"title,omitempty"`
+	UserID         *string    `json:"userID,omitempty"`
+	TopicID        *string    `json:"topicID,omitempty"`
+	Tags           *[]string  `json:"tags,omitempty"`
+	CreatedAt      *time.Time `json:"createdAt,omitzero"`
+	LastUpdate     *time.Time `json:"lastUpdate,omitzero"`
+	TotalUpvotes   *uint      `json:"totalUpvotes,omitempty"`
+	TotalDownvotes *uint      `json:"totalDownvotes,omitempty"`
 }
 
 type Message struct {
-	ID        string    `json:"id"`
-	ThreadID  string    `json:"threadID"`
-	UserID    string    `json:"userID"`
-	Title     string    `json:"title"`
-	Body      string    `json:"body"`
-	Tags      []string  `json:"tags"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	Upvotes   uint      `json:"upvotes"`
-	Downvotes uint      `json:"downvotes"`
+	ID        *string    `json:"id,omitempty"`
+	ThreadID  *string    `json:"threadID,omitempty"`
+	UserID    *string    `json:"userID,omitempty"`
+	Title     *string    `json:"title,omitempty"`
+	Body      *string    `json:"body,omitempty"`
+	Tags      *[]string  `json:"tags,omitempty"`
+	CreatedAt *time.Time `json:"createdAt,omitzero"`
+	UpdatedAt *time.Time `json:"updatedAt,omitzero"`
+	Upvotes   *uint      `json:"upvotes,omitempty"`
+	Downvotes *uint      `json:"downvotes,omitempty"`
 }

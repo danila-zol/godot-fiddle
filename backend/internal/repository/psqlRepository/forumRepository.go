@@ -12,12 +12,14 @@ type PsqlForumRepository struct {
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlForumRepository(dbClient psqlDatabaseClient) (*PsqlForumRepository, error) {
+func NewPsqlForumRepository(dbClient psqlDatabaseClient) *PsqlForumRepository {
 	return &PsqlForumRepository{
 		databaseClient: dbClient,
 		notFoundErr:    errors.New("Not Found"),
-	}, nil
+	}
 }
+
+func (r *PsqlForumRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
 
 func (r *PsqlForumRepository) CreateTopic(topic models.Topic) (*models.Topic, error) {
 	conn, err := r.databaseClient.AcquireConn()
@@ -42,7 +44,7 @@ func (r *PsqlForumRepository) CreateTopic(topic models.Topic) (*models.Topic, er
 	return &topic, nil
 }
 
-func (r *PsqlForumRepository) FindByTopicID(id string) (*models.Topic, error) {
+func (r *PsqlForumRepository) FindTopicByID(id string) (*models.Topic, error) {
 	var topic models.Topic
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -89,7 +91,7 @@ func (r *PsqlForumRepository) FindTopics() (*[]models.Topic, error) {
 	return &topics, nil
 }
 
-func (r *PsqlForumRepository) UpdateTopic(topic models.Topic) (*models.Topic, error) {
+func (r *PsqlForumRepository) UpdateTopic(id string, topic models.Topic) (*models.Topic, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -98,11 +100,11 @@ func (r *PsqlForumRepository) UpdateTopic(topic models.Topic) (*models.Topic, er
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.topics SET 
-		name=$1
+		name=COALESCE($1, name)
 		WHERE id = $2
 		RETURNING
 		(id, name)`,
-		topic.Name, topic.ID,
+		topic.Name, id,
 	).Scan(&topic)
 	if err != nil {
 		return nil, err
@@ -151,7 +153,7 @@ func (r *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread
 	return &thread, err
 }
 
-func (r *PsqlForumRepository) FindByThreadID(id string) (*models.Thread, error) {
+func (r *PsqlForumRepository) FindThreadByID(id string) (*models.Thread, error) {
 	var thread models.Thread
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -210,12 +212,13 @@ func (r *PsqlForumRepository) UpdateThread(id string, thread models.Thread) (*mo
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.threads SET 
-		name=$1, "userID"=$2, "topicID"=$3, tag=$4, "createdAt"=$5, "lastUpdate"=$6, "totalUpvotes"=$7, "totalDownvotes"=$8
+		name=COALESCE($1, name), "userID"=COALESCE($2, "userID"), "topicID"=COALESCE($3, "topicID"), tags=COALESCE($4, tags), "createdAt"=COALESCE($5, "createdAt"), 
+		"lastUpdate"=COALESCE($6, "lastUpdate"), "totalUpvotes"=COALESCE($7, "totalUpvotes"), "totalDownvotes"=COALESCE($8, "totalDownvotes")
 		WHERE id = $9
 		RETURNING
 		(id, title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes")`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags, thread.CreatedAt,
-		thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes, thread.ID,
+		thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes, id,
 	).Scan(&thread)
 	if err != nil {
 		return nil, err
@@ -264,7 +267,7 @@ func (r *PsqlForumRepository) CreateMessage(message models.Message) (*models.Mes
 	return &message, nil
 }
 
-func (r *PsqlForumRepository) FindByMessageID(id string) (*models.Message, error) {
+func (r *PsqlForumRepository) FindMessageByID(id string) (*models.Message, error) {
 	var message models.Message
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -358,13 +361,15 @@ func (r *PsqlForumRepository) UpdateMessage(id string, message models.Message) (
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.messages SET 
-		"threadID"=$1, "userID"=$2, title=$3, body=$4, tags=$5, "createdAt"=$6, "updatedAt"=$7, upvotes=$8, downvotes=$9
+		"threadID"=COALESCE($1, "threadID"), "userID"=COALESCE($2, "userID"), title=COALESCE($3, title), 
+		body=COALESCE($4, body), tags=COALESCE($5, tags), "createdAt"=COALESCE($6, "createdAt"),
+		"updatedAt"=COALESCE($7, "updatedAt"), upvotes=COALESCE($8, upvotes), downvotes=COALESCE($9, downvotes)
 		WHERE id = $10
 		RETURNING
 		(id, "threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes)`,
 		message.ThreadID, message.UserID, message.Title, message.Body,
 		message.Tags, message.CreatedAt, message.UpdatedAt, message.Upvotes,
-		message.Downvotes, message.ID,
+		message.Downvotes, id,
 	).Scan(&message)
 	if err != nil {
 		return nil, err

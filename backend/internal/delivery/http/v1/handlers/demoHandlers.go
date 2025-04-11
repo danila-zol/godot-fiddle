@@ -15,11 +15,11 @@ type DemoHandler struct {
 	repository DemoRepository
 }
 
-func NewDemoHandler(e *echo.Echo, repo DemoRepository) (*DemoHandler, error) {
+func NewDemoHandler(e *echo.Echo, repo DemoRepository) *DemoHandler {
 	return &DemoHandler{
 		logger:     e.Logger,
 		repository: repo,
-	}, nil
+	}
 }
 
 // @Summary	Creates a new demo.
@@ -33,22 +33,32 @@ func NewDemoHandler(e *echo.Echo, repo DemoRepository) (*DemoHandler, error) {
 // @Router		/v1/demo/ [post]
 func (h *DemoHandler) PostDemo(c echo.Context) error {
 	var demo models.Demo
+
 	err := c.Bind(&demo)
 	if err != nil {
-		h.logger.Printf("Error in PostAsset handler \n%s", err)
-		return c.String(http.StatusBadRequest, "Error in PostAsset handler")
+		h.logger.Printf("Error in PostDemo handler \n%s", err)
+		return c.String(http.StatusBadRequest, "Error in PostDemo handler")
 	}
 
-	demo.ID = uuid.NewString()
-	demo.CreatedAt, demo.UpdatedAt = time.Now(), time.Now()
-	demo.Upvotes, demo.Downvotes = 0, 0
+	if demo.ID == nil {
+		demoID := uuid.NewString()
+		demo.ID = &demoID
+	}
+	if demo.CreatedAt == nil || demo.UpdatedAt == nil {
+		currentTime := time.Now()
+		demo.CreatedAt, demo.UpdatedAt = &currentTime, &currentTime
+	}
+	if demo.Upvotes == nil || demo.Downvotes == nil {
+		zero := uint(0)
+		demo.Upvotes, demo.Downvotes = &zero, &zero
+	}
 
 	// TODO: Service that sends a POST request to create a new Thread and a new Message
 
 	newDemo, err := h.repository.CreateDemo(demo)
 	if err != nil {
-		h.logger.Printf("Error in CreateAsset operation \n%s", err)
-		return c.String(http.StatusInternalServerError, "Error in CreateAsset repository")
+		h.logger.Printf("Error in CreateDemo repository \n%s", err)
+		return c.String(http.StatusInternalServerError, "Error in CreateDemo repository")
 	}
 
 	return c.JSON(http.StatusOK, &newDemo)
@@ -67,13 +77,13 @@ func (h *DemoHandler) GetDemoById(c echo.Context) error {
 	id := c.Param("id")
 
 	demo, err := h.repository.FindDemoByID(id)
-	if err.Error() == "Not Found" {
-		h.logger.Printf("Error: Demos not found!\n%s", err)
-		return c.String(http.StatusNotFound, "Error: Demos not found!")
-	}
 	if err != nil {
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Demos not found!\n%s", err)
+			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		}
 		h.logger.Printf("Error in FindDemoByID repository \n%s", err)
-		return c.String(http.StatusInternalServerError, "Error in UpdateAsset repository")
+		return c.String(http.StatusInternalServerError, "Error in UpdateDemo repository")
 	}
 
 	return c.JSON(http.StatusOK, &demo)
@@ -88,11 +98,11 @@ func (h *DemoHandler) GetDemoById(c echo.Context) error {
 // @Router		/v1/demo/ [get]
 func (h *DemoHandler) GetDemos(c echo.Context) error {
 	demos, err := h.repository.FindDemos()
-	if err.Error() == "Not Found" {
-		h.logger.Printf("Error: Demos not found!\n%s", err)
-		return c.String(http.StatusNotFound, "Error: Demos not found!")
-	}
 	if err != nil {
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Demos not found!\n%s", err)
+			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		}
 		h.logger.Printf("Error in FindDemos operation \n%s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindDemos operation")
 	}
@@ -109,7 +119,7 @@ func (h *DemoHandler) GetDemos(c echo.Context) error {
 // @Success	200		{object}	ResponseHTTP{data=models.Demo}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/demo/{id} [patch]
+// @Router		/v1/demo/protected/{id} [patch]
 func (h *DemoHandler) PatchDemo(c echo.Context) error {
 	var demo models.Demo
 
@@ -120,16 +130,20 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 		h.logger.Printf("Error in PatchDemo handler \n%s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchDemo handler")
 	}
-	demo.UpdatedAt = time.Now()
+
+	if demo.UpdatedAt == nil {
+		currentTime := time.Now()
+		demo.UpdatedAt = &currentTime
+	}
 
 	// TODO: Update Thread and its initial Message when its Demo updates
 
 	updDemo, err := h.repository.UpdateDemo(id, demo)
-	if err.Error() == "Not Found" {
-		h.logger.Printf("Error: Demo not found!\n%s", err)
-		return c.String(http.StatusNotFound, "Error: Demo not found!")
-	}
 	if err != nil {
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Demos not found!\n%s", err)
+			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		}
 		h.logger.Printf("Error in UpdateDemo repository \n%s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateDemo repository")
 	}
@@ -145,18 +159,18 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/demo/{id} [delete]
+// @Router		/v1/demo/protected/{id} [delete]
 func (h *DemoHandler) DeleteDemo(c echo.Context) error {
 	id := c.Param("id")
 
 	// TODO: Delete the respective Thread and the initial Message?
 
 	err := h.repository.DeleteDemo(id)
-	if err.Error() == "Not Found" {
-		h.logger.Printf("Error: Demo not found!\n%s", err)
-		return c.String(http.StatusNotFound, "Error: Demo not found!")
-	}
 	if err != nil {
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Demos not found!\n%s", err)
+			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		}
 		h.logger.Printf("Error in DeleteDemo repository \n%s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteDemo repository")
 	}
