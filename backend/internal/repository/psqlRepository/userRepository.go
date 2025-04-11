@@ -30,11 +30,11 @@ func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".users
-			(id, username, displayName, email, password, roleID, createdAt, karma) 
+			(id, username, "displayName", email, password, "roleID", "createdAt", karma) 
 		VALUES
 			($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING
-			(id, username, displayName, email, password, roleID, createdAt, karma)`,
+			(id, username, "displayName", email, password, "roleID", "createdAt", karma)`,
 		user.ID, user.Username, user.DisplayName, user.Email, user.Password,
 		user.RoleID, user.CreatedAt, user.Karma,
 	).Scan(&user)
@@ -102,10 +102,10 @@ func (r *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.Us
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE "user".users SET 
-		username=$1, display_name=$2, email=$3, password=$4, role_id=$5, created_at=$6, karma=$7
+		username=$1, "displayName"=$2, email=$3, password=$4, "roleID"=$5, "createdAt"=$6, karma=$7
 		WHERE id = $8
 		RETURNING
-		(id, username, displayName, email, password, roleID, createdAt, karma)`,
+		(id, username, "displayName", email, password, "roleID", "createdAt", karma)`,
 		user.Username, user.DisplayName, user.Email, user.Password,
 		user.RoleID, user.CreatedAt, user.Karma, id,
 	).Scan(&user)
@@ -219,11 +219,11 @@ func (r *PsqlUserRepository) CreateSession(session models.Session) (*models.Sess
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".sessions
-		(id, userID) 
+		(id, "userID") 
 		VALUES
 		($1, $2)
 		RETURNING
-		(id, userID)`,
+		(id, "userID")`,
 		session.ID, session.UserID,
 	).Scan(&session.ID, &session.UserID)
 	if err != nil {

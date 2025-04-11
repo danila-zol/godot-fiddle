@@ -136,11 +136,11 @@ func (r *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.threads
-		(id, title, userID, topicID, tags, createdAt, lastUpdate, totalUpvotes, totalDownvotes) 
+		(id, title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes") 
 		VALUES
 		($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING
-		(id, title, userID, topicID, tags, createdAt, lastUpdate, totalUpvotes, totalDownvotes)`,
+		(id, title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes")`,
 		thread.ID, thread.Title, thread.UserID, thread.TopicID, thread.Tags,
 		thread.CreatedAt, thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes,
 	).Scan(&thread)
@@ -210,10 +210,10 @@ func (r *PsqlForumRepository) UpdateThread(id string, thread models.Thread) (*mo
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.threads SET 
-		name=$1, userID=$2, topicID=$3, tag=$4, createdAt=$5, lastUpdate=$6, totalUpvotes=$7, totalDownvotes=$8
+		name=$1, "userID"=$2, "topicID"=$3, tag=$4, "createdAt"=$5, "lastUpdate"=$6, "totalUpvotes"=$7, "totalDownvotes"=$8
 		WHERE id = $9
 		RETURNING
-		(id, title, userID, topicID, tags, createdAt, lastUpdate, totalUpvotes, totalDownvotes)`,
+		(id, title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes")`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags, thread.CreatedAt,
 		thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes, thread.ID,
 	).Scan(&thread)
@@ -249,11 +249,11 @@ func (r *PsqlForumRepository) CreateMessage(message models.Message) (*models.Mes
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.messages
-		(id, threadID, userID, title, body, tags, createdAt, updatedAt, upvotes, downvotes) 
+		(id, "threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes) 
 		VALUES
 		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING
-		(id, threadID, userID, title, body, tags, createdAt, updatedAt, upvotes, downvotes)`,
+		(id, "threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes)`,
 		message.ID, message.ThreadID, message.UserID, message.Title, message.Body,
 		message.Tags, message.CreatedAt, message.UpdatedAt, message.Upvotes,
 		message.Downvotes,
@@ -358,10 +358,10 @@ func (r *PsqlForumRepository) UpdateMessage(id string, message models.Message) (
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.messages SET 
-		threadID=$1, userID=$2, title=$3, body=$4, tags=$5, createdAt=$6, updatedAt=$7, upvotes=$8, downvotes=$9
+		"threadID"=$1, "userID"=$2, title=$3, body=$4, tags=$5, "createdAt"=$6, "updatedAt"=$7, upvotes=$8, downvotes=$9
 		WHERE id = $10
 		RETURNING
-		(id, threadID, userID, title, body, tags, createdAt, updatedAt, upvotes, downvotes)`,
+		(id, "threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes)`,
 		message.ThreadID, message.UserID, message.Title, message.Body,
 		message.Tags, message.CreatedAt, message.UpdatedAt, message.Upvotes,
 		message.Downvotes, message.ID,
