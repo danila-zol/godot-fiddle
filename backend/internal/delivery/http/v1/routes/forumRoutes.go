@@ -17,9 +17,9 @@ func NewForumRoutes(h *handlers.ForumHandler) *ForumRoutes {
 }
 
 func (r *ForumRoutes) InitRoutes(e *echo.Echo) {
-	topicGroup := e.Group("/v1/topic")
+	topicGroup := e.Group("/game-hangar/v1/topics")
 
-	protectedTopicGroup := topicGroup.Group("/protected")
+	protectedTopicGroup := topicGroup.Group("")
 
 	protectedTopicGroup.POST("", r.handler.PostTopic)
 	topicGroup.GET("/:id", r.handler.GetTopicById)
@@ -27,9 +27,9 @@ func (r *ForumRoutes) InitRoutes(e *echo.Echo) {
 	protectedTopicGroup.PATCH("/:id", r.handler.PatchTopic)
 	protectedTopicGroup.DELETE("/:id", r.handler.DeleteTopic)
 
-	threadGroup := e.Group("/v1/thread")
+	threadGroup := e.Group("/game-hangar/v1/threads")
 
-	protectedThreadGroup := threadGroup.Group("/protected")
+	protectedThreadGroup := threadGroup.Group("")
 
 	protectedThreadGroup.POST("", r.handler.PostThread)
 	threadGroup.GET("/:id", r.handler.GetThreadById)
@@ -37,9 +37,9 @@ func (r *ForumRoutes) InitRoutes(e *echo.Echo) {
 	protectedThreadGroup.PATCH("/:id", r.handler.PatchThread)
 	protectedThreadGroup.DELETE("/:id", r.handler.DeleteThread)
 
-	messageGroup := e.Group("/v1/message")
+	messageGroup := e.Group("/game-hangar/v1/messages")
 
-	protectedMessageGroup := messageGroup.Group("/protected")
+	protectedMessageGroup := messageGroup.Group("")
 
 	protectedMessageGroup.POST("", r.handler.PostMessage)
 	messageGroup.GET("/:id", r.handler.GetMessageById)

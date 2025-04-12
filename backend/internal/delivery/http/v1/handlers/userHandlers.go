@@ -30,7 +30,7 @@ func NewUserHandler(e *echo.Echo, repo UserRepository) *UserHandler {
 // @Success	200		{object}	ResponseHTTP{data=models.User}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/user/ [post]
+// @Router		/v1/users [post]
 func (h *UserHandler) PostUser(c echo.Context) error {
 	var user models.User
 
@@ -52,10 +52,10 @@ func (h *UserHandler) PostUser(c echo.Context) error {
 		zero := 0
 		user.Karma = &zero
 	}
-	if user.Verified == nil {
-		f := false
-		user.Verified = &f
-	}
+	// if user.Verified == nil {
+	// 	f := false
+	// 	user.Verified = &f
+	// }
 	// TODO: Create Salt for user's password
 
 	newUser, err := h.repository.CreateUser(user)
@@ -75,7 +75,7 @@ func (h *UserHandler) PostUser(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=models.User}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/user/{id} [get]
+// @Router		/v1/users/{id} [get]
 func (h *UserHandler) GetUserById(c echo.Context) error {
 	id := c.Param("id")
 
@@ -98,7 +98,7 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=[]models.User}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/user/ [get]
+// @Router		/v1/users [get]
 func (h *UserHandler) GetUsers(c echo.Context) error {
 	users, err := h.repository.FindUsers()
 	if err != nil {
@@ -117,12 +117,12 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 // @Tags		Users
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id	path		string	true	"Update User of ID"
+// @Param		id		path		string		true	"Update User of ID"
 // @Param		User	body		models.User	true	"Update User"
 // @Success	200		{object}	ResponseHTTP{data=models.User}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/user/protected/{id} [patch]
+// @Router		/v1/users/{id} [patch]
 func (h *UserHandler) PatchUser(c echo.Context) error {
 	var user models.User
 
@@ -155,7 +155,7 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/user/protected/{id} [delete]
+// @Router		/v1/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c echo.Context) error {
 	id := c.Param("id")
 
@@ -180,7 +180,7 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 // @Success	200		{object}	ResponseHTTP{data=models.Role}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/role/ [post]
+// @Router		/v1/roles [post]
 func (h *UserHandler) PostRole(c echo.Context) error {
 	var role models.Role
 
@@ -212,7 +212,7 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=models.Role}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/role/{id} [get]
+// @Router		/v1/roles/{id} [get]
 func (h *UserHandler) GetRoleById(c echo.Context) error {
 	id := c.Param("id")
 
@@ -233,12 +233,12 @@ func (h *UserHandler) GetRoleById(c echo.Context) error {
 // @Tags		Roles
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id	path		string	true	"Update Role of ID"
+// @Param		id		path		string		true	"Update Role of ID"
 // @Param		Role	body		models.Role	true	"Update Role"
 // @Success	200		{object}	ResponseHTTP{data=models.Role}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/role/protected/{id} [patch]
+// @Router		/v1/roles/{id} [patch]
 func (h *UserHandler) PatchRole(c echo.Context) error {
 	var role models.Role
 
@@ -271,7 +271,7 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/role/protected/{id} [delete]
+// @Router		/v1/roles/{id} [delete]
 func (h *UserHandler) DeleteRole(c echo.Context) error {
 	id := c.Param("id")
 
@@ -296,7 +296,7 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 // @Success	200		{object}	ResponseHTTP{data=models.Session}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/session/ [post]
+// @Router		/v1/sessions [post]
 func (h *UserHandler) PostSession(c echo.Context) error {
 	var session models.Session
 
@@ -328,7 +328,7 @@ func (h *UserHandler) PostSession(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=models.Session}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/session/{id} [get]
+// @Router		/v1/sessions/{id} [get]
 func (h *UserHandler) GetSessionById(c echo.Context) error {
 	id := c.Param("id")
 
@@ -353,7 +353,7 @@ func (h *UserHandler) GetSessionById(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/session/{id} [delete]
+// @Router		/v1/sessions/{id} [delete]
 func (h *UserHandler) DeleteSession(c echo.Context) error {
 	id := c.Param("id")
 

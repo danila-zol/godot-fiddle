@@ -30,7 +30,7 @@ func NewAssetHandler(e *echo.Echo, repo AssetRepository) *AssetHandler {
 // @Success	200		{object}	ResponseHTTP{data=models.Asset}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/asset/protected [post]
+// @Router		/v1/assets [post]
 func (h *AssetHandler) PostAsset(c echo.Context) error {
 	var asset models.Asset
 
@@ -68,7 +68,7 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=models.Asset}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/asset/{id} [get]
+// @Router		/v1/assets/{id} [get]
 func (h *AssetHandler) GetAssetById(c echo.Context) error {
 	id := c.Param("id")
 
@@ -91,7 +91,7 @@ func (h *AssetHandler) GetAssetById(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=[]models.Asset}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/asset [get]
+// @Router		/v1/assets [get]
 func (h *AssetHandler) GetAssets(c echo.Context) error {
 	assets, err := h.repository.FindAssets()
 	if err != nil {
@@ -110,12 +110,12 @@ func (h *AssetHandler) GetAssets(c echo.Context) error {
 // @Tags		Assets
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id	path		string	true	"Update Asset of ID"
+// @Param		id		path		string			true	"Update Asset of ID"
 // @Param		Asset	body		models.Asset	true	"Update Asset"
 // @Success	200		{object}	ResponseHTTP{data=models.Asset}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/asset/protected/{id} [patch]
+// @Router		/v1/assets/{id} [patch]
 func (h *AssetHandler) PatchAsset(c echo.Context) error {
 	var asset models.Asset
 	id := c.Param("id")
@@ -146,7 +146,7 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/asset/protected/{id} [delete]
+// @Router		/v1/assets/{id} [delete]
 func (h *AssetHandler) DeleteAsset(c echo.Context) error {
 	id := c.Param("id")
 

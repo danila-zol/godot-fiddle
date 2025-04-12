@@ -17,9 +17,9 @@ func NewAssetRoutes(h *handlers.AssetHandler) *AssetRoutes {
 }
 
 func (r *AssetRoutes) InitRoutes(e *echo.Echo) {
-	assetGroup := e.Group("/v1/asset")
+	assetGroup := e.Group("/game-hangar/v1/assets")
 
-	protectedAssetGroup := assetGroup.Group("/protected")
+	protectedAssetGroup := assetGroup.Group("")
 
 	protectedAssetGroup.POST("", r.handler.PostAsset)
 	assetGroup.GET("/:id", r.handler.GetAssetById)

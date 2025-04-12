@@ -30,7 +30,7 @@ func NewDemoHandler(e *echo.Echo, repo DemoRepository) *DemoHandler {
 // @Success	200		{object}	ResponseHTTP{data=models.Demo}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/demo/ [post]
+// @Router		/v1/demos [post]
 func (h *DemoHandler) PostDemo(c echo.Context) error {
 	var demo models.Demo
 
@@ -72,7 +72,7 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=models.Demo}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/demo/{id} [get]
+// @Router		/v1/demos/{id} [get]
 func (h *DemoHandler) GetDemoById(c echo.Context) error {
 	id := c.Param("id")
 
@@ -95,7 +95,7 @@ func (h *DemoHandler) GetDemoById(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=[]models.Demo}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/demo/ [get]
+// @Router		/v1/demos [get]
 func (h *DemoHandler) GetDemos(c echo.Context) error {
 	demos, err := h.repository.FindDemos()
 	if err != nil {
@@ -114,12 +114,12 @@ func (h *DemoHandler) GetDemos(c echo.Context) error {
 // @Tags		Demos
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id	path		string	true	"Update Demo of ID"
+// @Param		id		path		string		true	"Update Demo of ID"
 // @Param		Demo	body		models.Demo	true	"Update Demo"
 // @Success	200		{object}	ResponseHTTP{data=models.Demo}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/demo/protected/{id} [patch]
+// @Router		/v1/demos/{id} [patch]
 func (h *DemoHandler) PatchDemo(c echo.Context) error {
 	var demo models.Demo
 
@@ -159,7 +159,7 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/demo/protected/{id} [delete]
+// @Router		/v1/demos/{id} [delete]
 func (h *DemoHandler) DeleteDemo(c echo.Context) error {
 	id := c.Param("id")
 

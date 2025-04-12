@@ -30,7 +30,7 @@ func NewForumHandler(e *echo.Echo, repo ForumRepository) *ForumHandler {
 // @Success	200		{object}	ResponseHTTP{data=models.Topic}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/topic/protected [post]
+// @Router		/v1/topics [post]
 func (h *ForumHandler) PostTopic(c echo.Context) error {
 	var topic models.Topic
 
@@ -62,7 +62,7 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=models.Topic}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/topic/{id} [get]
+// @Router		/v1/topics/{id} [get]
 func (h *ForumHandler) GetTopicById(c echo.Context) error {
 	id := c.Param("id")
 
@@ -85,7 +85,7 @@ func (h *ForumHandler) GetTopicById(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=[]models.Topic}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/topic [get]
+// @Router		/v1/topics [get]
 func (h *ForumHandler) GetTopics(c echo.Context) error {
 	topics, err := h.repository.FindTopics()
 	if err != nil {
@@ -104,12 +104,12 @@ func (h *ForumHandler) GetTopics(c echo.Context) error {
 // @Tags		Topics
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id	path		string	true	"Update Topic of ID"
+// @Param		id		path		string			true	"Update Topic of ID"
 // @Param		Topic	body		models.Topic	true	"Update Topic"
 // @Success	200		{object}	ResponseHTTP{data=models.Topic}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/topic/protected/{id} [patch]
+// @Router		/v1/topics/{id} [patch]
 func (h *ForumHandler) PatchTopic(c echo.Context) error {
 	var topic models.Topic
 	id := c.Param("id")
@@ -140,7 +140,7 @@ func (h *ForumHandler) PatchTopic(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/topic/protected/{id} [delete]
+// @Router		/v1/topics/{id} [delete]
 func (h *ForumHandler) DeleteTopic(c echo.Context) error {
 	id := c.Param("id")
 
@@ -165,7 +165,7 @@ func (h *ForumHandler) DeleteTopic(c echo.Context) error {
 // @Success	200		{object}	ResponseHTTP{data=models.Thread}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/thread/protected [post]
+// @Router		/v1/threads [post]
 func (h *ForumHandler) PostThread(c echo.Context) error {
 	var thread models.Thread
 
@@ -205,7 +205,7 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=models.Thread}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/thread/{id} [get]
+// @Router		/v1/threads/{id} [get]
 func (h *ForumHandler) GetThreadById(c echo.Context) error {
 	id := c.Param("id")
 
@@ -228,7 +228,7 @@ func (h *ForumHandler) GetThreadById(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=[]models.Thread}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/thread [get]
+// @Router		/v1/threads [get]
 func (h *ForumHandler) GetThreads(c echo.Context) error {
 	threads, err := h.repository.FindThreads()
 	if err != nil {
@@ -247,12 +247,12 @@ func (h *ForumHandler) GetThreads(c echo.Context) error {
 // @Tags		Threads
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id	path		string	true	"Update Thread of ID"
+// @Param		id		path		string			true	"Update Thread of ID"
 // @Param		Thread	body		models.Thread	true	"Update Thread"
 // @Success	200		{object}	ResponseHTTP{data=models.Thread}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/thread/protected/{id} [patch]
+// @Router		/v1/threads/{id} [patch]
 func (h *ForumHandler) PatchThread(c echo.Context) error {
 	var thread models.Thread
 	id := c.Param("id")
@@ -288,7 +288,7 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/thread/protected/{id} [delete]
+// @Router		/v1/threads/{id} [delete]
 func (h *ForumHandler) DeleteThread(c echo.Context) error {
 	id := c.Param("id")
 
@@ -313,7 +313,7 @@ func (h *ForumHandler) DeleteThread(c echo.Context) error {
 // @Success	200		{object}	ResponseHTTP{data=models.Message}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/message/protected [post]
+// @Router		/v1/messages [post]
 func (h *ForumHandler) PostMessage(c echo.Context) error {
 	var message models.Message
 
@@ -353,7 +353,7 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=models.Message}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/message/{id} [get]
+// @Router		/v1/messages/{id} [get]
 func (h *ForumHandler) GetMessageById(c echo.Context) error {
 	id := c.Param("id")
 
@@ -376,7 +376,7 @@ func (h *ForumHandler) GetMessageById(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{data=[]models.Message}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/message [get]
+// @Router		/v1/messages [get]
 func (h *ForumHandler) GetMessages(c echo.Context) error {
 	messages, err := h.repository.FindMessages()
 	if err != nil {
@@ -395,12 +395,12 @@ func (h *ForumHandler) GetMessages(c echo.Context) error {
 // @Tags		Messages
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id	path		string	true	"Update Message of ID"
+// @Param		id		path		string			true	"Update Message of ID"
 // @Param		Message	body		models.Message	true	"Update Message"
 // @Success	200		{object}	ResponseHTTP{data=models.Message}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/message/protected/{id} [patch]
+// @Router		/v1/messages/{id} [patch]
 func (h *ForumHandler) PatchMessage(c echo.Context) error {
 	var message models.Message
 	id := c.Param("id")
@@ -435,7 +435,7 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/message/protected/{id} [delete]
+// @Router		/v1/messages/{id} [delete]
 func (h *ForumHandler) DeleteMessage(c echo.Context) error {
 	id := c.Param("id")
 

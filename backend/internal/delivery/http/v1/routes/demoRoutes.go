@@ -17,9 +17,9 @@ func NewDemoRoutes(h *handlers.DemoHandler) *DemoRoutes {
 }
 
 func (r *DemoRoutes) InitRoutes(e *echo.Echo) {
-	demoGroup := e.Group("/v1/demo")
+	demoGroup := e.Group("/game-hangar/v1/demos")
 
-	protectedDemoGroup := demoGroup.Group("/protected")
+	protectedDemoGroup := demoGroup.Group("")
 
 	protectedDemoGroup.POST("", r.handler.PostDemo)
 	demoGroup.GET("/:id", r.handler.GetDemoById)

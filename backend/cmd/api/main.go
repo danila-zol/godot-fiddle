@@ -47,7 +47,7 @@ func getEnv() {
 // @description	A backend for Game Hangar game prototyping web service
 // @contact.name	Mikhail Pecherkin
 // @contact.email	m.pecherkin.sas@gmail.com
-// @BasePath		/
+// @BasePath		/game-hangar
 func main() {
 	e := echo.New()
 	getEnv()

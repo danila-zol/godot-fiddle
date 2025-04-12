@@ -11,7 +11,7 @@ import (
 func (app *application) routes(e *echo.Echo) *echo.Router {
 	router := echo.NewRouter(e)
 
-	e.GET("/docs/*", echoSwagger.WrapHandler)
+	e.GET("/game-hangar/docs/*", echoSwagger.WrapHandler)
 
 	return router
 }
