@@ -23,17 +23,20 @@ type PsqlDatabaseClient struct {
 	ConnPool   *pgxpool.Pool // nil until Setup() is called
 }
 
-func (p PsqlDatabase) NewDatabaseClient(connstring string, config *psqlDatabseConfig.PsqlDatabaseConfig) *PsqlDatabaseClient {
+func (p PsqlDatabase) NewDatabaseClient(connstring string, config *psqlDatabseConfig.PsqlDatabaseConfig) (*PsqlDatabaseClient, error) {
 	var dbClient = &PsqlDatabaseClient{
 		config:     config,
 		connstring: connstring,
 	}
 
-	return dbClient
+	err := p.setup(dbClient)
+	if err != nil {
+		return nil, err
+	}
+	return dbClient, nil
 }
 
-// TODO: nil ConnPool seems to be a bad design
-func (p PsqlDatabase) Setup(pdc *PsqlDatabaseClient) error {
+func (p PsqlDatabase) setup(pdc *PsqlDatabaseClient) error {
 	var err error
 
 	pdc.ConnPool, err = pgxpool.New(context.Background(), pdc.connstring)

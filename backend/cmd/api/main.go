@@ -31,8 +31,7 @@ type DatabaseConfigCreator interface {
 }
 
 type databaseClientCreator interface {
-	NewDatabaseClient(connstring string, config *config.DatabaseConfig) any
-	Setup() error
+	NewDatabaseClient(connstring string, config *config.DatabaseConfig) (any, error)
 }
 
 func getEnv() {
@@ -70,10 +69,9 @@ func main() {
 	if err != nil {
 		app.logger.Fatalf("Error loading PSQL database Config: %v", err)
 	}
-	databaseClient := psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
+	databaseClient, err := psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
 		os.Getenv("PSQL_CONNSTRING"), databaseConfig,
 	)
-	err = psqlDatabase.PsqlDatabase{}.Setup(databaseClient)
 	if err != nil {
 		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
 	}
