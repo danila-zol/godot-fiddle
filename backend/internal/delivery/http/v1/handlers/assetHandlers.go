@@ -36,7 +36,7 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 
 	err := c.Bind(&asset)
 	if err != nil {
-		h.logger.Printf("Error in PostAsset handler \n%s", err)
+		h.logger.Printf("Error in PostAsset handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostAsset handler")
 	}
 
@@ -53,7 +53,7 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 
 	newAsset, err := h.repository.CreateAsset(asset)
 	if err != nil {
-		h.logger.Printf("Error in CreateAsset repository \n%s", err)
+		h.logger.Printf("Error in CreateAsset repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateAsset repository")
 	}
 
@@ -75,10 +75,10 @@ func (h *AssetHandler) GetAssetById(c echo.Context) error {
 	asset, err := h.repository.FindAssetByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Asset not found!\n%s", err)
+			h.logger.Printf("Error: Asset not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in FindAssetByID repository \n%s", err)
+		h.logger.Printf("Error in FindAssetByID repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindAssetByID repository")
 	}
 
@@ -96,10 +96,10 @@ func (h *AssetHandler) GetAssets(c echo.Context) error {
 	assets, err := h.repository.FindAssets()
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Asset not found!\n%s", err)
+			h.logger.Printf("Error: Asset not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in FindFirstAsset repository \n%s", err)
+		h.logger.Printf("Error in FindFirstAsset repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindAssets repository")
 	}
 
@@ -121,17 +121,17 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 	id := c.Param("id")
 
 	if err := c.Bind(&asset); err != nil {
-		h.logger.Printf("Error in PatchAsset handler \n%s", err)
+		h.logger.Printf("Error in PatchAsset handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchAsset handler")
 	}
 
 	updAsset, err := h.repository.UpdateAsset(id, asset)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Asset not found!\n%s", err)
+			h.logger.Printf("Error: Asset not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in UpdateAsset repository \n%s", err)
+		h.logger.Printf("Error in UpdateAsset repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateAsset repository")
 	}
 
@@ -153,10 +153,10 @@ func (h *AssetHandler) DeleteAsset(c echo.Context) error {
 	err := h.repository.DeleteAsset(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Asset not found!\n%s", err)
+			h.logger.Printf("Error: Asset not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in DeleteAsset repository \n%s", err)
+		h.logger.Printf("Error in DeleteAsset repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteAsset repository")
 	}
 

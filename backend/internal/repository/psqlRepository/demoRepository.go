@@ -31,13 +31,13 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO demo.demos
-		(id, name, description, link, "userID", "createdAt", "updatedAt", upvotes, downvotes, "threadID") 
+		(id, title, description, link, "userID", tags, "createdAt", "updatedAt", upvotes, downvotes, "threadID") 
 		VALUES
-		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING
-		(id, name, description, link, "userID", "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,
-		demo.ID, demo.Name, demo.Description, demo.Link, demo.UserID,
-		demo.CreatedAt, demo.UpdatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID,
+		(id, title, description, link, "userID", tags, "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,
+		demo.ID, demo.Title, demo.Description, demo.Link, demo.UserID, demo.Tags,
+		demo.UpdatedAt, demo.CreatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID,
 	).Scan(&demo)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (r *PsqlDemoRepository) FindDemoByID(id string) (*models.Demo, error) {
 	err = conn.QueryRow(context.Background(),
 		`SELECT * FROM demo.demos WHERE id = $1 LIMIT 1`,
 		id,
-	).Scan(&demo.ID, &demo.Name, &demo.Description, &demo.Link, &demo.UserID,
+	).Scan(&demo.ID, &demo.Title, &demo.Description, &demo.Link, &demo.UserID,
 		&demo.CreatedAt, &demo.UpdatedAt, &demo.Upvotes, &demo.Downvotes, &demo.ThreadID)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (r *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var demo models.Demo
-		err = rows.Scan(&demo.ID, &demo.Name, &demo.Description, &demo.Link, &demo.UserID,
+		err = rows.Scan(&demo.ID, &demo.Title, &demo.Description, &demo.Link, &demo.UserID,
 			&demo.CreatedAt, &demo.UpdatedAt, &demo.Upvotes, &demo.Downvotes, &demo.ThreadID)
 		if err != nil {
 			return nil, err
@@ -103,13 +103,13 @@ func (r *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.De
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE demo.demos SET 
-		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), "userID"=COALESCE($4, "userID"),
-		"createdAt"=COALESCE($5, "createdAt"), "updatedAt"=COALESCE($6, "updatedAt"), upvotes=COALESCE($7, upvotes), 
-		downvotes=COALESCE($8, downvotes), "threadID"=COALESCE($9, "threadID") 
-		WHERE id = $10
+		title=COALESCE($1, title), description=COALESCE($2, description), link=COALESCE($3, link), "userID"=COALESCE($4, "userID"), tags=COALESCE($5, tags)
+		"createdAt"=COALESCE($6, "createdAt"), "updatedAt"=COALESCE($7, "updatedAt"), upvotes=COALESCE($8, upvotes), 
+		downvotes=COALESCE($9, downvotes), "threadID"=COALESCE($10, "threadID") 
+		WHERE id = $11
 		RETURNING
-		(id, name, description, link, "userID", "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,
-		demo.Name, demo.Description, demo.Link, demo.UserID, demo.CreatedAt,
+		(id, name, description, link, "userID", tags, "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,
+		demo.Title, demo.Description, demo.Link, demo.UserID, demo.CreatedAt,
 		demo.UpdatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID, id,
 	).Scan(&demo)
 	if err != nil {

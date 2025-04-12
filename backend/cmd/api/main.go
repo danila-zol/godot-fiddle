@@ -7,6 +7,7 @@ import (
 	"gamehangar/internal/delivery/http/v1/handlers"
 	"gamehangar/internal/delivery/http/v1/routes"
 	"gamehangar/internal/repository/psqlRepository"
+	"gamehangar/internal/services"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -81,13 +82,14 @@ func main() {
 	assetHandler := handlers.NewAssetHandler(e, assetRepo)
 	routes.NewAssetRoutes(assetHandler).InitRoutes(app.echo)
 
-	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient)
-	demoHandler := handlers.NewDemoHandler(e, demoRepo)
-	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
-
 	forumRepo := psqlRepository.NewPsqlForumRepository(databaseClient)
 	forumHandler := handlers.NewForumHandler(e, forumRepo)
 	routes.NewForumRoutes(forumHandler).InitRoutes(app.echo)
+
+	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient)
+	demoThreadSyncer := services.NewThreadSyncer(forumRepo, "test-demo-id")
+	demoHandler := handlers.NewDemoHandler(e, demoRepo, demoThreadSyncer)
+	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
 
 	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient)
 	userHandler := handlers.NewUserHandler(e, userRepo)

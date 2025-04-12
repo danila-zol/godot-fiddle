@@ -36,7 +36,7 @@ func (h *UserHandler) PostUser(c echo.Context) error {
 
 	err := c.Bind(&user)
 	if err != nil {
-		h.logger.Printf("Error in PostUser handler \n%s", err)
+		h.logger.Printf("Error in PostUser handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostUser handler")
 	}
 
@@ -60,7 +60,7 @@ func (h *UserHandler) PostUser(c echo.Context) error {
 
 	newUser, err := h.repository.CreateUser(user)
 	if err != nil {
-		h.logger.Printf("Error in CreateUser repository \n%s", err)
+		h.logger.Printf("Error in CreateUser repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateUser repository")
 	}
 
@@ -82,10 +82,10 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 	user, err := h.repository.FindUserByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Users not found!\n%s", err)
+			h.logger.Printf("Error: Users not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: User not found!")
 		}
-		h.logger.Printf("Error in FindUserByID repository \n%s", err)
+		h.logger.Printf("Error in FindUserByID repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateUser repository")
 	}
 
@@ -103,10 +103,10 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 	users, err := h.repository.FindUsers()
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Users not found!\n%s", err)
+			h.logger.Printf("Error: Users not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in FindUsers operation \n%s", err)
+		h.logger.Printf("Error in FindUsers operation: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindUsers operation")
 	}
 
@@ -130,17 +130,17 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 
 	err := c.Bind(&user)
 	if err != nil {
-		h.logger.Printf("Error in PatchUser handler \n%s", err)
+		h.logger.Printf("Error in PatchUser handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchUser handler")
 	}
 
 	updUser, err := h.repository.UpdateUser(id, user)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Users not found!\n%s", err)
+			h.logger.Printf("Error: Users not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in UpdateUser repository \n%s", err)
+		h.logger.Printf("Error in UpdateUser repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateUser repository")
 	}
 
@@ -162,10 +162,10 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	err := h.repository.DeleteUser(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Users not found!\n%s", err)
+			h.logger.Printf("Error: Users not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in DeleteUser repository \n%s", err)
+		h.logger.Printf("Error in DeleteUser repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteUser repository")
 	}
 
@@ -186,7 +186,7 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 
 	err := c.Bind(&role)
 	if err != nil {
-		h.logger.Printf("Error in PostRole handler \n%s", err)
+		h.logger.Printf("Error in PostRole handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostRole handler")
 	}
 
@@ -197,7 +197,7 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 
 	newRole, err := h.repository.CreateRole(role)
 	if err != nil {
-		h.logger.Printf("Error in CreateRole repository \n%s", err)
+		h.logger.Printf("Error in CreateRole repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateRole repository")
 	}
 
@@ -219,10 +219,10 @@ func (h *UserHandler) GetRoleById(c echo.Context) error {
 	role, err := h.repository.FindRoleByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Roles not found!\n%s", err)
+			h.logger.Printf("Error: Roles not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Role not found!")
 		}
-		h.logger.Printf("Error in FindRoleByID repository \n%s", err)
+		h.logger.Printf("Error in FindRoleByID repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateRole repository")
 	}
 
@@ -246,17 +246,17 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 
 	err := c.Bind(&role)
 	if err != nil {
-		h.logger.Printf("Error in PatchRole handler \n%s", err)
+		h.logger.Printf("Error in PatchRole handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchRole handler")
 	}
 
 	updRole, err := h.repository.UpdateRole(id, role)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Roles not found!\n%s", err)
+			h.logger.Printf("Error: Roles not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in UpdateRole repository \n%s", err)
+		h.logger.Printf("Error in UpdateRole repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateRole repository")
 	}
 
@@ -278,10 +278,10 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 	err := h.repository.DeleteRole(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Roles not found!\n%s", err)
+			h.logger.Printf("Error: Roles not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in DeleteRole repository \n%s", err)
+		h.logger.Printf("Error in DeleteRole repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteRole repository")
 	}
 
@@ -302,7 +302,7 @@ func (h *UserHandler) PostSession(c echo.Context) error {
 
 	err := c.Bind(&session)
 	if err != nil {
-		h.logger.Printf("Error in PostSession handler \n%s", err)
+		h.logger.Printf("Error in PostSession handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostSession handler")
 	}
 
@@ -313,7 +313,7 @@ func (h *UserHandler) PostSession(c echo.Context) error {
 
 	newSession, err := h.repository.CreateSession(session)
 	if err != nil {
-		h.logger.Printf("Error in CreateSession repository \n%s", err)
+		h.logger.Printf("Error in CreateSession repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateSession repository")
 	}
 
@@ -335,10 +335,10 @@ func (h *UserHandler) GetSessionById(c echo.Context) error {
 	session, err := h.repository.FindSessionByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Sessions not found!\n%s", err)
+			h.logger.Printf("Error: Sessions not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Session not found!")
 		}
-		h.logger.Printf("Error in FindSessionByID repository \n%s", err)
+		h.logger.Printf("Error in FindSessionByID repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateSession repository")
 	}
 
@@ -360,10 +360,10 @@ func (h *UserHandler) DeleteSession(c echo.Context) error {
 	err := h.repository.DeleteSession(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Sessions not found!\n%s", err)
+			h.logger.Printf("Error: Sessions not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
 		}
-		h.logger.Printf("Error in DeleteSession repository \n%s", err)
+		h.logger.Printf("Error in DeleteSession repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteSession repository")
 	}
 

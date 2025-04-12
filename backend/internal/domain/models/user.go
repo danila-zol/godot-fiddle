@@ -23,8 +23,8 @@ type User struct {
 	DisplayName *string `json:"displayName,omitempy"`
 	Email       *string `json:"email,omitempy"`
 	// Verified    *bool      `json:"verified,omitempty"` // TODO: Verification endpoint
-	Password  *string    `json:"password"`
-	Salt      *string    `json:"-"`
+	Password *string `json:"password"`
+	// Salt      *string    `json:"-"`
 	RoleID    *string    `json:"roleID,omitempy"`
 	CreatedAt *time.Time `json:"createdAt,omitzero"`
 	Karma     *int       `json:"karma,omitempy"`

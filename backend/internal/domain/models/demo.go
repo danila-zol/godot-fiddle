@@ -4,8 +4,9 @@ import "time"
 
 type Demo struct {
 	ID          *string    `json:"id,omitempty"`
-	Name        *string    `json:"name,omitempty"`
+	Title       *string    `json:"title,omitempty"`
 	Description *string    `json:"description,omitempty"`
+	Tags        *[]string  `json:"tags,omitempty"`
 	Link        *string    `json:"link,omitempty"` // Links to an S3 bucket
 	UserID      *string    `json:"userID,omitempty"`
 	CreatedAt   *time.Time `json:"createdAt,omitzero"`

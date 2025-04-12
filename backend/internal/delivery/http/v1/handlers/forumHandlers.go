@@ -36,7 +36,7 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 
 	err := c.Bind(&topic)
 	if err != nil {
-		h.logger.Printf("Error in PostTopic handler \n%s", err)
+		h.logger.Printf("Error in PostTopic handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostTopic handler")
 	}
 
@@ -47,7 +47,7 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 
 	newTopic, err := h.repository.CreateTopic(topic)
 	if err != nil {
-		h.logger.Printf("Error in CreateTopic repository \n%s", err)
+		h.logger.Printf("Error in CreateTopic repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateTopic repository")
 	}
 
@@ -69,10 +69,10 @@ func (h *ForumHandler) GetTopicById(c echo.Context) error {
 	topic, err := h.repository.FindTopicByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Topic not found!\n%s", err)
+			h.logger.Printf("Error: Topic not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Topic not found!")
 		}
-		h.logger.Printf("Error in FindTopicByID repository \n%s", err)
+		h.logger.Printf("Error in FindTopicByID repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindTopicByID repository")
 	}
 
@@ -90,10 +90,10 @@ func (h *ForumHandler) GetTopics(c echo.Context) error {
 	topics, err := h.repository.FindTopics()
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Topic not found!\n%s", err)
+			h.logger.Printf("Error: Topic not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Topic not found!")
 		}
-		h.logger.Printf("Error in FindFirstTopic repository \n%s", err)
+		h.logger.Printf("Error in FindFirstTopic repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindTopics repository")
 	}
 
@@ -115,17 +115,17 @@ func (h *ForumHandler) PatchTopic(c echo.Context) error {
 	id := c.Param("id")
 
 	if err := c.Bind(&topic); err != nil {
-		h.logger.Printf("Error in PatchTopic handler \n%s", err)
+		h.logger.Printf("Error in PatchTopic handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchTopic handler")
 	}
 
 	updTopic, err := h.repository.UpdateTopic(id, topic)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Topic not found!\n%s", err)
+			h.logger.Printf("Error: Topic not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Topic not found!")
 		}
-		h.logger.Printf("Error in UpdateTopic repository \n%s", err)
+		h.logger.Printf("Error in UpdateTopic repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateTopic repository")
 	}
 
@@ -147,10 +147,10 @@ func (h *ForumHandler) DeleteTopic(c echo.Context) error {
 	err := h.repository.DeleteTopic(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Topic not found!\n%s", err)
+			h.logger.Printf("Error: Topic not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Topic not found!")
 		}
-		h.logger.Printf("Error in DeleteTopic repository \n%s", err)
+		h.logger.Printf("Error in DeleteTopic repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteTopic repository")
 	}
 
@@ -171,7 +171,7 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 
 	err := c.Bind(&thread)
 	if err != nil {
-		h.logger.Printf("Error in PostThread handler \n%s", err)
+		h.logger.Printf("Error in PostThread handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostThread handler")
 	}
 
@@ -190,7 +190,7 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 
 	newThread, err := h.repository.CreateThread(thread)
 	if err != nil {
-		h.logger.Printf("Error in CreateThread repository \n%s", err)
+		h.logger.Printf("Error in CreateThread repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateThread repository")
 	}
 
@@ -212,10 +212,10 @@ func (h *ForumHandler) GetThreadById(c echo.Context) error {
 	thread, err := h.repository.FindThreadByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Thread not found!\n%s", err)
+			h.logger.Printf("Error: Thread not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Thread not found!")
 		}
-		h.logger.Printf("Error in FindThreadByID repository \n%s", err)
+		h.logger.Printf("Error in FindThreadByID repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindThreadByID repository")
 	}
 
@@ -233,10 +233,10 @@ func (h *ForumHandler) GetThreads(c echo.Context) error {
 	threads, err := h.repository.FindThreads()
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Thread not found!\n%s", err)
+			h.logger.Printf("Error: Thread not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Thread not found!")
 		}
-		h.logger.Printf("Error in FindFirstThread repository \n%s", err)
+		h.logger.Printf("Error in FindFirstThread repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindThreads repository")
 	}
 
@@ -258,7 +258,7 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 	id := c.Param("id")
 
 	if err := c.Bind(&thread); err != nil {
-		h.logger.Printf("Error in PatchThread handler \n%s", err)
+		h.logger.Printf("Error in PatchThread handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchThread handler")
 	}
 
@@ -270,10 +270,10 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 	updThread, err := h.repository.UpdateThread(id, thread)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Thread not found!\n%s", err)
+			h.logger.Printf("Error: Thread not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Thread not found!")
 		}
-		h.logger.Printf("Error in UpdateThread repository \n%s", err)
+		h.logger.Printf("Error in UpdateThread repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateThread repository")
 	}
 
@@ -295,10 +295,10 @@ func (h *ForumHandler) DeleteThread(c echo.Context) error {
 	err := h.repository.DeleteThread(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Thread not found!\n%s", err)
+			h.logger.Printf("Error: Thread not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Thread not found!")
 		}
-		h.logger.Printf("Error in DeleteThread repository \n%s", err)
+		h.logger.Printf("Error in DeleteThread repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteThread repository")
 	}
 
@@ -319,7 +319,7 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 
 	err := c.Bind(&message)
 	if err != nil {
-		h.logger.Printf("Error in PostMessage handler \n%s", err)
+		h.logger.Printf("Error in PostMessage handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostMessage handler")
 	}
 
@@ -338,7 +338,7 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 
 	newMessage, err := h.repository.CreateMessage(message)
 	if err != nil {
-		h.logger.Printf("Error in CreateMessage repository \n%s", err)
+		h.logger.Printf("Error in CreateMessage repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateMessage repository")
 	}
 
@@ -360,10 +360,10 @@ func (h *ForumHandler) GetMessageById(c echo.Context) error {
 	message, err := h.repository.FindMessageByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Message not found!\n%s", err)
+			h.logger.Printf("Error: Message not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Message not found!")
 		}
-		h.logger.Printf("Error in FindMessageByID repository \n%s", err)
+		h.logger.Printf("Error in FindMessageByID repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindMessageByID repository")
 	}
 
@@ -381,10 +381,10 @@ func (h *ForumHandler) GetMessages(c echo.Context) error {
 	messages, err := h.repository.FindMessages()
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Message not found!\n%s", err)
+			h.logger.Printf("Error: Message not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Message not found!")
 		}
-		h.logger.Printf("Error in FindFirstMessage repository \n%s", err)
+		h.logger.Printf("Error in FindFirstMessage repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindMessages repository")
 	}
 
@@ -406,7 +406,7 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 	id := c.Param("id")
 
 	if err := c.Bind(&message); err != nil {
-		h.logger.Printf("Error in PatchMessage handler \n%s", err)
+		h.logger.Printf("Error in PatchMessage handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchMessage handler")
 	}
 	if message.UpdatedAt == nil {
@@ -417,10 +417,10 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 	updMessage, err := h.repository.UpdateMessage(id, message)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Message not found!\n%s", err)
+			h.logger.Printf("Error: Message not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Message not found!")
 		}
-		h.logger.Printf("Error in UpdateMessage repository \n%s", err)
+		h.logger.Printf("Error in UpdateMessage repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateMessage repository")
 	}
 
@@ -442,10 +442,10 @@ func (h *ForumHandler) DeleteMessage(c echo.Context) error {
 	err := h.repository.DeleteMessage(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Message not found!\n%s", err)
+			h.logger.Printf("Error: Message not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Message not found!")
 		}
-		h.logger.Printf("Error in DeleteMessage repository \n%s", err)
+		h.logger.Printf("Error in DeleteMessage repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteMessage repository")
 	}
 

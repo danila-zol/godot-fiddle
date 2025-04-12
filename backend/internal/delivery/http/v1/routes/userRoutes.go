@@ -17,7 +17,7 @@ func NewUserRoutes(h *handlers.UserHandler) *UserRoutes {
 }
 
 func (r *UserRoutes) InitRoutes(e *echo.Echo) {
-	userGroup := e.Group("/game-hangar/v1/user")
+	userGroup := e.Group("/game-hangar/v1/users")
 
 	protectedUserGroup := userGroup.Group("")
 
