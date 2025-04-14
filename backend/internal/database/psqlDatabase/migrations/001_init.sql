@@ -12,6 +12,7 @@ CREATE TABLE "user".users (
 	"displayName" varchar(255),
 	"email" varchar(255) NOT NULL UNIQUE,
 	"password" varchar(255) NOT NULL,
+	"verified" boolean NOT NULL DEFAULT false,
 	"roleID" varchar(64) NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
 	"createdAt" timestamp NOT NULL,
 	"karma" integer NOT NULL
@@ -25,15 +26,15 @@ CREATE TABLE "user".sessions (
 CREATE SCHEMA forum;
 
 CREATE TABLE forum.topics (
-	"id" varchar(64) PRIMARY KEY,
+	"id"  integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	"name" varchar(255) NOT NULL
 );
 
 CREATE TABLE forum.threads (
-	"id" varchar(64) PRIMARY KEY,
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	"title" varchar(255) NOT NULL,
 	"userID" varchar(64) NOT NULL,
-	"topicID" varchar(64) NOT NULL REFERENCES forum.topics (id) ON DELETE CASCADE,
+	"topicID" integer NOT NULL REFERENCES forum.topics (id) ON DELETE CASCADE,
 	"tags" varchar(255)[],
 	"createdAt" timestamp NOT NULL,
 	"lastUpdate" timestamp NOT NULL,
@@ -42,8 +43,8 @@ CREATE TABLE forum.threads (
 );
 
 CREATE TABLE forum.messages (
-	"id" varchar(64) PRIMARY KEY,
-	"threadID" varchar(64) NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"threadID" integer NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
 	"userID" varchar(64) NOT NULL,
 	"title" varchar(255) NOT NULL,
 	"body" varchar NOT NULL,
@@ -57,7 +58,7 @@ CREATE TABLE forum.messages (
 CREATE SCHEMA demo;
 
 CREATE TABLE demo.demos (
-	"id" varchar(64)  PRIMARY KEY,
+	"id"  integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	"title" varchar(255) NOT NULL,
 	"description" varchar NOT NULL,
 	"tags" varchar(255)[],
@@ -67,13 +68,13 @@ CREATE TABLE demo.demos (
 	"updatedAt" timestamp NOT NULL,
 	"upvotes" integer NOT NULL,
 	"downvotes" integer NOT NULL,
-	"threadID" varchar(64) NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
+	"threadID" integer NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
 );
 
 CREATE SCHEMA asset;
 
 CREATE TABLE asset.assets (
-  "id" varchar(64) PRIMARY KEY,
+  "id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   "name" varchar(255) NOT NULL,
   "description" varchar,
   "link" varchar(255) NOT NULL,

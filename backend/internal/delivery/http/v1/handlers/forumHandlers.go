@@ -3,10 +3,10 @@ package handlers
 import (
 	"gamehangar/internal/domain/models"
 	"net/http"
+	"strconv"
 	"time"
 
 	_ "gamehangar/docs"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -40,11 +40,6 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostTopic handler")
 	}
 
-	if topic.ID == nil {
-		topicID := uuid.NewString()
-		topic.ID = &topicID
-	}
-
 	newTopic, err := h.repository.CreateTopic(topic)
 	if err != nil {
 		h.logger.Printf("Error in CreateTopic repository: %s", err)
@@ -58,15 +53,19 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 // @Tags		Topics
 // @Accept		text/plain
 // @Produce	application/json
-// @Param		id	path		string	true	"Get Topic of ID"
+// @Param		id	path		int	true	"Get Topic of ID"
 // @Success	200	{object}	ResponseHTTP{data=models.Topic}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/topics/{id} [get]
 func (h *ForumHandler) GetTopicById(c echo.Context) error {
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in GetTopicByID handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in GetTopicByID handler")
+	}
 
-	topic, err := h.repository.FindTopicByID(id)
+	topic, err := h.repository.FindTopicByID(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Topic not found! %s", err)
@@ -104,7 +103,7 @@ func (h *ForumHandler) GetTopics(c echo.Context) error {
 // @Tags		Topics
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id		path		string			true	"Update Topic of ID"
+// @Param		id		path		int			true	"Update Topic of ID"
 // @Param		Topic	body		models.Topic	true	"Update Topic"
 // @Success	200		{object}	ResponseHTTP{data=models.Topic}
 // @Failure	400		{object}	ResponseHTTP{}
@@ -112,14 +111,18 @@ func (h *ForumHandler) GetTopics(c echo.Context) error {
 // @Router		/v1/topics/{id} [patch]
 func (h *ForumHandler) PatchTopic(c echo.Context) error {
 	var topic models.Topic
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in PatchTopic handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in PatchTopic handler")
+	}
 
 	if err := c.Bind(&topic); err != nil {
 		h.logger.Printf("Error in PatchTopic handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchTopic handler")
 	}
 
-	updTopic, err := h.repository.UpdateTopic(id, topic)
+	updTopic, err := h.repository.UpdateTopic(int(id), topic)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Topic not found! %s", err)
@@ -136,15 +139,19 @@ func (h *ForumHandler) PatchTopic(c echo.Context) error {
 // @Tags		Topics
 // @Accept		text/plain
 // @Produce	text/plain
-// @Param		id	path		string	true	"Delete Topic of ID"
+// @Param		id	path		int	true	"Delete Topic of ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/topics/{id} [delete]
 func (h *ForumHandler) DeleteTopic(c echo.Context) error {
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in DeleteTopic handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in DeleteTopic handler")
+	}
 
-	err := h.repository.DeleteTopic(id)
+	err = h.repository.DeleteTopic(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Topic not found! %s", err)
@@ -175,10 +182,6 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostThread handler")
 	}
 
-	if thread.ID == nil {
-		threadID := uuid.NewString()
-		thread.ID = &threadID
-	}
 	if thread.CreatedAt == nil || thread.LastUpdate == nil {
 		currentTime := time.Now()
 		thread.CreatedAt, thread.LastUpdate = &currentTime, &currentTime
@@ -201,15 +204,19 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 // @Tags		Threads
 // @Accept		text/plain
 // @Produce	application/json
-// @Param		id	path		string	true	"Get Thread of ID"
+// @Param		id	path		int	true	"Get Thread of ID"
 // @Success	200	{object}	ResponseHTTP{data=models.Thread}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/threads/{id} [get]
 func (h *ForumHandler) GetThreadById(c echo.Context) error {
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in GetThreadByID handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in GetThreadByID handler")
+	}
 
-	thread, err := h.repository.FindThreadByID(id)
+	thread, err := h.repository.FindThreadByID(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Thread not found! %s", err)
@@ -247,7 +254,7 @@ func (h *ForumHandler) GetThreads(c echo.Context) error {
 // @Tags		Threads
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id		path		string			true	"Update Thread of ID"
+// @Param		id		path		int			true	"Update Thread of ID"
 // @Param		Thread	body		models.Thread	true	"Update Thread"
 // @Success	200		{object}	ResponseHTTP{data=models.Thread}
 // @Failure	400		{object}	ResponseHTTP{}
@@ -255,7 +262,11 @@ func (h *ForumHandler) GetThreads(c echo.Context) error {
 // @Router		/v1/threads/{id} [patch]
 func (h *ForumHandler) PatchThread(c echo.Context) error {
 	var thread models.Thread
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in PatchThread handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in PatchThread handler")
+	}
 
 	if err := c.Bind(&thread); err != nil {
 		h.logger.Printf("Error in PatchThread handler: %s", err)
@@ -267,7 +278,7 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 		thread.LastUpdate = &currentTime
 	}
 
-	updThread, err := h.repository.UpdateThread(id, thread)
+	updThread, err := h.repository.UpdateThread(int(id), thread)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Thread not found! %s", err)
@@ -284,15 +295,19 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 // @Tags		Threads
 // @Accept		text/plain
 // @Produce	text/plain
-// @Param		id	path		string	true	"Delete Thread of ID"
+// @Param		id	path		int	true	"Delete Thread of ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/threads/{id} [delete]
 func (h *ForumHandler) DeleteThread(c echo.Context) error {
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in DeleteThread handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in DeleteThread handler")
+	}
 
-	err := h.repository.DeleteThread(id)
+	err = h.repository.DeleteThread(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Thread not found! %s", err)
@@ -323,10 +338,6 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostMessage handler")
 	}
 
-	if message.ID == nil {
-		messageID := uuid.NewString()
-		message.ID = &messageID
-	}
 	if message.CreatedAt == nil || message.UpdatedAt == nil {
 		currentTime := time.Now()
 		message.CreatedAt, message.UpdatedAt = &currentTime, &currentTime
@@ -349,15 +360,19 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 // @Tags		Messages
 // @Accept		text/plain
 // @Produce	application/json
-// @Param		id	path		string	true	"Get Message of ID"
+// @Param		id	path		int	true	"Get Message of ID"
 // @Success	200	{object}	ResponseHTTP{data=models.Message}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/messages/{id} [get]
 func (h *ForumHandler) GetMessageById(c echo.Context) error {
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in GetMessageByID handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in GetMessageByID handler")
+	}
 
-	message, err := h.repository.FindMessageByID(id)
+	message, err := h.repository.FindMessageByID(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Message not found! %s", err)
@@ -395,7 +410,7 @@ func (h *ForumHandler) GetMessages(c echo.Context) error {
 // @Tags		Messages
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id		path		string			true	"Update Message of ID"
+// @Param		id		path		int			true	"Update Message of ID"
 // @Param		Message	body		models.Message	true	"Update Message"
 // @Success	200		{object}	ResponseHTTP{data=models.Message}
 // @Failure	400		{object}	ResponseHTTP{}
@@ -403,7 +418,11 @@ func (h *ForumHandler) GetMessages(c echo.Context) error {
 // @Router		/v1/messages/{id} [patch]
 func (h *ForumHandler) PatchMessage(c echo.Context) error {
 	var message models.Message
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in PatchMessage handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in PatchMessage handler")
+	}
 
 	if err := c.Bind(&message); err != nil {
 		h.logger.Printf("Error in PatchMessage handler: %s", err)
@@ -414,7 +433,7 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 		message.UpdatedAt = &currentTime
 	}
 
-	updMessage, err := h.repository.UpdateMessage(id, message)
+	updMessage, err := h.repository.UpdateMessage(int(id), message)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Message not found! %s", err)
@@ -431,15 +450,19 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 // @Tags		Messages
 // @Accept		text/plain
 // @Produce	text/plain
-// @Param		id	path		string	true	"Delete Message of ID"
+// @Param		id	path		int	true	"Delete Message of ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/messages/{id} [delete]
 func (h *ForumHandler) DeleteMessage(c echo.Context) error {
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in DeleteMessage handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in DeleteMessage handler")
+	}
 
-	err := h.repository.DeleteMessage(id)
+	err = h.repository.DeleteMessage(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Message not found! %s", err)

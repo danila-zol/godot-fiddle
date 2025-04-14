@@ -28,12 +28,12 @@ func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, er
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO asset.assets
-		(id, name, description, link, "createdAt") 
+		(name, description, link, "createdAt") 
 		VALUES
-		($1, $2, $3, $4, $5)
+		($1, $2, $3, $4)
 		RETURNING
 		(id, name, description, link, "createdAt")`,
-		asset.ID, asset.Name, asset.Description, asset.Link, asset.CreatedAt,
+		asset.Name, asset.Description, asset.Link, asset.CreatedAt,
 	).Scan(&asset)
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, er
 	return &asset, nil
 }
 
-func (r *PsqlAssetRepository) FindAssetByID(id string) (*models.Asset, error) {
+func (r *PsqlAssetRepository) FindAssetByID(id int) (*models.Asset, error) {
 	var asset models.Asset
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -89,7 +89,7 @@ func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	return &assets, nil
 }
 
-func (r *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) (*models.Asset, error) {
+func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.Asset, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func (r *PsqlAssetRepository) UpdateAsset(id string, asset models.Asset) (*model
 	return &asset, nil
 }
 
-func (r *PsqlAssetRepository) DeleteAsset(id string) error {
+func (r *PsqlAssetRepository) DeleteAsset(id int) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err

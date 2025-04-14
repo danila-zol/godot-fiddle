@@ -30,12 +30,12 @@ func (r *PsqlForumRepository) CreateTopic(topic models.Topic) (*models.Topic, er
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.topics
-		(id, name) 
+		(name) 
 		VALUES
-		($1, $2)
+		($1)
 		RETURNING
 		(id, name)`,
-		topic.ID, topic.Name,
+		topic.Name,
 	).Scan(&topic)
 
 	if err != nil {
@@ -44,7 +44,7 @@ func (r *PsqlForumRepository) CreateTopic(topic models.Topic) (*models.Topic, er
 	return &topic, nil
 }
 
-func (r *PsqlForumRepository) FindTopicByID(id string) (*models.Topic, error) {
+func (r *PsqlForumRepository) FindTopicByID(id int) (*models.Topic, error) {
 	var topic models.Topic
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -91,7 +91,7 @@ func (r *PsqlForumRepository) FindTopics() (*[]models.Topic, error) {
 	return &topics, nil
 }
 
-func (r *PsqlForumRepository) UpdateTopic(id string, topic models.Topic) (*models.Topic, error) {
+func (r *PsqlForumRepository) UpdateTopic(id int, topic models.Topic) (*models.Topic, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (r *PsqlForumRepository) UpdateTopic(id string, topic models.Topic) (*model
 	return &topic, err
 }
 
-func (r *PsqlForumRepository) DeleteTopic(id string) error {
+func (r *PsqlForumRepository) DeleteTopic(id int) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
@@ -138,12 +138,12 @@ func (r *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.threads
-		(id, title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes") 
+		(title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes") 
 		VALUES
-		($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING
 		(id, title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes")`,
-		thread.ID, thread.Title, thread.UserID, thread.TopicID, thread.Tags,
+		thread.Title, thread.UserID, thread.TopicID, thread.Tags,
 		thread.CreatedAt, thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes,
 	).Scan(&thread)
 	if err != nil {
@@ -153,7 +153,7 @@ func (r *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread
 	return &thread, err
 }
 
-func (r *PsqlForumRepository) FindThreadByID(id string) (*models.Thread, error) {
+func (r *PsqlForumRepository) FindThreadByID(id int) (*models.Thread, error) {
 	var thread models.Thread
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -203,7 +203,7 @@ func (r *PsqlForumRepository) FindThreads() (*[]models.Thread, error) {
 	return &threads, nil
 }
 
-func (r *PsqlForumRepository) UpdateThread(id string, thread models.Thread) (*models.Thread, error) {
+func (r *PsqlForumRepository) UpdateThread(id int, thread models.Thread) (*models.Thread, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -226,7 +226,7 @@ func (r *PsqlForumRepository) UpdateThread(id string, thread models.Thread) (*mo
 	return &thread, nil
 }
 
-func (r *PsqlForumRepository) DeleteThread(id string) error {
+func (r *PsqlForumRepository) DeleteThread(id int) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
@@ -252,12 +252,12 @@ func (r *PsqlForumRepository) CreateMessage(message models.Message) (*models.Mes
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.messages
-		(id, "threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes) 
+		("threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes) 
 		VALUES
-		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING
 		(id, "threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes)`,
-		message.ID, message.ThreadID, message.UserID, message.Title, message.Body,
+		message.ThreadID, message.UserID, message.Title, message.Body,
 		message.Tags, message.CreatedAt, message.UpdatedAt, message.Upvotes,
 		message.Downvotes,
 	).Scan(&message)
@@ -267,7 +267,7 @@ func (r *PsqlForumRepository) CreateMessage(message models.Message) (*models.Mes
 	return &message, nil
 }
 
-func (r *PsqlForumRepository) FindMessageByID(id string) (*models.Message, error) {
+func (r *PsqlForumRepository) FindMessageByID(id int) (*models.Message, error) {
 	var message models.Message
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -318,7 +318,7 @@ func (r *PsqlForumRepository) FindMessages() (*[]models.Message, error) {
 	return &messages, nil
 }
 
-func (r *PsqlForumRepository) FindMessagesByThreadID(threadID string) (*[]models.Message, error) {
+func (r *PsqlForumRepository) FindMessagesByThreadID(threadID int) (*[]models.Message, error) {
 	var messages []models.Message
 
 	conn, err := r.databaseClient.AcquireConn()
@@ -352,7 +352,7 @@ func (r *PsqlForumRepository) FindMessagesByThreadID(threadID string) (*[]models
 	return &messages, nil
 }
 
-func (r *PsqlForumRepository) UpdateMessage(id string, message models.Message) (*models.Message, error) {
+func (r *PsqlForumRepository) UpdateMessage(id int, message models.Message) (*models.Message, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -377,7 +377,7 @@ func (r *PsqlForumRepository) UpdateMessage(id string, message models.Message) (
 	return &message, nil
 }
 
-func (r *PsqlForumRepository) DeleteMessage(id string) error {
+func (r *PsqlForumRepository) DeleteMessage(id int) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err

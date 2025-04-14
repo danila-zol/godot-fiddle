@@ -1,34 +1,30 @@
 package services
 
-import (
-	"gamehangar/internal/domain/models"
-
-	"github.com/google/uuid"
-)
+import "gamehangar/internal/domain/models"
 
 type ForumRepository interface {
 	CreateThread(thread models.Thread) (*models.Thread, error)
-	UpdateThread(id string, thread models.Thread) (*models.Thread, error)
-	DeleteThread(id string) error
+	UpdateThread(id int, thread models.Thread) (*models.Thread, error)
+	DeleteThread(id int) error
 
 	CreateMessage(message models.Message) (*models.Message, error)
-	UpdateMessage(id string, message models.Message) (*models.Message, error)
-	DeleteMessage(id string) error
+	UpdateMessage(id int, message models.Message) (*models.Message, error)
+	DeleteMessage(id int) error
 }
 
 type ThreadSyncer struct {
 	threadRepository ForumRepository
-	demoTopicID      string
+	demoTopicID      int
 }
 
-func NewThreadSyncer(r ForumRepository, demoTopicID string) *ThreadSyncer {
+func NewThreadSyncer(r ForumRepository, demoTopicID int) *ThreadSyncer {
 	return &ThreadSyncer{
 		threadRepository: r,
 		demoTopicID:      demoTopicID, // Demo will be stored in a single topic
 	}
 }
 
-func (s *ThreadSyncer) PostThread(demo models.Demo) (*string, error) {
+func (s *ThreadSyncer) PostThread(demo models.Demo) (*int, error) {
 	thread := models.Thread{
 		Title:          demo.Title,
 		UserID:         demo.UserID,
@@ -39,10 +35,6 @@ func (s *ThreadSyncer) PostThread(demo models.Demo) (*string, error) {
 		Tags:           demo.Tags,
 	}
 
-	if thread.ID == nil {
-		id := uuid.NewString()
-		thread.ID = &id
-	}
 	if thread.TopicID == nil {
 		id := s.demoTopicID
 		thread.TopicID = &id

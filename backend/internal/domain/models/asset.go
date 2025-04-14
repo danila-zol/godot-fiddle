@@ -3,7 +3,7 @@ package models
 import "time"
 
 type Asset struct {
-	ID          *string    `json:"id,omitempty"`
+	ID          *int       `json:"id,omitempty"`
 	Name        *string    `json:"name,omitempty"`
 	Description *string    `json:"description,omitempty"`
 	Link        *string    `json:"link,omitempty"` // Links to an S3 bucket

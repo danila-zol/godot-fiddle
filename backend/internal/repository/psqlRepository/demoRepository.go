@@ -31,12 +31,12 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO demo.demos
-		(id, title, description, link, "userID", tags, "createdAt", "updatedAt", upvotes, downvotes, "threadID") 
+		(title, description, link, "userID", tags, "createdAt", "updatedAt", upvotes, downvotes, "threadID") 
 		VALUES
-		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING
 		(id, title, description, link, "userID", tags, "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,
-		demo.ID, demo.Title, demo.Description, demo.Link, demo.UserID, demo.Tags,
+		demo.Title, demo.Description, demo.Link, demo.UserID, demo.Tags,
 		demo.UpdatedAt, demo.CreatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID,
 	).Scan(&demo)
 	if err != nil {
@@ -45,7 +45,7 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 	return &demo, nil
 }
 
-func (r *PsqlDemoRepository) FindDemoByID(id string) (*models.Demo, error) {
+func (r *PsqlDemoRepository) FindDemoByID(id int) (*models.Demo, error) {
 	var demo models.Demo
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -94,7 +94,7 @@ func (r *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 	return &demos, nil
 }
 
-func (r *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.Demo, error) {
+func (r *PsqlDemoRepository) UpdateDemo(id int, demo models.Demo) (*models.Demo, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (r *PsqlDemoRepository) UpdateDemo(id string, demo models.Demo) (*models.De
 	return &demo, err
 }
 
-func (r *PsqlDemoRepository) DeleteDemo(id string) error {
+func (r *PsqlDemoRepository) DeleteDemo(id int) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err

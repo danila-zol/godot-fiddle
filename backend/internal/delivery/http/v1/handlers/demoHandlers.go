@@ -3,10 +3,11 @@ package handlers
 import (
 	"gamehangar/internal/domain/models"
 	"net/http"
+	"strconv"
 	"time"
 
 	_ "gamehangar/docs"
-	"github.com/google/uuid"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -17,7 +18,7 @@ type DemoHandler struct {
 }
 
 type ThreadSyncer interface {
-	PostThread(demo models.Demo) (*string, error)
+	PostThread(demo models.Demo) (*int, error)
 	PatchThread(demo models.Demo) error
 }
 
@@ -47,10 +48,6 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostDemo handler")
 	}
 
-	if demo.ID == nil {
-		demoID := uuid.NewString()
-		demo.ID = &demoID
-	}
 	if demo.CreatedAt == nil || demo.UpdatedAt == nil {
 		currentTime := time.Now()
 		demo.CreatedAt, demo.UpdatedAt = &currentTime, &currentTime
@@ -83,15 +80,19 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 // @Tags		Demos
 // @Accept		text/plain
 // @Produce	application/json
-// @Param		id	path		string	true	"Get Demo of ID"
+// @Param		id	path		int	true	"Get Demo of ID"
 // @Success	200	{object}	ResponseHTTP{data=models.Demo}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/demos/{id} [get]
 func (h *DemoHandler) GetDemoById(c echo.Context) error {
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in GetDemoByID handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in GetDemoByID handler")
+	}
 
-	demo, err := h.repository.FindDemoByID(id)
+	demo, err := h.repository.FindDemoByID(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Demos not found! %s", err)
@@ -129,7 +130,7 @@ func (h *DemoHandler) GetDemos(c echo.Context) error {
 // @Tags		Demos
 // @Accept		application/json
 // @Produce	application/json
-// @Param		id		path		string		true	"Update Demo of ID"
+// @Param		id		path		int		true	"Update Demo of ID"
 // @Param		Demo	body		models.Demo	true	"Update Demo"
 // @Success	200		{object}	ResponseHTTP{data=models.Demo}
 // @Failure	400		{object}	ResponseHTTP{}
@@ -138,9 +139,13 @@ func (h *DemoHandler) GetDemos(c echo.Context) error {
 func (h *DemoHandler) PatchDemo(c echo.Context) error {
 	var demo models.Demo
 
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in PatchDemo handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in PatchDemo handler")
+	}
 
-	err := c.Bind(&demo)
+	err = c.Bind(&demo)
 	if err != nil {
 		h.logger.Printf("Error in PatchDemo handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchDemo handler")
@@ -157,7 +162,7 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PatchDemo handler")
 	}
 
-	updDemo, err := h.repository.UpdateDemo(id, demo)
+	updDemo, err := h.repository.UpdateDemo(int(id), demo)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Demos not found! %s", err)
@@ -174,15 +179,19 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 // @Tags		Demos
 // @Accept		text/plain
 // @Produce	text/plain
-// @Param		id	path		string	true	"Delete Demo of ID"
+// @Param		id	path		int	true	"Delete Demo of ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/demos/{id} [delete]
 func (h *DemoHandler) DeleteDemo(c echo.Context) error {
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in DeleteDemo handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in DeleteDemo handler")
+	}
 
-	err := h.repository.DeleteDemo(id)
+	err = h.repository.DeleteDemo(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Demos not found! %s", err)

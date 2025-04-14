@@ -3,7 +3,7 @@ package models
 import "time"
 
 type Demo struct {
-	ID          *string    `json:"id,omitempty"`
+	ID          *int       `json:"id,omitempty"`
 	Title       *string    `json:"title,omitempty"`
 	Description *string    `json:"description,omitempty"`
 	Tags        *[]string  `json:"tags,omitempty"`
@@ -13,5 +13,5 @@ type Demo struct {
 	UpdatedAt   *time.Time `json:"updatedAt,omitzero"`
 	Upvotes     *uint      `json:"upvotes,omitzero"`
 	Downvotes   *uint      `json:"downvotes,omitzero"`
-	ThreadID    *string    `json:"threadID,omitempty"`
+	ThreadID    *int       `json:"threadID,omitempty"`
 }
