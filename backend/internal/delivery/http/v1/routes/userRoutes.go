@@ -21,7 +21,6 @@ func (r *UserRoutes) InitRoutes(e *echo.Echo) {
 
 	protectedUserGroup := userGroup.Group("")
 
-	protectedUserGroup.POST("", r.handler.PostUser)
 	userGroup.GET("/:id", r.handler.GetUserById)
 	userGroup.GET("", r.handler.GetUsers)
 	protectedUserGroup.PATCH("/:id", r.handler.PatchUser)
@@ -36,9 +35,11 @@ func (r *UserRoutes) InitRoutes(e *echo.Echo) {
 	protectedRoleGroup.PATCH("/:id", r.handler.PatchRole)
 	protectedRoleGroup.DELETE("/:id", r.handler.DeleteRole)
 
-	sessionGroup := e.Group("/game-hangar/v1/sessions")
+	sessionGroup := e.Group("/game-hangar/v1")
 
-	sessionGroup.POST("", r.handler.PostSession)
-	sessionGroup.GET("/:id", r.handler.GetSessionById)
-	sessionGroup.DELETE("/:id", r.handler.DeleteSession)
+	sessionGroup.POST("/register", r.handler.Register)
+	sessionGroup.POST("/login", r.handler.Login)
+	sessionGroup.GET("/verify", r.handler.Verify)
+	sessionGroup.GET("/refresh", r.handler.RefreshSession)
+	sessionGroup.DELETE("logout/:id", r.handler.Logout)
 }

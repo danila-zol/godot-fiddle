@@ -10,57 +10,22 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type UserLookup interface {
+	LookupUser(email, username string) (user *models.User, err error)
+}
+
 type UserHandler struct {
 	logger     echo.Logger
 	repository UserRepository
+	userLookup UserLookup
 }
 
-func NewUserHandler(e *echo.Echo, repo UserRepository) *UserHandler {
+func NewUserHandler(e *echo.Echo, repo UserRepository, r UserLookup) *UserHandler {
 	return &UserHandler{
 		logger:     e.Logger,
 		repository: repo,
+		userLookup: r,
 	}
-}
-
-// @Summary	Creates a new user.
-// @Tags		Users
-// @Accept		application/json
-// @Produce	application/json
-// @Param		User	body		models.User	true	"Create User"
-// @Success	200		{object}	ResponseHTTP{data=models.User}
-// @Failure	400		{object}	ResponseHTTP{}
-// @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/users [post]
-func (h *UserHandler) PostUser(c echo.Context) error {
-	var user models.User
-
-	err := c.Bind(&user)
-	if err != nil {
-		h.logger.Printf("Error in PostUser handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PostUser handler")
-	}
-
-	if user.CreatedAt == nil {
-		currentTime := time.Now()
-		user.CreatedAt = &currentTime
-	}
-	if user.Karma == nil {
-		zero := 0
-		user.Karma = &zero
-	}
-	// if user.Verified == nil {
-	// 	f := false
-	// 	user.Verified = &f
-	// }
-	// TODO: Create Salt for user's password
-
-	newUser, err := h.repository.CreateUser(user)
-	if err != nil {
-		h.logger.Printf("Error in CreateUser repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in CreateUser repository")
-	}
-
-	return c.JSON(http.StatusOK, &newUser)
 }
 
 // @Summary	Fetches a user by its ID.
@@ -99,8 +64,8 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 	users, err := h.repository.FindUsers()
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Users not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			h.logger.Printf("Error: User not found! %s", err)
+			return c.String(http.StatusNotFound, "Error: User not found!")
 		}
 		h.logger.Printf("Error in FindUsers operation: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindUsers operation")
@@ -133,8 +98,8 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 	updUser, err := h.repository.UpdateUser(id, user)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Users not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			h.logger.Printf("Error: User not found! %s", err)
+			return c.String(http.StatusNotFound, "Error: User not found!")
 		}
 		h.logger.Printf("Error in UpdateUser repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateUser repository")
@@ -158,8 +123,8 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	err := h.repository.DeleteUser(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Users not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			h.logger.Printf("Error: User not found! %s", err)
+			return c.String(http.StatusNotFound, "Error: User not found!")
 		}
 		h.logger.Printf("Error in DeleteUser repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteUser repository")
@@ -215,7 +180,7 @@ func (h *UserHandler) GetRoleById(c echo.Context) error {
 	role, err := h.repository.FindRoleByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Roles not found! %s", err)
+			h.logger.Printf("Error: Role not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Role not found!")
 		}
 		h.logger.Printf("Error in FindRoleByID repository: %s", err)
@@ -249,8 +214,8 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 	updRole, err := h.repository.UpdateRole(id, role)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Roles not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			h.logger.Printf("Error: Role not found! %s", err)
+			return c.String(http.StatusNotFound, "Error: Role not found!")
 		}
 		h.logger.Printf("Error in UpdateRole repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateRole repository")
@@ -263,6 +228,8 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 // @Tags		Roles
 // @Accept		text/plain
 // @Produce	text/plain
+// @Security ApiSessionCookie
+// @param sessionID header string true "Session ID"
 // @Param		id	path		string	true	"Delete Role of ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
@@ -274,8 +241,8 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 	err := h.repository.DeleteRole(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Roles not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			h.logger.Printf("Error: Role not found! %s", err)
+			return c.String(http.StatusNotFound, "Error: Role not found!")
 		}
 		h.logger.Printf("Error in DeleteRole repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteRole repository")
@@ -284,84 +251,200 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 	return c.String(http.StatusOK, "Role successfully deleted!")
 }
 
-// @Summary	Creates a new session.
-// @Tags		Sessions
+// @Summary	Registers a new user.
+// @Tags		Login
 // @Accept		application/json
 // @Produce	application/json
-// @Param		Session	body		models.Session	true	"Create Session"
-// @Success	200		{object}	ResponseHTTP{data=models.Session}
+// @Param		User	body		models.User	true	"Create User"
+// @Success	200		{object}	ResponseHTTP{data=models.User}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
-// @Router		/v1/sessions [post]
-func (h *UserHandler) PostSession(c echo.Context) error {
-	var session models.Session
+// @Router		/v1/register [post]
+func (h *UserHandler) Register(c echo.Context) error {
+	var user models.User
 
-	err := c.Bind(&session)
+	err := c.Bind(&user)
+	if err != nil {
+		h.logger.Printf("Error in PostUser handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in PostUser handler")
+	}
+
+	if user.CreatedAt == nil {
+		currentTime := time.Now()
+		user.CreatedAt = &currentTime
+	}
+	if user.Karma == nil {
+		zero := 0
+		user.Karma = &zero
+	}
+	if user.Verified == nil {
+		f := false
+		user.Verified = &f
+	}
+	// TODO: Create Salt for user's password
+
+	newUser, err := h.repository.CreateUser(user)
+	if err != nil {
+		h.logger.Printf("Error in CreateUser repository: %s", err)
+		return c.String(http.StatusInternalServerError, "Error in CreateUser repository")
+	}
+
+	sessionToken, err := h.repository.CreateSession(models.Session{UserID: user.ID})
+	if err != nil {
+		h.logger.Printf("Error creating session: %s", err)
+		return c.String(http.StatusInternalServerError, "Error creating session")
+	}
+	c.SetCookie(&http.Cookie{
+		Name:     "sessionID",
+		Value:    *sessionToken.ID,
+		Expires:  time.Now().Add(1 * time.Hour),
+		HttpOnly: true,
+		SameSite: 3,
+	})
+
+	return c.JSON(http.StatusOK, &newUser)
+}
+
+// @Summary	Verifies the authenticated User.
+// @Tags		Login
+// @Accept		text/plain
+// @Produce	text/plain
+// @Success	200	{object}	ResponseHTTP{}
+// @Failure	400	{object}	ResponseHTTP{}
+// @Failure	500	{object}	ResponseHTTP{}
+// @Router		/v1/verify [get]
+func (h *UserHandler) Verify(c echo.Context) error {
+	cookie, err := c.Cookie("sessionID")
+	if err != nil {
+		h.logger.Printf("Error reading cookie: %s", err)
+		return c.String(http.StatusInternalServerError, "Error reading cookie")
+	}
+
+	session, err := h.repository.FindSessionByID(cookie.Value)
+	if err != nil {
+		h.logger.Printf("Error in FindSessionByID repository: %s", err)
+		return c.String(http.StatusInternalServerError, "Error in FindSessionByID repository")
+	}
+
+	t := true
+	_, err = h.repository.UpdateUser(*session.UserID, models.User{Verified: &t})
+	if err != nil {
+		h.logger.Printf("Error in UpdateUser repository: %s", err)
+		return c.String(http.StatusInternalServerError, "Error in UpdateUser repository")
+	}
+
+	return c.String(http.StatusOK, "User verified")
+}
+
+// @Summary	Logs the User in and creates a new Session.
+// @Tags		Login
+// @Accept		application/json
+// @Produce	text/plain
+// @Param		LoginForm	body		models.LoginForm	true	"Log in"
+// @Success	200		{object}	ResponseHTTP{}
+// @Failure	400		{object}	ResponseHTTP{}
+// @Failure	500		{object}	ResponseHTTP{}
+// @Router		/v1/login [post]
+func (h *UserHandler) Login(c echo.Context) error {
+	var loginForm models.LoginForm
+
+	err := c.Bind(&loginForm)
 	if err != nil {
 		h.logger.Printf("Error in PostSession handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostSession handler")
 	}
 
-	if session.ID == nil {
-		sessionID := uuid.NewString()
-		session.ID = &sessionID
+	user, err := h.userLookup.LookupUser(*loginForm.Email, *loginForm.Username)
+	if err != nil {
+		h.logger.Printf("Error resolving username: %s", err)
+		return c.String(http.StatusInternalServerError, "Error resolving username")
 	}
 
-	newSession, err := h.repository.CreateSession(session)
+	// TODO: Service to check password
+
+	newSession, err := h.repository.CreateSession(models.Session{UserID: user.ID})
 	if err != nil {
 		h.logger.Printf("Error in CreateSession repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateSession repository")
 	}
 
-	return c.JSON(http.StatusOK, &newSession)
+	c.SetCookie(&http.Cookie{
+		Name:     "sessionID",
+		Value:    *newSession.ID,
+		Expires:  time.Now().Add(1 * time.Hour),
+		HttpOnly: true,
+		SameSite: 3,
+	})
+
+	return c.String(http.StatusOK, "Login successful")
 }
 
-// @Summary	Fetches a session by its ID.
-// @Tags		Sessions
+// @Summary	Refreshes Session token.
+// @Tags		Login
 // @Accept		text/plain
-// @Produce	application/json
-// @Param		id	path		string	true	"Get Session of ID"
-// @Success	200	{object}	ResponseHTTP{data=models.Session}
+// @Produce	text/plain
+// @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/sessions/{id} [get]
-func (h *UserHandler) GetSessionById(c echo.Context) error {
-	id := c.Param("id")
+// @Router		/v1/refresh [get]
+func (h *UserHandler) RefreshSession(c echo.Context) error {
+	cookie, err := c.Cookie("sessionID")
+	if err != nil {
+		h.logger.Printf("Error reading cookie: %s", err)
+		return c.String(http.StatusBadRequest, "Error reading cookie")
+	}
 
-	session, err := h.repository.FindSessionByID(id)
+	/* No need to create a new session, right?
+	id, err := c.Cookie("sessionID")
+	if err != nil {
+		h.logger.Printf("Error finding session in cookie: %s", err)
+		return c.String(http.StatusInternalServerError, "Error finding session in cookie")
+	}
+	*/
+
+	c.SetCookie(&http.Cookie{
+		Name:     "sessionID",
+		Value:    cookie.Value,
+		Expires:  time.Now().Add(1 * time.Hour),
+		HttpOnly: true,
+		SameSite: 3,
+	})
+
+	return c.String(http.StatusOK, "Session refreshed")
+}
+
+// @Summary	Invalidates and deletes user's Session.
+// @Tags		Login
+// @Accept		text/plain
+// @Produce	text/plain
+// @Success	200	{object}	ResponseHTTP{}
+// @Failure	400	{object}	ResponseHTTP{}
+// @Failure	500	{object}	ResponseHTTP{}
+// @Router		/v1/logout [delete]
+func (h *UserHandler) Logout(c echo.Context) error {
+	id, err := c.Cookie("sessionID")
+	if err != nil {
+		h.logger.Printf("Error reading cookie: %s", err)
+		return c.String(http.StatusBadRequest, "Error reading cookie")
+	}
+
+	err = h.repository.DeleteSession(id.Value)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Sessions not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Session not found!")
 		}
-		h.logger.Printf("Error in FindSessionByID repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in UpdateSession repository")
-	}
-
-	return c.JSON(http.StatusOK, &session)
-}
-
-// @Summary	Deletes the specified session.
-// @Tags		Sessions
-// @Accept		text/plain
-// @Produce	text/plain
-// @Param		id	path		string	true	"Delete Session of ID"
-// @Success	200	{object}	ResponseHTTP{}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/sessions/{id} [delete]
-func (h *UserHandler) DeleteSession(c echo.Context) error {
-	id := c.Param("id")
-
-	err := h.repository.DeleteSession(id)
-	if err != nil {
-		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Sessions not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
-		}
 		h.logger.Printf("Error in DeleteSession repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in DeleteSession repository")
 	}
+
+	c.SetCookie(&http.Cookie{
+		Name:     "sessionID",
+		Value:    "",
+		Expires:  time.Now().Add(-1),
+		HttpOnly: true,
+		SameSite: 3,
+	})
 
 	return c.String(http.StatusOK, "Session successfully deleted!")
 }

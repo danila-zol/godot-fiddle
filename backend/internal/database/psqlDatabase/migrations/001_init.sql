@@ -13,10 +13,10 @@ CREATE TABLE "user".users (
 	"displayName" varchar(255),
 	"email" varchar(255) NOT NULL UNIQUE,
 	"password" varchar(255) NOT NULL,
-	"verified" boolean NOT NULL DEFAULT false,
+	"verified" boolean DEFAULT FALSE NOT NULL,
 	"roleID" uuid NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
-	"createdAt" timestamp NOT NULL,
-	"karma" integer NOT NULL
+	"createdAt" timestamp DEFAULT NOW() NOT NULL,
+	"karma" integer DEFAULT 0 NOT NULL
 );
 
 CREATE TABLE "user".sessions (
@@ -37,8 +37,8 @@ CREATE TABLE forum.threads (
 	"userID" uuid NOT NULL,
 	"topicID" integer NOT NULL REFERENCES forum.topics (id) ON DELETE CASCADE,
 	"tags" varchar(255)[],
-	"createdAt" timestamp NOT NULL,
-	"lastUpdate" timestamp NOT NULL,
+	"createdAt" timestamp DEFAULT NOW() NOT NULL,
+	"lastUpdate" timestamp DEFAULT NOW() NOT NULL,
 	"totalUpvotes" integer NOT NULL,
 	"totalDownvotes" integer NOT NULL
 );
@@ -50,8 +50,8 @@ CREATE TABLE forum.messages (
 	"title" varchar(255) NOT NULL,
 	"body" varchar NOT NULL,
 	"tags" varchar(255)[],
-	"createdAt" timestamp NOT NULL,
-	"updatedAt" timestamp NOT NULL,
+	"createdAt" timestamp DEFAULT NOW() NOT NULL,
+	"updatedAt" timestamp DEFAULT NOW() NOT NULL,
 	"upvotes" integer NOT NULL,
 	"downvotes" integer NOT NULL
 );
@@ -65,8 +65,8 @@ CREATE TABLE demo.demos (
 	"tags" varchar(255)[],
 	"link" varchar(255) NOT NULL,
 	"userID" uuid NOT NULL,
-	"createdAt" timestamp NOT NULL,
-	"updatedAt" timestamp NOT NULL,
+	"createdAt" timestamp DEFAULT NOW() NOT NULL,
+	"updatedAt" timestamp DEFAULT NOW() NOT NULL,
 	"upvotes" integer NOT NULL,
 	"downvotes" integer NOT NULL,
 	"threadID" integer NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
@@ -79,13 +79,13 @@ CREATE TABLE asset.assets (
   "name" varchar(255) NOT NULL,
   "description" varchar,
   "link" varchar(255) NOT NULL,
-  "createdAt" timestamp NOT NULL
+  "createdAt" timestamp DEFAULT NOW() NOT NULL
 );
 
 ---- create above / drop below ----
 
-DROP SCHEMA "user" CASCADE;
-DROP SCHEMA "demo" CASCADE;
-DROP SCHEMA "forum" CASCADE;
-DROP SCHEMA "asset" CASCADE;
-DROP EXTENSION "uuid-ossp";
+DROP SCHEMA IF EXISTS "user" CASCADE;
+DROP SCHEMA IF EXISTS "demo" CASCADE;
+DROP SCHEMA IF EXISTS "forum" CASCADE;
+DROP SCHEMA IF EXISTS "asset" CASCADE;
+DROP EXTENSION IF EXISTS "uuid-ossp";

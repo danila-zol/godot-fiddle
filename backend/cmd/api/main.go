@@ -48,6 +48,9 @@ func getEnv() {
 // @contact.name	Mikhail Pecherkin
 // @contact.email	m.pecherkin.sas@gmail.com
 // @BasePath		/game-hangar
+// @securityDefinitions.apikey ApiSessionCookie
+// @in header
+// @name sessionID
 func main() {
 	e := echo.New()
 	getEnv()
@@ -92,7 +95,8 @@ func main() {
 	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
 
 	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient)
-	userHandler := handlers.NewUserHandler(e, userRepo)
+	userIDLookup := services.NewUserLookup(userRepo)
+	userHandler := handlers.NewUserHandler(e, userRepo, userIDLookup)
 	routes.NewUserRoutes(userHandler).InitRoutes(app.echo)
 
 	app.appRouter = app.routes(app.echo)

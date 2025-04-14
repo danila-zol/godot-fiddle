@@ -19,8 +19,6 @@ func NewPsqlUserRepository(dbClient psqlDatabaseClient) *PsqlUserRepository {
 	}
 }
 
-// TODO: MapNameToUser + assert one unique user per username!
-
 func (r *PsqlUserRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
 
 func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
@@ -32,13 +30,13 @@ func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".users
-			(id, username, "displayName", email, password, "roleID", "createdAt", karma) 
+			(username, "displayName", email, password, verified, "roleID", "createdAt", karma) 
 		VALUES
 			($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING
-			(id, username, "displayName", email, password, "roleID", "createdAt", karma)`,
-		user.ID, user.Username, user.DisplayName, user.Email, user.Password,
-		user.RoleID, user.CreatedAt, user.Karma,
+			(id, username, "displayName", email, password, verified, "roleID", "createdAt", karma)`,
+		user.Username, user.DisplayName, user.Email, user.Password,
+		user.Verified, user.RoleID, user.CreatedAt, user.Karma,
 	).Scan(&user)
 	if err != nil {
 		return nil, err
@@ -57,8 +55,43 @@ func (r *PsqlUserRepository) FindUserByID(id string) (*models.User, error) {
 	err = conn.QueryRow(context.Background(),
 		`SELECT * FROM "user".users WHERE id = $1 LIMIT 1`,
 		id,
-	).Scan(&user.ID, &user.Username, &user.DisplayName, &user.Email, &user.Password,
-		&user.RoleID, &user.CreatedAt, &user.Karma)
+	).Scan(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *PsqlUserRepository) FindUserByEmail(email string) (*models.User, error) {
+	var user models.User
+	conn, err := r.databaseClient.AcquireConn()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	err = conn.QueryRow(context.Background(),
+		`SELECT * FROM "user".users WHERE email = $1 LIMIT 1`,
+		email,
+	).Scan(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *PsqlUserRepository) FindUserByUsername(username string) (*models.User, error) {
+	var user models.User
+	conn, err := r.databaseClient.AcquireConn()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	err = conn.QueryRow(context.Background(),
+		`SELECT * FROM "user".users WHERE username = $1 LIMIT 1`,
+		username,
+	).Scan(&user)
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +114,7 @@ func (r *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var user models.User
-		err = rows.Scan(&user.ID, &user.Username, &user.DisplayName, &user.Email,
-			&user.Password, &user.RoleID, &user.CreatedAt, &user.Karma)
+		err = rows.Scan(&user)
 		if err != nil {
 			return nil, err
 		}
@@ -105,12 +137,12 @@ func (r *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.Us
 	err = conn.QueryRow(context.Background(),
 		`UPDATE "user".users SET 
 		username=COALESCE($1, username), "displayName"=COALESCE($2, "displayName"), email=COALESCE($3, email), 
-		password=COALESCE($4, password), "roleID"=COALESCE($5, "roleID"), "createdAt"=COALESCE($6, "createdAt"), karma=COALESCE($7, karma)
+		password=COALESCE($4, password), verified=COALESCE($5, verified), "roleID"=COALESCE($6, "roleID"), "createdAt"=COALESCE($7, "createdAt"), karma=COALESCE($8, karma)
 		WHERE id = $8
 		RETURNING
-		(id, username, "displayName", email, password, "roleID", "createdAt", karma)`,
+		(id, username, "displayName", email, password, verified, "roleID", "createdAt", karma)`,
 		user.Username, user.DisplayName, user.Email, user.Password,
-		user.RoleID, user.CreatedAt, user.Karma, id,
+		user.Verified, user.RoleID, user.CreatedAt, user.Karma, id,
 	).Scan(&user)
 	if err != nil {
 		return nil, err
@@ -144,12 +176,12 @@ func (r *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".roles
-		(id, name) 
+		(name) 
 		VALUES
-		($1, $2)
+		($1)
 		RETURNING
 		(id, name)`,
-		role.ID, role.Name,
+		role.Name,
 	).Scan(&role)
 	if err != nil {
 		return nil, err
@@ -168,7 +200,7 @@ func (r *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 	err = conn.QueryRow(context.Background(),
 		`SELECT * FROM "user".roles WHERE id = $1 LIMIT 1`,
 		id,
-	).Scan(&role.ID, &role.Name)
+	).Scan(&role)
 	if err != nil {
 		return nil, err
 	}
@@ -222,13 +254,13 @@ func (r *PsqlUserRepository) CreateSession(session models.Session) (*models.Sess
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".sessions
-		(id, "userID") 
+		"userID" 
 		VALUES
-		($1, $2)
+		$1
 		RETURNING
 		(id, "userID")`,
-		session.ID, session.UserID,
-	).Scan(&session.ID, &session.UserID)
+		session.UserID,
+	).Scan(&session)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +278,7 @@ func (r *PsqlUserRepository) FindSessionByID(id string) (*models.Session, error)
 	err = conn.QueryRow(context.Background(),
 		`SELECT * FROM "user".sessions WHERE id = $1 LIMIT 1`,
 		id,
-	).Scan(&session.ID, &session.UserID)
+	).Scan(&session)
 	if err != nil {
 		return nil, err
 	}
