@@ -19,7 +19,7 @@ type DemoHandler struct {
 
 type ThreadSyncer interface {
 	PostThread(demo models.Demo) (*int, error)
-	PatchThread(demo models.Demo) error
+	PatchThread(demoID int, demo models.Demo) error
 }
 
 func NewDemoHandler(e *echo.Echo, repo DemoRepository, s ThreadSyncer) *DemoHandler {
@@ -156,8 +156,12 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 		demo.UpdatedAt = &currentTime
 	}
 
-	err = h.syncer.PatchThread(demo)
+	err = h.syncer.PatchThread(int(id), demo)
 	if err != nil {
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Demos not found! %s", err)
+			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		}
 		h.logger.Printf("Error in PatchDemo handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchDemo handler")
 	}

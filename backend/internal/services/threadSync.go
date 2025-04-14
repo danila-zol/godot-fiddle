@@ -12,14 +12,21 @@ type ForumRepository interface {
 	DeleteMessage(id int) error
 }
 
+type DemoRepository interface {
+	FindDemoByID(id int) (*models.Demo, error)
+	NotFoundErr() error
+}
+
 type ThreadSyncer struct {
 	threadRepository ForumRepository
+	demoRepository   DemoRepository
 	demoTopicID      int
 }
 
-func NewThreadSyncer(r ForumRepository, demoTopicID int) *ThreadSyncer {
+func NewThreadSyncer(fr ForumRepository, dr DemoRepository, demoTopicID int) *ThreadSyncer {
 	return &ThreadSyncer{
-		threadRepository: r,
+		threadRepository: fr,
+		demoRepository:   dr,
 		demoTopicID:      demoTopicID, // Demo will be stored in a single topic
 	}
 }
@@ -48,7 +55,7 @@ func (s *ThreadSyncer) PostThread(demo models.Demo) (*int, error) {
 	return t.ID, nil
 }
 
-func (s *ThreadSyncer) PatchThread(demo models.Demo) error {
+func (s *ThreadSyncer) PatchThread(demoID int, demo models.Demo) error {
 	thread := models.Thread{
 		Title:          demo.Title,
 		LastUpdate:     demo.UpdatedAt,
@@ -57,6 +64,16 @@ func (s *ThreadSyncer) PatchThread(demo models.Demo) error {
 		Tags:           demo.Tags,
 	}
 
+	if demo.ThreadID == nil {
+		d, err := s.demoRepository.FindDemoByID(demoID)
+		if notFoundErr := s.demoRepository.NotFoundErr(); notFoundErr == err {
+			return notFoundErr
+		}
+		if err != nil {
+			return err
+		}
+		demo.ThreadID = d.ThreadID
+	}
 	_, err := s.threadRepository.UpdateThread(*demo.ThreadID, thread)
 	if err != nil {
 		return err

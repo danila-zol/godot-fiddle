@@ -35,7 +35,7 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 		VALUES
 		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING
-		(id, title, description, link, "userID", tags, "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,
+		(id, title, description, link, "userID", ( tags ), "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,
 		demo.Title, demo.Description, demo.Link, demo.UserID, demo.Tags,
 		demo.UpdatedAt, demo.CreatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID,
 	).Scan(&demo)
@@ -56,7 +56,7 @@ func (r *PsqlDemoRepository) FindDemoByID(id int) (*models.Demo, error) {
 	err = conn.QueryRow(context.Background(),
 		`SELECT * FROM demo.demos WHERE id = $1 LIMIT 1`,
 		id,
-	).Scan(&demo.ID, &demo.Title, &demo.Description, &demo.Link, &demo.UserID,
+	).Scan(&demo.ID, &demo.Title, &demo.Description, &demo.Tags, &demo.Link, &demo.UserID,
 		&demo.CreatedAt, &demo.UpdatedAt, &demo.Upvotes, &demo.Downvotes, &demo.ThreadID)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (r *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var demo models.Demo
-		err = rows.Scan(&demo.ID, &demo.Title, &demo.Description, &demo.Link, &demo.UserID,
+		err = rows.Scan(&demo.ID, &demo.Title, &demo.Description, &demo.Tags, &demo.Link, &demo.UserID,
 			&demo.CreatedAt, &demo.UpdatedAt, &demo.Upvotes, &demo.Downvotes, &demo.ThreadID)
 		if err != nil {
 			return nil, err
@@ -108,10 +108,10 @@ func (r *PsqlDemoRepository) UpdateDemo(id int, demo models.Demo) (*models.Demo,
 		downvotes=COALESCE($9, downvotes), "threadID"=COALESCE($10, "threadID") 
 		WHERE id = $11
 		RETURNING
-		(id, name, description, link, "userID", tags, "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,
+		(id, title, description, link, "userID", tags, "createdAt", "updatedAt", upvotes, downvotes, "threadID")`,
 		demo.Title, demo.Description, demo.Link, demo.UserID, demo.CreatedAt,
 		demo.UpdatedAt, demo.Upvotes, demo.Downvotes, demo.ThreadID, id,
-	).Scan(&demo)
+	).Scan(demo)
 	if err != nil {
 		return nil, err
 	}

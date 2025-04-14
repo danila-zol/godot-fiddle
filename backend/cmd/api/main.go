@@ -87,7 +87,7 @@ func main() {
 	routes.NewForumRoutes(forumHandler).InitRoutes(app.echo)
 
 	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient)
-	demoThreadSyncer := services.NewThreadSyncer(forumRepo, 1)
+	demoThreadSyncer := services.NewThreadSyncer(forumRepo, demoRepo, 1)
 	demoHandler := handlers.NewDemoHandler(e, demoRepo, demoThreadSyncer)
 	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
 
