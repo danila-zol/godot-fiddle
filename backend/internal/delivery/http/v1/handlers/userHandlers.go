@@ -40,10 +40,6 @@ func (h *UserHandler) PostUser(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostUser handler")
 	}
 
-	if user.ID == nil {
-		userID := uuid.NewString()
-		user.ID = &userID
-	}
 	if user.CreatedAt == nil {
 		currentTime := time.Now()
 		user.CreatedAt = &currentTime
