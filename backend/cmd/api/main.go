@@ -99,7 +99,7 @@ func main() {
 	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
 
 	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient)
-	userIDLookup := services.NewUserLookup(userRepo)
+	userIDLookup := services.NewUserIdentifier(userRepo)
 	userHandler := handlers.NewUserHandler(e, userRepo, userIDLookup)
 	routes.NewUserRoutes(userHandler).InitRoutes(app.echo)
 

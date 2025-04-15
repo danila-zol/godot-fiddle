@@ -7,17 +7,17 @@ type UserRepository interface {
 	FindUserByUsername(username string) (user *models.User, err error)
 }
 
-type UserLookup struct {
+type UserIdentifier struct {
 	userRepository UserRepository
 }
 
-func NewUserLookup(r UserRepository) *UserLookup {
-	return &UserLookup{
+func NewUserIdentifier(r UserRepository) *UserIdentifier {
+	return &UserIdentifier{
 		userRepository: r,
 	}
 }
 
-func (l *UserLookup) LookupUser(email, username *string) (user *models.User, err error) {
+func (l *UserIdentifier) IdentifyUser(email, username *string) (user *models.User, err error) {
 	if email != nil {
 		user, err = l.userRepository.FindUserByEmail(*email)
 		if err != nil {

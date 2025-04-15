@@ -10,21 +10,21 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type UserLookup interface {
-	LookupUser(email, username *string) (user *models.User, err error)
+type UserIdentifier interface {
+	IdentifyUser(email, username *string) (user *models.User, err error)
 }
 
 type UserHandler struct {
-	logger     echo.Logger
-	repository UserRepository
-	userLookup UserLookup
+	logger         echo.Logger
+	repository     UserRepository
+	userIdentifier UserIdentifier
 }
 
-func NewUserHandler(e *echo.Echo, repo UserRepository, r UserLookup) *UserHandler {
+func NewUserHandler(e *echo.Echo, repo UserRepository, r UserIdentifier) *UserHandler {
 	return &UserHandler{
-		logger:     e.Logger,
-		repository: repo,
-		userLookup: r,
+		logger:         e.Logger,
+		repository:     repo,
+		userIdentifier: r,
 	}
 }
 
@@ -357,10 +357,10 @@ func (h *UserHandler) Login(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostSession handler")
 	}
 
-	user, err := h.userLookup.LookupUser(loginForm.Email, loginForm.Username)
+	user, err := h.userIdentifier.IdentifyUser(loginForm.Email, loginForm.Username)
 	if err != nil {
-		h.logger.Printf("Error resolving username: %s", err)
-		return c.String(http.StatusInternalServerError, "Error resolving username")
+		h.logger.Printf("Error identifying user: %s", err)
+		return c.String(http.StatusInternalServerError, "Error identifying user")
 	}
 
 	// TODO: Service to check password
