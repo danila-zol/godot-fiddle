@@ -11,7 +11,7 @@ import (
 )
 
 type UserLookup interface {
-	LookupUser(email, username string) (user *models.User, err error)
+	LookupUser(email, username *string) (user *models.User, err error)
 }
 
 type UserHandler struct {
@@ -357,7 +357,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostSession handler")
 	}
 
-	user, err := h.userLookup.LookupUser(*loginForm.Email, *loginForm.Username)
+	user, err := h.userLookup.LookupUser(loginForm.Email, loginForm.Username)
 	if err != nil {
 		h.logger.Printf("Error resolving username: %s", err)
 		return c.String(http.StatusInternalServerError, "Error resolving username")
@@ -430,13 +430,13 @@ func (h *UserHandler) RefreshSession(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/logout [delete]
 func (h *UserHandler) Logout(c echo.Context) error {
-	id, err := c.Cookie("sessionID")
+	sessionID, err := c.Cookie("sessionID")
 	if err != nil {
 		h.logger.Printf("Error reading cookie: %s", err)
 		return c.String(http.StatusBadRequest, "Error reading cookie")
 	}
 
-	err = h.repository.DeleteSession(id.Value)
+	err = h.repository.DeleteSession(sessionID.Value)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Sessions not found! %s", err)

@@ -17,15 +17,15 @@ func NewUserLookup(r UserRepository) *UserLookup {
 	}
 }
 
-func (l *UserLookup) LookupUser(email, username string) (user *models.User, err error) {
-	if email != "" {
-		user, err = l.userRepository.FindUserByEmail(email)
+func (l *UserLookup) LookupUser(email, username *string) (user *models.User, err error) {
+	if email != nil {
+		user, err = l.userRepository.FindUserByEmail(*email)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if username != "" {
-		user, err = l.userRepository.FindUserByUsername(username)
+	if username != nil {
+		user, err = l.userRepository.FindUserByUsername(*username)
 		if err != nil {
 			return nil, err
 		}
