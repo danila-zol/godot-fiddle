@@ -28,11 +28,11 @@ func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, er
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO asset.assets
-		(name, description, link, "createdAt") 
+		(name, description, link, "created_at") 
 		VALUES
 		($1, $2, $3, $4)
 		RETURNING
-		(id, name, description, link, "createdAt")`,
+		(id, name, description, link, "created_at")`,
 		asset.Name, asset.Description, asset.Link, asset.CreatedAt,
 	).Scan(&asset)
 	if err != nil {
@@ -98,10 +98,10 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE asset.assets SET 
-		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), "createdAt"=COALESCE($4, "createdAt")
+		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), "created_at"=COALESCE($4, "created_at")
 			WHERE id = $5
 		RETURNING
-			(id, name, description, link, "createdAt")`,
+			(id, name, description, link, "created_at")`,
 		asset.Name, asset.Description, asset.Link, asset.CreatedAt,
 		id,
 	).Scan(&asset)

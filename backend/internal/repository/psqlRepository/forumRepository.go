@@ -138,11 +138,11 @@ func (r *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.threads
-		(title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes") 
+			(title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)
 		VALUES
-		($1, $2, $3, $4, $5, $6, $7, $8)
+			($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING
-		(id, title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes")`,
+			(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags,
 		thread.CreatedAt, thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes,
 	).Scan(&thread)
@@ -209,11 +209,13 @@ func (r *PsqlForumRepository) UpdateThread(id int, thread models.Thread) (*model
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.threads SET 
-		name=COALESCE($1, name), "userID"=COALESCE($2, "userID"), "topicID"=COALESCE($3, "topicID"), tags=COALESCE($4, tags), "createdAt"=COALESCE($5, "createdAt"), 
-		"lastUpdate"=COALESCE($6, "lastUpdate"), "totalUpvotes"=COALESCE($7, "totalUpvotes"), "totalDownvotes"=COALESCE($8, "totalDownvotes")
-		WHERE id = $9
+			title=COALESCE($1, title), user_id=COALESCE($2, user_id), 
+		topic_id=COALESCE($3, topic_id), tags=COALESCE($4, tags), 
+			created_at=COALESCE($5, created_at), updated_at=COALESCE($6, updated_at), 
+		upvotes=COALESCE($7, upvotes), downvotes=COALESCE($8, downvotes)
+			WHERE id = $9
 		RETURNING
-		(id, title, "userID", "topicID", tags, "createdAt", "lastUpdate", "totalUpvotes", "totalDownvotes")`,
+			(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags, thread.CreatedAt,
 		thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes, id,
 	).Scan(&thread)
@@ -249,11 +251,11 @@ func (r *PsqlForumRepository) CreateMessage(message models.Message) (*models.Mes
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO forum.messages
-		("threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes) 
+		(thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes) 
 		VALUES
 		($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING
-		(id, "threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes)`,
+		(id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)`,
 		message.ThreadID, message.UserID, message.Title, message.Body,
 		message.Tags, message.CreatedAt, message.UpdatedAt, message.Upvotes,
 		message.Downvotes,
@@ -311,7 +313,7 @@ func (r *PsqlForumRepository) FindMessages() (*[]models.Message, error) {
 	return &messages, nil
 }
 
-func (r *PsqlForumRepository) FindMessagesByThreadID(threadID int) (*[]models.Message, error) {
+func (r *PsqlForumRepository) FindMessagesByThreadID(thread_id int) (*[]models.Message, error) {
 	var messages []models.Message
 
 	conn, err := r.databaseClient.AcquireConn()
@@ -321,8 +323,8 @@ func (r *PsqlForumRepository) FindMessagesByThreadID(threadID int) (*[]models.Me
 	defer conn.Release()
 
 	rows, err := conn.Query(context.Background(),
-		`SELECT * FROM forum.messages WHERE threadID=$1`,
-		threadID,
+		`SELECT * FROM forum.messages WHERE thread_id=$1`,
+		thread_id,
 	)
 	if err != nil {
 		return nil, err
@@ -352,12 +354,12 @@ func (r *PsqlForumRepository) UpdateMessage(id int, message models.Message) (*mo
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.messages SET 
-		"threadID"=COALESCE($1, "threadID"), "userID"=COALESCE($2, "userID"), title=COALESCE($3, title), 
-		body=COALESCE($4, body), tags=COALESCE($5, tags), "createdAt"=COALESCE($6, "createdAt"),
-		"updatedAt"=COALESCE($7, "updatedAt"), upvotes=COALESCE($8, upvotes), downvotes=COALESCE($9, downvotes)
+		thread_id=COALESCE($1, thread_id), user_id=COALESCE($2, user_id), title=COALESCE($3, title), 
+		body=COALESCE($4, body), tags=COALESCE($5, tags), created_at=COALESCE($6, created_at),
+		updated_at=COALESCE($7, updated_at), upvotes=COALESCE($8, upvotes), downvotes=COALESCE($9, downvotes)
 		WHERE id = $10
 		RETURNING
-		(id, "threadID", "userID", title, body, tags, "createdAt", "updatedAt", upvotes, downvotes)`,
+		(id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)`,
 		message.ThreadID, message.UserID, message.Title, message.Body,
 		message.Tags, message.CreatedAt, message.UpdatedAt, message.Upvotes,
 		message.Downvotes, id,

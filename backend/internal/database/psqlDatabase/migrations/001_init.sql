@@ -10,18 +10,18 @@ CREATE TABLE "user".roles (
 CREATE TABLE "user".users (
 	"id" uuid DEFAULT gen_random_uuid() PRIMARY KEY,
 	"username" varchar(255) NOT NULL UNIQUE,
-	"displayName" varchar(255),
+	"display_name" varchar(255),
 	"email" varchar(255) NOT NULL UNIQUE,
 	"password" varchar(255) NOT NULL,
 	"verified" boolean DEFAULT FALSE NOT NULL,
-	"roleID" uuid NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
-	"createdAt" timestamp DEFAULT NOW() NOT NULL,
+	"role_id" uuid NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
+	"created_at" timestamp DEFAULT NOW() NOT NULL,
 	"karma" integer DEFAULT 0 NOT NULL
 );
 
 CREATE TABLE "user".sessions (
 	"id" uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-	"userID" uuid NOT NULL REFERENCES "user".users (id) ON DELETE RESTRICT
+	"user_id" uuid NOT NULL REFERENCES "user".users (id) ON DELETE RESTRICT
 );
 
 CREATE SCHEMA IF NOT EXISTS forum;
@@ -34,24 +34,24 @@ CREATE TABLE forum.topics (
 CREATE TABLE forum.threads (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	"title" varchar(255) NOT NULL,
-	"userID" uuid NOT NULL,
-	"topicID" integer NOT NULL REFERENCES forum.topics (id) ON DELETE CASCADE,
+	"user_id" uuid NOT NULL,
+	"topic_id" integer NOT NULL REFERENCES forum.topics (id) ON DELETE CASCADE,
 	"tags" varchar(255)[],
-	"createdAt" timestamp DEFAULT NOW() NOT NULL,
-	"lastUpdate" timestamp DEFAULT NOW() NOT NULL,
-	"totalUpvotes" integer NOT NULL,
-	"totalDownvotes" integer NOT NULL
+	"created_at" timestamp DEFAULT NOW() NOT NULL,
+	"updated_at" timestamp DEFAULT NOW() NOT NULL,
+	"upvotes" integer NOT NULL,
+	"downvotes" integer NOT NULL
 );
 
 CREATE TABLE forum.messages (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	"threadID" integer NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
-	"userID" uuid NOT NULL,
+	"thread_id" integer NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
+	"user_id" uuid NOT NULL,
 	"title" varchar(255) NOT NULL,
 	"body" varchar NOT NULL,
 	"tags" varchar(255)[],
-	"createdAt" timestamp DEFAULT NOW() NOT NULL,
-	"updatedAt" timestamp DEFAULT NOW() NOT NULL,
+	"created_at" timestamp DEFAULT NOW() NOT NULL,
+	"updated_at" timestamp DEFAULT NOW() NOT NULL,
 	"upvotes" integer NOT NULL,
 	"downvotes" integer NOT NULL
 );
@@ -64,12 +64,12 @@ CREATE TABLE demo.demos (
 	"description" varchar NOT NULL,
 	"tags" varchar(255)[],
 	"link" varchar(255) NOT NULL,
-	"userID" uuid NOT NULL,
-	"createdAt" timestamp DEFAULT NOW() NOT NULL,
-	"updatedAt" timestamp DEFAULT NOW() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"created_at" timestamp DEFAULT NOW() NOT NULL,
+	"updated_at" timestamp DEFAULT NOW() NOT NULL,
 	"upvotes" integer NOT NULL,
 	"downvotes" integer NOT NULL,
-	"threadID" integer NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
+	"thread_id" integer NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
 );
 
 CREATE SCHEMA IF NOT EXISTS asset;
@@ -79,7 +79,7 @@ CREATE TABLE asset.assets (
   "name" varchar(255) NOT NULL,
   "description" varchar,
   "link" varchar(255) NOT NULL,
-  "createdAt" timestamp DEFAULT NOW() NOT NULL
+  "created_at" timestamp DEFAULT NOW() NOT NULL
 );
 
 ---- create above / drop below ----

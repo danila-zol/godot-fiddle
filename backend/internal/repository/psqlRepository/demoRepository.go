@@ -31,11 +31,11 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO demo.demos
-		(title, description, link, tags, "userID", "threadID", "createdAt", "updatedAt", upvotes, downvotes) 
+		(title, description, link, tags, "user_id", "thread_id", "created_at", "updated_at", upvotes, downvotes) 
 		VALUES
 		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING
-		(id, title, description, link, tags, "userID", "threadID", "createdAt", "updatedAt", upvotes, downvotes)`,
+		(id, title, description, link, tags, "user_id", "thread_id", "created_at", "updated_at", upvotes, downvotes)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID,
 		demo.ThreadID, demo.CreatedAt, demo.UpdatedAt, demo.Upvotes, demo.Downvotes,
 	).Scan(&demo)
@@ -102,12 +102,12 @@ func (r *PsqlDemoRepository) UpdateDemo(id int, demo models.Demo) (*models.Demo,
 	err = conn.QueryRow(context.Background(),
 		`UPDATE demo.demos SET 
 			title=COALESCE($1, title), description=COALESCE($2, description),
-		link=COALESCE($3, link), tags=COALESCE($4, tags), "userID"=COALESCE($5, "userID"),
-			"threadID"=COALESCE($6, "threadID"), "createdAt"=COALESCE($7, "createdAt"),
-		"updatedAt"=COALESCE($8, "updatedAt"), upvotes=COALESCE($9, upvotes), downvotes=COALESCE($10, downvotes)
+		link=COALESCE($3, link), tags=COALESCE($4, tags), "user_id"=COALESCE($5, "user_id"),
+			"thread_id"=COALESCE($6, "thread_id"), "created_at"=COALESCE($7, "created_at"),
+		"updated_at"=COALESCE($8, "updated_at"), upvotes=COALESCE($9, upvotes), downvotes=COALESCE($10, downvotes)
 			WHERE id = $11
 		RETURNING
-			(id, title, description, link, tags "userID", "threadID", "createdAt", "updatedAt", upvotes, downvotes)`,
+			(id, title, description, link, tags "user_id", "thread_id", "created_at", "updated_at", upvotes, downvotes)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
 		demo.CreatedAt, demo.UpdatedAt, demo.Upvotes, demo.Downvotes, id,
 	).Scan(&demo)
