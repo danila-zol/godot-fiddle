@@ -2,21 +2,18 @@ package psqlRepository
 
 import (
 	"context"
-	"errors"
 
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlDemoRepository struct {
 	databaseClient psqlDatabaseClient
-	notFoundErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
 func NewPsqlDemoRepository(dbClient psqlDatabaseClient) *PsqlDemoRepository {
 	return &PsqlDemoRepository{
 		databaseClient: dbClient,
-		notFoundErr:    errors.New("Not Found"),
 	}
 }
 
@@ -31,11 +28,11 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO demo.demos
-		(title, description, link, tags, "user_id", "thread_id", "created_at", "updated_at", upvotes, downvotes) 
+		(title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes) 
 		VALUES
 		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING
-		(id, title, description, link, tags, "user_id", "thread_id", "created_at", "updated_at", upvotes, downvotes)`,
+		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID,
 		demo.ThreadID, demo.CreatedAt, demo.UpdatedAt, demo.Upvotes, demo.Downvotes,
 	).Scan(&demo)
@@ -54,7 +51,8 @@ func (r *PsqlDemoRepository) FindDemoByID(id int) (*models.Demo, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM demo.demos WHERE id = $1 LIMIT 1`,
+		`SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)
+		FROM demo.demos WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&demo)
 	if err != nil {
@@ -72,7 +70,10 @@ func (r *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(), `SELECT * FROM demo.demos`)
+	rows, err := conn.Query(context.Background(),
+		`SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes) 
+		FROM demo.demos`,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -102,12 +103,12 @@ func (r *PsqlDemoRepository) UpdateDemo(id int, demo models.Demo) (*models.Demo,
 	err = conn.QueryRow(context.Background(),
 		`UPDATE demo.demos SET 
 			title=COALESCE($1, title), description=COALESCE($2, description),
-		link=COALESCE($3, link), tags=COALESCE($4, tags), "user_id"=COALESCE($5, "user_id"),
-			"thread_id"=COALESCE($6, "thread_id"), "created_at"=COALESCE($7, "created_at"),
-		"updated_at"=COALESCE($8, "updated_at"), upvotes=COALESCE($9, upvotes), downvotes=COALESCE($10, downvotes)
+		link=COALESCE($3, link), tags=COALESCE($4, tags), user_id=COALESCE($5, user_id),
+			thread_id=COALESCE($6, thread_id), created_at=COALESCE($7, created_at),
+		updated_at=COALESCE($8, updated_at), upvotes=COALESCE($9, upvotes), downvotes=COALESCE($10, downvotes)
 			WHERE id = $11
 		RETURNING
-			(id, title, description, link, tags "user_id", "thread_id", "created_at", "updated_at", upvotes, downvotes)`,
+			(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
 		demo.CreatedAt, demo.UpdatedAt, demo.Upvotes, demo.Downvotes, id,
 	).Scan(&demo)
@@ -126,10 +127,10 @@ func (r *PsqlDemoRepository) DeleteDemo(id int) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM demo.demos WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return r.notFoundErr
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+		return r.databaseClient.ErrNoRows()
 	}
 	return nil
 }

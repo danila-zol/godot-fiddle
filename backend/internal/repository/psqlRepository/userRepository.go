@@ -2,23 +2,19 @@ package psqlRepository
 
 import (
 	"context"
-	"errors"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlUserRepository struct {
 	databaseClient psqlDatabaseClient
-	notFoundErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
 func NewPsqlUserRepository(dbClient psqlDatabaseClient) *PsqlUserRepository {
 	return &PsqlUserRepository{
 		databaseClient: dbClient,
-		notFoundErr:    errors.New("Not Found"),
 	}
 }
-
 func (r *PsqlUserRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
 
 func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
@@ -53,7 +49,8 @@ func (r *PsqlUserRepository) FindUserByID(id string) (*models.User, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM "user".users WHERE id = $1 LIMIT 1`,
+		`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma)
+		FROM "user".users WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&user)
 	if err != nil {
@@ -71,7 +68,8 @@ func (r *PsqlUserRepository) FindUserByEmail(email string) (*models.User, error)
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM "user".users WHERE email = $1 LIMIT 1`,
+		`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma) 
+		FROM "user".users WHERE email = $1 LIMIT 1`,
 		email,
 	).Scan(&user)
 	if err != nil {
@@ -89,7 +87,8 @@ func (r *PsqlUserRepository) FindUserByUsername(username string) (*models.User, 
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM "user".users WHERE username = $1 LIMIT 1`,
+		`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma)
+		FROM "user".users WHERE username = $1 LIMIT 1`,
 		username,
 	).Scan(&user)
 	if err != nil {
@@ -107,7 +106,10 @@ func (r *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(), `SELECT * FROM "user".users`)
+	rows, err := conn.Query(context.Background(),
+		`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma)
+		FROM "user".users`,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +141,7 @@ func (r *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.Us
 			username=COALESCE($1, username), display_name=COALESCE($2, display_name), email=COALESCE($3, email), 
 			password=COALESCE($4, password), verified=COALESCE($5, verified), role_id=COALESCE($6, role_id), 
 			created_at=COALESCE($7, created_at), karma=COALESCE($8, karma)
-		WHERE id = $8
+		WHERE id = $9
 		RETURNING
 			(id, username, display_name, email, password, verified, role_id, created_at, karma)`,
 		user.Username, user.DisplayName, user.Email, user.Password,
@@ -160,10 +162,10 @@ func (r *PsqlUserRepository) DeleteUser(id string) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".users WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return r.notFoundErr
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+		return r.databaseClient.ErrNoRows()
 	}
 	return nil
 }
@@ -199,7 +201,7 @@ func (r *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM "user".roles WHERE id = $1 LIMIT 1`,
+		`SELECT (id, name) FROM "user".roles WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&role)
 	if err != nil {
@@ -238,10 +240,10 @@ func (r *PsqlUserRepository) DeleteRole(id string) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".roles WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return r.notFoundErr
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+		return r.databaseClient.ErrNoRows()
 	}
 	return nil
 }
@@ -277,7 +279,7 @@ func (r *PsqlUserRepository) FindSessionByID(id string) (*models.Session, error)
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM "user".sessions WHERE id = $1 LIMIT 1`,
+		`SELECT (id, user_id) FROM "user".sessions WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&session)
 	if err != nil {
@@ -295,10 +297,10 @@ func (r *PsqlUserRepository) DeleteSession(id string) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".sessions WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return r.notFoundErr
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+		return r.databaseClient.ErrNoRows()
 	}
 	return nil
 }

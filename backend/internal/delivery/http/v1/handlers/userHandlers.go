@@ -251,7 +251,7 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 	return c.String(http.StatusOK, "Role successfully deleted!")
 }
 
-// @Summary	Registers a new user.
+// @Summary	Registers a new user and creates a session.
 // @Tags		Login
 // @Accept		application/json
 // @Produce	application/json
@@ -280,7 +280,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 	if user.Verified == nil {
 		f := false
 		user.Verified = &f
-	}
+	} // TODO: Fix nil values for Postgres
 	// TODO: Create Salt for user's password
 
 	newUser, err := h.repository.CreateUser(user)
@@ -289,19 +289,19 @@ func (h *UserHandler) Register(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in CreateUser repository")
 	}
 
-	// TODO: Passes in nil
-	sessionToken, err := h.repository.CreateSession(models.Session{UserID: user.ID})
+	session, err := h.repository.CreateSession(models.Session{UserID: newUser.ID})
 	if err != nil {
 		h.logger.Printf("Error creating session: %s", err)
 		return c.String(http.StatusInternalServerError, "Error creating session")
 	}
 	c.SetCookie(&http.Cookie{
 		Name:     "sessionID",
-		Value:    *sessionToken.ID,
+		Value:    *session.ID,
 		Expires:  time.Now().Add(1 * time.Hour),
 		HttpOnly: true,
 		SameSite: 3,
 	})
+	h.logger.Printf("Cookie value: ", *session.ID) // DEBUG
 
 	return c.JSON(http.StatusOK, &newUser)
 }
@@ -310,6 +310,8 @@ func (h *UserHandler) Register(c echo.Context) error {
 // @Tags		Login
 // @Accept		text/plain
 // @Produce	text/plain
+// @Security ApiSessionCookie
+// @param sessionID header string true "Session ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
@@ -363,7 +365,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 
 	// TODO: Service to check password
 
-	newSession, err := h.repository.CreateSession(models.Session{UserID: user.ID})
+	session, err := h.repository.CreateSession(models.Session{UserID: user.ID})
 	if err != nil {
 		h.logger.Printf("Error in CreateSession repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in CreateSession repository")
@@ -371,11 +373,12 @@ func (h *UserHandler) Login(c echo.Context) error {
 
 	c.SetCookie(&http.Cookie{
 		Name:     "sessionID",
-		Value:    *newSession.ID,
+		Value:    *session.ID,
 		Expires:  time.Now().Add(1 * time.Hour),
 		HttpOnly: true,
 		SameSite: 3,
 	})
+	h.logger.Printf("Cookie value: ", *session.ID) // DEBUG
 
 	return c.String(http.StatusOK, "Login successful")
 }
@@ -384,6 +387,8 @@ func (h *UserHandler) Login(c echo.Context) error {
 // @Tags		Login
 // @Accept		text/plain
 // @Produce	text/plain
+// @Security ApiSessionCookie
+// @param sessionID header string true "Session ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
@@ -418,6 +423,8 @@ func (h *UserHandler) RefreshSession(c echo.Context) error {
 // @Tags		Login
 // @Accept		text/plain
 // @Produce	text/plain
+// @Security ApiSessionCookie
+// @param sessionID header string true "Session ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}

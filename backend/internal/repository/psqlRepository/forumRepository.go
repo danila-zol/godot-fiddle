@@ -2,20 +2,17 @@ package psqlRepository
 
 import (
 	"context"
-	"errors"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlForumRepository struct {
 	databaseClient psqlDatabaseClient
-	notFoundErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
 func NewPsqlForumRepository(dbClient psqlDatabaseClient) *PsqlForumRepository {
 	return &PsqlForumRepository{
 		databaseClient: dbClient,
-		notFoundErr:    errors.New("Not Found"),
 	}
 }
 
@@ -53,7 +50,7 @@ func (r *PsqlForumRepository) FindTopicByID(id int) (*models.Topic, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM forum.topics WHERE id = $1 LIMIT 1`,
+		`SELECT (id, name) FROM forum.topics WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&topic)
 	if err != nil {
@@ -71,7 +68,7 @@ func (r *PsqlForumRepository) FindTopics() (*[]models.Topic, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(), `SELECT * FROM forum.topics`)
+	rows, err := conn.Query(context.Background(), `SELECT (id, name) FROM forum.topics`)
 	if err != nil {
 		return nil, err
 	}
@@ -121,10 +118,10 @@ func (r *PsqlForumRepository) DeleteTopic(id int) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM forum.topics WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return r.notFoundErr
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+		return r.databaseClient.ErrNoRows()
 	}
 	return nil
 }
@@ -162,7 +159,8 @@ func (r *PsqlForumRepository) FindThreadByID(id int) (*models.Thread, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM forum.threads WHERE id = $1 LIMIT 1`,
+		`SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)
+		FROM forum.threads WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&thread)
 	if err != nil {
@@ -180,7 +178,10 @@ func (r *PsqlForumRepository) FindThreads() (*[]models.Thread, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(), `SELECT * FROM forum.threads`)
+	rows, err := conn.Query(context.Background(),
+		`SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)
+		FROM forum.threads`,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -234,10 +235,10 @@ func (r *PsqlForumRepository) DeleteThread(id int) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM forum.threads WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return errors.New("Not Found")
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+		return r.databaseClient.ErrNoRows()
 	}
 	return nil
 }
@@ -275,7 +276,8 @@ func (r *PsqlForumRepository) FindMessageByID(id int) (*models.Message, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM forum.messages WHERE id = $1 LIMIT 1`,
+		`SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)
+		FROM forum.messages WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&message)
 	if err != nil {
@@ -293,7 +295,10 @@ func (r *PsqlForumRepository) FindMessages() (*[]models.Message, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(), `SELECT * FROM forum.messages`)
+	rows, err := conn.Query(context.Background(),
+		`SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)
+		FROM forum.messages`,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +328,8 @@ func (r *PsqlForumRepository) FindMessagesByThreadID(thread_id int) (*[]models.M
 	defer conn.Release()
 
 	rows, err := conn.Query(context.Background(),
-		`SELECT * FROM forum.messages WHERE thread_id=$1`,
+		`SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)
+		FROM forum.messages WHERE thread_id=$1`,
 		thread_id,
 	)
 	if err != nil {
@@ -379,10 +385,10 @@ func (r *PsqlForumRepository) DeleteMessage(id int) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM forum.messages WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
-		return r.notFoundErr
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+		return r.databaseClient.ErrNoRows()
 	}
 	return nil
 }

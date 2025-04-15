@@ -21,7 +21,7 @@ CREATE TABLE "user".users (
 
 CREATE TABLE "user".sessions (
 	"id" uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-	"user_id" uuid NOT NULL REFERENCES "user".users (id) ON DELETE RESTRICT
+	"user_id" uuid NOT NULL REFERENCES "user".users (id) ON DELETE CASCADE
 );
 
 CREATE SCHEMA IF NOT EXISTS forum;

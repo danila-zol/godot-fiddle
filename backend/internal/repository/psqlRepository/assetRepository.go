@@ -51,7 +51,8 @@ func (r *PsqlAssetRepository) FindAssetByID(id int) (*models.Asset, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT * FROM asset.assets WHERE id = $1 LIMIT 1`,
+		`SELECT (id, name, description, link, "created_at") 
+		FROM asset.assets WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&asset)
 	if err != nil {
@@ -69,7 +70,10 @@ func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(), `SELECT * FROM asset.assets`)
+	rows, err := conn.Query(context.Background(),
+		`SELECT (id, name, description, link, "created_at") 
+		FROM asset.assets`,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +102,8 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE asset.assets SET 
-		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), "created_at"=COALESCE($4, "created_at")
+		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), 
+		"created_at"=COALESCE($4, "created_at")
 			WHERE id = $5
 		RETURNING
 			(id, name, description, link, "created_at")`,
@@ -120,10 +125,10 @@ func (r *PsqlAssetRepository) DeleteAsset(id int) error {
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM asset.assets WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
+		if err != nil {
+			return err
+		}
 		return r.databaseClient.ErrNoRows()
-	}
-	if err != nil {
-		return err
 	}
 	return nil
 }
