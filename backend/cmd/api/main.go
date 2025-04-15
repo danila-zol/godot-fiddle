@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"gamehangar/internal/config"
 	"gamehangar/internal/config/psqlDatabseConfig"
 	"gamehangar/internal/database/psqlDatabase"
@@ -8,7 +9,10 @@ import (
 	"gamehangar/internal/delivery/http/v1/routes"
 	"gamehangar/internal/repository/psqlRepository"
 	"gamehangar/internal/services"
+	"net/http"
 	"os"
+	"os/signal"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -101,5 +105,18 @@ func main() {
 
 	app.appRouter = app.routes(app.echo)
 
-	app.logger.Fatal(app.echo.Start(app.appConfig.port))
+	// Graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	go func() {
+		if err := app.echo.Start(app.appConfig.port); err != nil && err != http.ErrServerClosed {
+			app.logger.Fatal("Shutting down the server")
+		}
+	}()
+	<-ctx.Done()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := e.Shutdown(ctx); err != nil {
+		app.logger.Fatal(err)
+	}
 }
