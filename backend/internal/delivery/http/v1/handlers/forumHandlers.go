@@ -182,13 +182,13 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostThread handler")
 	}
 
-	if thread.CreatedAt == nil || thread.LastUpdate == nil {
+	if thread.CreatedAt == nil || thread.UpdatedAt == nil {
 		currentTime := time.Now()
-		thread.CreatedAt, thread.LastUpdate = &currentTime, &currentTime
+		thread.CreatedAt, thread.UpdatedAt = &currentTime, &currentTime
 	}
-	if thread.TotalUpvotes == nil || thread.TotalDownvotes == nil {
+	if thread.Upvotes == nil || thread.Downvotes == nil {
 		zero := uint(0)
-		thread.TotalUpvotes, thread.TotalDownvotes = &zero, &zero
+		thread.Upvotes, thread.Downvotes = &zero, &zero
 	}
 
 	newThread, err := h.repository.CreateThread(thread)
@@ -273,9 +273,9 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PatchThread handler")
 	}
 
-	if thread.LastUpdate == nil {
+	if thread.UpdatedAt == nil {
 		currentTime := time.Now()
-		thread.LastUpdate = &currentTime
+		thread.UpdatedAt = &currentTime
 	}
 
 	updThread, err := h.repository.UpdateThread(int(id), thread)

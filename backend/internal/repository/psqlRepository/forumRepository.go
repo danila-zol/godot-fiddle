@@ -141,7 +141,7 @@ func (r *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread
 		RETURNING
 			(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags,
-		thread.CreatedAt, thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes,
+		thread.CreatedAt, thread.UpdatedAt, thread.Upvotes, thread.Downvotes,
 	).Scan(&thread)
 	if err != nil {
 		return nil, err
@@ -218,7 +218,7 @@ func (r *PsqlForumRepository) UpdateThread(id int, thread models.Thread) (*model
 		RETURNING
 			(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags, thread.CreatedAt,
-		thread.LastUpdate, thread.TotalUpvotes, thread.TotalDownvotes, id,
+		thread.UpdatedAt, thread.Upvotes, thread.Downvotes, id,
 	).Scan(&thread)
 	if err != nil {
 		return nil, err

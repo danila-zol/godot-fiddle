@@ -33,13 +33,13 @@ func NewThreadSyncer(fr ForumRepository, dr DemoRepository, demoTopicID int) *Th
 
 func (s *ThreadSyncer) PostThread(demo models.Demo) (*int, error) {
 	thread := models.Thread{
-		Title:          demo.Title,
-		UserID:         demo.UserID,
-		CreatedAt:      demo.CreatedAt,
-		LastUpdate:     demo.UpdatedAt,
-		TotalUpvotes:   demo.Upvotes,
-		TotalDownvotes: demo.Downvotes,
-		Tags:           demo.Tags,
+		Title:     demo.Title,
+		UserID:    demo.UserID,
+		CreatedAt: demo.CreatedAt,
+		UpdatedAt: demo.UpdatedAt,
+		Upvotes:   demo.Upvotes,
+		Downvotes: demo.Downvotes,
+		Tags:      demo.Tags,
 	}
 
 	if thread.TopicID == nil {
@@ -57,11 +57,11 @@ func (s *ThreadSyncer) PostThread(demo models.Demo) (*int, error) {
 
 func (s *ThreadSyncer) PatchThread(demoID int, demo models.Demo) error {
 	thread := models.Thread{
-		Title:          demo.Title,
-		LastUpdate:     demo.UpdatedAt,
-		TotalUpvotes:   demo.Upvotes,
-		TotalDownvotes: demo.Downvotes,
-		Tags:           demo.Tags,
+		Title:     demo.Title,
+		UpdatedAt: demo.UpdatedAt,
+		Upvotes:   demo.Upvotes,
+		Downvotes: demo.Downvotes,
+		Tags:      demo.Tags,
 	}
 
 	if demo.ThreadID == nil {
