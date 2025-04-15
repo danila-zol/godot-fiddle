@@ -53,7 +53,7 @@ func (r *PsqlAssetRepository) FindAssetByID(id int) (*models.Asset, error) {
 	err = conn.QueryRow(context.Background(),
 		`SELECT * FROM asset.assets WHERE id = $1 LIMIT 1`,
 		id,
-	).Scan(&asset.ID, &asset.Name, &asset.Description, &asset.Link, &asset.CreatedAt)
+	).Scan(&asset)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var asset models.Asset
-		err = rows.Scan(&asset.ID, &asset.Name, &asset.Description, &asset.Link, &asset.CreatedAt)
+		err = rows.Scan(&asset)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +99,7 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 	err = conn.QueryRow(context.Background(),
 		`UPDATE asset.assets SET 
 		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), "createdAt"=COALESCE($4, "createdAt")
-		WHERE id = $5
+			WHERE id = $5
 		RETURNING
 			(id, name, description, link, "createdAt")`,
 		asset.Name, asset.Description, asset.Link, asset.CreatedAt,

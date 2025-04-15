@@ -55,7 +55,7 @@ func (r *PsqlForumRepository) FindTopicByID(id int) (*models.Topic, error) {
 	err = conn.QueryRow(context.Background(),
 		`SELECT * FROM forum.topics WHERE id = $1 LIMIT 1`,
 		id,
-	).Scan(&topic.ID, &topic.Name)
+	).Scan(&topic)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (r *PsqlForumRepository) FindTopics() (*[]models.Topic, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var topic models.Topic
-		err = rows.Scan(&topic.ID, &topic.Name)
+		err = rows.Scan(&topic)
 		if err != nil {
 			return nil, err
 		}
@@ -164,8 +164,7 @@ func (r *PsqlForumRepository) FindThreadByID(id int) (*models.Thread, error) {
 	err = conn.QueryRow(context.Background(),
 		`SELECT * FROM forum.threads WHERE id = $1 LIMIT 1`,
 		id,
-	).Scan(&thread.ID, &thread.Title, &thread.UserID, &thread.TopicID, &thread.Tags,
-		&thread.CreatedAt, &thread.LastUpdate, &thread.TotalUpvotes, &thread.TotalDownvotes)
+	).Scan(&thread)
 	if err != nil {
 		return nil, err
 	}
@@ -188,9 +187,7 @@ func (r *PsqlForumRepository) FindThreads() (*[]models.Thread, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var thread models.Thread
-		err = rows.Scan(&thread.ID, &thread.Title, &thread.UserID, &thread.TopicID,
-			&thread.Tags, &thread.CreatedAt, &thread.LastUpdate,
-			&thread.TotalUpvotes, &thread.TotalDownvotes)
+		err = rows.Scan(&thread)
 		if err != nil {
 			return nil, err
 		}
@@ -278,9 +275,7 @@ func (r *PsqlForumRepository) FindMessageByID(id int) (*models.Message, error) {
 	err = conn.QueryRow(context.Background(),
 		`SELECT * FROM forum.messages WHERE id = $1 LIMIT 1`,
 		id,
-	).Scan(&message.ID, &message.ThreadID, &message.UserID, &message.Title, &message.Body,
-		&message.Tags, &message.CreatedAt, &message.UpdatedAt, &message.Upvotes,
-		&message.Downvotes)
+	).Scan(&message)
 	if err != nil {
 		return nil, err
 	}
@@ -303,9 +298,7 @@ func (r *PsqlForumRepository) FindMessages() (*[]models.Message, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var message models.Message
-		err = rows.Scan(&message.ID, &message.ThreadID, &message.UserID, &message.Title,
-			&message.Body, &message.Tags, &message.CreatedAt, &message.UpdatedAt,
-			&message.Upvotes, &message.Downvotes)
+		err = rows.Scan(&message)
 		if err != nil {
 			return nil, err
 		}
@@ -337,9 +330,7 @@ func (r *PsqlForumRepository) FindMessagesByThreadID(threadID int) (*[]models.Me
 	defer rows.Close()
 	for rows.Next() {
 		var message models.Message
-		err = rows.Scan(&message.ID, &message.ThreadID, &message.UserID, &message.Title,
-			&message.Body, &message.Tags, &message.CreatedAt, &message.UpdatedAt,
-			&message.Upvotes, &message.Downvotes)
+		err = rows.Scan(&message)
 		if err != nil {
 			return nil, err
 		}

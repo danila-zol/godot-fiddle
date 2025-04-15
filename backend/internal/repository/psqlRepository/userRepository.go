@@ -37,7 +37,7 @@ func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) 
 			(id, username, "displayName", email, password, verified, "roleID", "createdAt", karma)`,
 		user.Username, user.DisplayName, user.Email, user.Password,
 		user.Verified, user.RoleID, user.CreatedAt, user.Karma,
-	).Scan(&user)
+	).Scan(&user) // Mind the field order!
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (r *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.Us
 		(id, username, "displayName", email, password, verified, "roleID", "createdAt", karma)`,
 		user.Username, user.DisplayName, user.Email, user.Password,
 		user.Verified, user.RoleID, user.CreatedAt, user.Karma, id,
-	).Scan(&user)
+	).Scan(&user) // Mind the field order!
 	if err != nil {
 		return nil, err
 	}
@@ -254,9 +254,9 @@ func (r *PsqlUserRepository) CreateSession(session models.Session) (*models.Sess
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".sessions
-		"userID" 
+		("userID") 
 		VALUES
-		$1
+		($1)
 		RETURNING
 		(id, "userID")`,
 		session.UserID,

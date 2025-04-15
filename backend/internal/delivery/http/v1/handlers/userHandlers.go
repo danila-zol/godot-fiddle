@@ -289,6 +289,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in CreateUser repository")
 	}
 
+	// TODO: Passes in nil
 	sessionToken, err := h.repository.CreateSession(models.Session{UserID: user.ID})
 	if err != nil {
 		h.logger.Printf("Error creating session: %s", err)
