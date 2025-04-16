@@ -391,44 +391,6 @@ func (h *UserHandler) Login(c echo.Context) error {
 	return c.String(http.StatusOK, "Login successful")
 }
 
-// @Summary	Invalidates and deletes current user Session.
-// @Tags		Login
-// @Accept		text/plain
-// @Produce	text/plain
-// @Security ApiSessionCookie
-// @param sessionID header string true "Session ID"
-// @Success	200	{object}	ResponseHTTP{}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/logout [delete]
-func (h *UserHandler) LogoutSelf(c echo.Context) error {
-	cookie, err := c.Cookie("sessionID")
-	if err != nil {
-		h.logger.Printf("Error reading cookie: %s", err)
-		return c.String(http.StatusUnauthorized, "Error reading cookie")
-	}
-
-	err = h.repository.DeleteSession(cookie.Value)
-	if err != nil {
-		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Session not found! %s", err)
-			return c.String(http.StatusUnauthorized, "Error: Session not found!")
-		}
-		h.logger.Printf("Error in DeleteSession repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in DeleteSession repository")
-	}
-
-	c.SetCookie(&http.Cookie{
-		Name:     "sessionID",
-		Value:    "",
-		Expires:  time.Now().Add(-1),
-		HttpOnly: true,
-		SameSite: 3,
-	})
-
-	return c.String(http.StatusOK, "Session successfully deleted!")
-}
-
 // @Summary	Invalidates and deletes the specified session.
 // @Tags		Login
 // @Accept		text/plain
@@ -440,7 +402,7 @@ func (h *UserHandler) LogoutSelf(c echo.Context) error {
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/logout/{id} [delete]
-func (h *UserHandler) LogoutOther(c echo.Context) error {
+func (h *UserHandler) Logout(c echo.Context) error {
 	cookie, err := c.Cookie("sessionID")
 	if err != nil {
 		h.logger.Printf("Error reading cookie: %s", err)
@@ -457,8 +419,7 @@ func (h *UserHandler) LogoutOther(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in FindSessionByAccess repository")
 	}
 
-	requestedSessionID := c.Param("id")
-	requestedSession, err := h.repository.FindSessionByID(requestedSessionID)
+	requestedSession, err := h.repository.FindSessionByID(c.Param("id"))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Session not found! %s", err)
@@ -472,7 +433,7 @@ func (h *UserHandler) LogoutOther(c echo.Context) error {
 		return c.String(http.StatusForbidden, "Cannot log out other user!")
 	}
 
-	err = h.repository.DeleteSession(requestedSessionID)
+	err = h.repository.DeleteSession(*requestedSession.ID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Sessions not found! %s", err)
@@ -482,14 +443,16 @@ func (h *UserHandler) LogoutOther(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in DeleteSession repository")
 	}
 
-	// TODO: Delete only if current session is specified!
-	c.SetCookie(&http.Cookie{
-		Name:     "refreshToken",
-		Value:    "",
-		Expires:  time.Now().Add(-1),
-		HttpOnly: true,
-		SameSite: 3,
-	})
+	// Invalidate cookie if the client invalidates the session they are logged in as
+	if *requestedSession.ID == *currentSession.ID {
+		c.SetCookie(&http.Cookie{
+			Name:     "sessionID",
+			Value:    "",
+			Expires:  time.Now().Add(-1),
+			HttpOnly: true,
+			SameSite: 3,
+		})
+	}
 
 	return c.String(http.StatusOK, "Session successfully deleted!")
 }
