@@ -39,6 +39,7 @@ func (r *UserRoutes) InitRoutes(e *echo.Echo) {
 
 	sessionGroup.POST("/register", r.handler.Register)
 	sessionGroup.POST("/login", r.handler.Login)
+	sessionGroup.PATCH("/reset-password/:id", r.handler.ResetPassword)
 	sessionGroup.GET("/verify", r.handler.Verify)
 	sessionGroup.DELETE("/logout/:id", r.handler.Logout)
 }

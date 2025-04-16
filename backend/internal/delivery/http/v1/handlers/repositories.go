@@ -58,6 +58,7 @@ type UserRepository interface {
 	CreateSession(session models.Session) (*models.Session, error)
 	FindSessionByID(id string) (*models.Session, error)
 	DeleteSession(id string) error
+	DeleteAllUserSessions(userID string) error
 
 	NotFoundErr() error
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	_ "gamehangar/docs"
+
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
@@ -341,6 +342,43 @@ func (h *UserHandler) Verify(c echo.Context) error {
 	}
 
 	return c.String(http.StatusOK, "User verified")
+}
+
+// @Summary	Resets User password and deletes all their Sessions
+// @Tags		Login
+// @Accept		text/plain
+// @Produce	text/plain
+// @Security ApiSessionCookie
+// @param password header string true "New Password"
+// @param id path string true "User ID"
+// @Success	200	{object}	ResponseHTTP{}
+// @Failure	400	{object}	ResponseHTTP{}
+// @Failure	500	{object}	ResponseHTTP{}
+// @Router		/v1/reset-password/{id} [patch]
+func (h *UserHandler) ResetPassword(c echo.Context) error {
+	password, ok := c.Request().Header["Password"]
+	if !ok {
+		h.logger.Printf("No password provided!")
+		return c.String(http.StatusBadRequest, "No password provided!")
+	}
+
+	user, err := h.repository.UpdateUser(c.Param("id"), models.User{Password: &password[0]})
+	if err != nil {
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: User not found! %s", err)
+			return c.String(http.StatusNotFound, "Error: User not found!")
+		}
+		h.logger.Printf("Error in UpdateUser repository: %s", err)
+		return c.String(http.StatusInternalServerError, "Error in UpdateUser repository")
+	}
+
+	err = h.repository.DeleteAllUserSessions(*user.ID)
+	if err != nil {
+		h.logger.Printf("Error in DeleteAllUserSessions repository: %s", err)
+		return c.String(http.StatusInternalServerError, "Error in DeleteAllUserSessions repository")
+	}
+
+	return c.String(http.StatusOK, "User password reset!")
 }
 
 // @Summary	Logs the User in and creates a new Session.

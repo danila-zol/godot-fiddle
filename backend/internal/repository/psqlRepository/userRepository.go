@@ -288,6 +288,23 @@ func (r *PsqlUserRepository) FindSessionByID(id string) (*models.Session, error)
 	return &session, nil
 }
 
+func (r *PsqlUserRepository) DeleteAllUserSessions(userID string) error {
+	conn, err := r.databaseClient.AcquireConn()
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".sessions WHERE user_id=$1`, userID)
+	if ct.RowsAffected() == 0 {
+		if err != nil {
+			return err
+		}
+		return r.databaseClient.ErrNoRows()
+	}
+	return nil
+}
+
 func (r *PsqlUserRepository) DeleteSession(id string) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
