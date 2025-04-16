@@ -6,8 +6,9 @@ import (
 )
 
 type Session struct {
-	ID      *string `json:"id,omitempty"`
+	Access  *string `json:"access,omitempty"`
 	UserID  *string `json:"userID,omitempty"`
+	Refresh *string `json:"refresh,omitempty"`
 }
 
 type LoginForm struct {
@@ -29,7 +30,7 @@ type User struct {
 	DisplayName *string    `json:"displayName,omitempty"`
 	Email       *string    `json:"email,omitempty"`
 	Password    *string    `json:"password"`
-	Verified    *bool      `json:"verified,omitempty"` // TODO: Verification endpoint
+	Verified    *bool      `json:"verified,omitempty"`
 	RoleID      *string    `json:"roleID,omitempty"`
 	CreatedAt   *time.Time `json:"createdAt,omitzero"`
 	Karma       *int       `json:"karma,omitempty"`
