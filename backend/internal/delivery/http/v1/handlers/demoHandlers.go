@@ -8,12 +8,14 @@ import (
 
 	_ "gamehangar/docs"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
 
 type DemoHandler struct {
 	logger     echo.Logger
 	repository DemoRepository
+	validator  *validator.Validate
 	syncer     ThreadSyncer
 }
 
@@ -22,10 +24,11 @@ type ThreadSyncer interface {
 	PatchThread(demoID int, demo models.Demo) error
 }
 
-func NewDemoHandler(e *echo.Echo, repo DemoRepository, s ThreadSyncer) *DemoHandler {
+func NewDemoHandler(e *echo.Echo, repo DemoRepository, v *validator.Validate, s ThreadSyncer) *DemoHandler {
 	return &DemoHandler{
 		logger:     e.Logger,
 		repository: repo,
+		validator:  v,
 		syncer:     s,
 	}
 }
@@ -59,6 +62,12 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 	if demo.Tags == nil {
 		empty := make([]string, 0)
 		demo.Tags = &empty
+	}
+
+	err = h.validator.Struct(&demo)
+	if err != nil {
+		h.logger.Printf("Error in PostDemo handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PostDemo handler")
 	}
 
 	demo.ThreadID, err = h.syncer.PostThread(demo)
@@ -154,6 +163,12 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 	if demo.UpdatedAt == nil {
 		currentTime := time.Now()
 		demo.UpdatedAt = &currentTime
+	}
+
+	err = h.validator.Struct(&demo)
+	if err != nil {
+		h.logger.Printf("Error in PatchDemo handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchDemo handler")
 	}
 
 	err = h.syncer.PatchThread(int(id), demo)

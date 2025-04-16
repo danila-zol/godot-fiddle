@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 )
@@ -28,7 +29,6 @@ type application struct {
 	echo      *echo.Echo
 	logger    echo.Logger
 	appRouter *echo.Router
-	validator echo.Validator
 }
 
 type DatabaseConfigCreator interface {
@@ -57,6 +57,7 @@ func getEnv() {
 // @name sessionID
 func main() {
 	e := echo.New()
+	v := validator.New(validator.WithRequiredStructEnabled())
 	getEnv()
 
 	cfg := &appConfig{
@@ -67,7 +68,6 @@ func main() {
 		appConfig: cfg,
 		echo:      e,
 		logger:    e.Logger,
-		validator: e.Validator,
 	}
 
 	// Might not look pretty to avoid passing around a pointer, but Psql*{} structs are empty
@@ -86,21 +86,21 @@ func main() {
 	app.logger.Info("Database setup successful!")
 
 	assetRepo := psqlRepository.NewPsqlAssetRepository(databaseClient)
-	assetHandler := handlers.NewAssetHandler(e, assetRepo)
+	assetHandler := handlers.NewAssetHandler(e, assetRepo, v)
 	routes.NewAssetRoutes(assetHandler).InitRoutes(app.echo)
 
 	forumRepo := psqlRepository.NewPsqlForumRepository(databaseClient)
-	forumHandler := handlers.NewForumHandler(e, forumRepo)
+	forumHandler := handlers.NewForumHandler(e, forumRepo, v)
 	routes.NewForumRoutes(forumHandler).InitRoutes(app.echo)
 
 	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient)
 	demoThreadSyncer := services.NewThreadSyncer(forumRepo, demoRepo, 1)
-	demoHandler := handlers.NewDemoHandler(e, demoRepo, demoThreadSyncer)
+	demoHandler := handlers.NewDemoHandler(e, demoRepo, v, demoThreadSyncer)
 	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
 
 	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient)
-	userIDLookup := services.NewUserIdentifier(userRepo)
-	userHandler := handlers.NewUserHandler(e, userRepo, userIDLookup)
+	userIdentifier := services.NewUserIdentifier(userRepo)
+	userHandler := handlers.NewUserHandler(e, userRepo, v, userIdentifier)
 	routes.NewUserRoutes(userHandler).InitRoutes(app.echo)
 
 	app.appRouter = app.routes(app.echo)

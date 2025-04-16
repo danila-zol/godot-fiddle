@@ -7,6 +7,7 @@ import (
 
 	_ "gamehangar/docs"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
@@ -18,13 +19,15 @@ type UserIdentifier interface {
 type UserHandler struct {
 	logger         echo.Logger
 	repository     UserRepository
+	validator      *validator.Validate
 	userIdentifier UserIdentifier
 }
 
-func NewUserHandler(e *echo.Echo, repo UserRepository, r UserIdentifier) *UserHandler {
+func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, r UserIdentifier) *UserHandler {
 	return &UserHandler{
 		logger:         e.Logger,
 		repository:     repo,
+		validator:      v,
 		userIdentifier: r,
 	}
 }
@@ -157,6 +160,12 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 		role.ID = &roleID
 	}
 
+	err = h.validator.Struct(&role)
+	if err != nil {
+		h.logger.Printf("Error in PostRole handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PostRole handler")
+	}
+
 	newRole, err := h.repository.CreateRole(role)
 	if err != nil {
 		h.logger.Printf("Error in CreateRole repository: %s", err)
@@ -284,6 +293,12 @@ func (h *UserHandler) Register(c echo.Context) error {
 	} // TODO: Fix nil values for Postgres
 	// TODO: Create Salt for user's password
 
+	err = h.validator.Struct(&user)
+	if err != nil {
+		h.logger.Printf("Error in Register handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in Register handler")
+	}
+
 	newUser, err := h.repository.CreateUser(user)
 	if err != nil {
 		h.logger.Printf("Error in CreateUser repository: %s", err)
@@ -356,13 +371,20 @@ func (h *UserHandler) Verify(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/reset-password/{id} [patch]
 func (h *UserHandler) ResetPassword(c echo.Context) error {
-	password, ok := c.Request().Header["Password"]
+	passwordSlice, ok := c.Request().Header["Password"]
 	if !ok {
 		h.logger.Printf("No password provided!")
 		return c.String(http.StatusBadRequest, "No password provided!")
 	}
+	password := passwordSlice[0]
 
-	user, err := h.repository.UpdateUser(c.Param("id"), models.User{Password: &password[0]})
+	err := h.validator.Var(&password, "required,min=8,alphanum")
+	if err != nil {
+		h.logger.Printf("Error in ResetPassword handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in ResetPassword handler")
+	}
+
+	user, err := h.repository.UpdateUser(c.Param("id"), models.User{Password: &password})
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: User not found! %s", err)
@@ -397,6 +419,12 @@ func (h *UserHandler) Login(c echo.Context) error {
 	if err != nil {
 		h.logger.Printf("Error in PostSession handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostSession handler")
+	}
+
+	err = h.validator.Struct(&loginForm)
+	if err != nil {
+		h.logger.Printf("Error in Login handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in Login handler")
 	}
 
 	user, err := h.userIdentifier.IdentifyUser(loginForm.Email, loginForm.Username)

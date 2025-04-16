@@ -61,7 +61,7 @@ CREATE SCHEMA IF NOT EXISTS demo;
 CREATE TABLE demo.demos (
 	"id"  integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	"title" varchar(255) NOT NULL,
-	"description" varchar NOT NULL,
+	"description" varchar,
 	"tags" varchar(255)[],
 	"link" varchar(255) NOT NULL,
 	"user_id" uuid NOT NULL,

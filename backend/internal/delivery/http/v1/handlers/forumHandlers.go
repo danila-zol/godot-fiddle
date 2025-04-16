@@ -7,18 +7,22 @@ import (
 	"time"
 
 	_ "gamehangar/docs"
+
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
 
 type ForumHandler struct {
 	logger     echo.Logger
 	repository ForumRepository
+	validator  *validator.Validate
 }
 
-func NewForumHandler(e *echo.Echo, repo ForumRepository) *ForumHandler {
+func NewForumHandler(e *echo.Echo, repo ForumRepository, v *validator.Validate) *ForumHandler {
 	return &ForumHandler{
 		logger:     e.Logger,
 		repository: repo,
+		validator:  v,
 	}
 }
 
@@ -38,6 +42,12 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 	if err != nil {
 		h.logger.Printf("Error in PostTopic handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostTopic handler")
+	}
+
+	err = h.validator.Struct(&topic)
+	if err != nil {
+		h.logger.Printf("Error in PostTopic handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PostTopic handler")
 	}
 
 	newTopic, err := h.repository.CreateTopic(topic)
@@ -122,6 +132,12 @@ func (h *ForumHandler) PatchTopic(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PatchTopic handler")
 	}
 
+	err = h.validator.Struct(&topic)
+	if err != nil {
+		h.logger.Printf("Error in PatchTopic handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchTopic handler")
+	}
+
 	updTopic, err := h.repository.UpdateTopic(int(id), topic)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
@@ -189,6 +205,12 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 	if thread.Upvotes == nil || thread.Downvotes == nil {
 		zero := uint(0)
 		thread.Upvotes, thread.Downvotes = &zero, &zero
+	}
+
+	err = h.validator.Struct(&thread)
+	if err != nil {
+		h.logger.Printf("Error in PostThread handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PostThread handler")
 	}
 
 	newThread, err := h.repository.CreateThread(thread)
@@ -278,6 +300,12 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 		thread.UpdatedAt = &currentTime
 	}
 
+	err = h.validator.Struct(&thread)
+	if err != nil {
+		h.logger.Printf("Error in PatchThread handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchThread handler")
+	}
+
 	updThread, err := h.repository.UpdateThread(int(id), thread)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
@@ -345,6 +373,12 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 	if message.Upvotes == nil || message.Downvotes == nil {
 		zero := uint(0)
 		message.Upvotes, message.Downvotes = &zero, &zero
+	}
+
+	err = h.validator.Struct(&message)
+	if err != nil {
+		h.logger.Printf("Error in PostMessage handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PostMessage handler")
 	}
 
 	newMessage, err := h.repository.CreateMessage(message)
@@ -431,6 +465,12 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 	if message.UpdatedAt == nil {
 		currentTime := time.Now()
 		message.UpdatedAt = &currentTime
+	}
+
+	err = h.validator.Struct(&message)
+	if err != nil {
+		h.logger.Printf("Error in PatchMessage handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchMessage handler")
 	}
 
 	updMessage, err := h.repository.UpdateMessage(int(id), message)

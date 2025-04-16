@@ -7,18 +7,22 @@ import (
 	"time"
 
 	_ "gamehangar/docs"
+
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
 
 type AssetHandler struct {
 	logger     echo.Logger
 	repository AssetRepository
+	validator  *validator.Validate
 }
 
-func NewAssetHandler(e *echo.Echo, repo AssetRepository) *AssetHandler {
+func NewAssetHandler(e *echo.Echo, repo AssetRepository, v *validator.Validate) *AssetHandler {
 	return &AssetHandler{
 		logger:     e.Logger,
 		repository: repo,
+		validator:  v,
 	}
 }
 
@@ -43,6 +47,12 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 	if asset.CreatedAt == nil {
 		currentTime := time.Now()
 		asset.CreatedAt = &currentTime
+	}
+
+	err = h.validator.Struct(&asset)
+	if err != nil {
+		h.logger.Printf("Error in PostAsset handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PostAsset handler")
 	}
 
 	// TODO: Hook a Service to create links to the S3 bucket
@@ -127,6 +137,12 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 	if err = c.Bind(&asset); err != nil {
 		h.logger.Printf("Error in PatchAsset handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchAsset handler")
+	}
+
+	err = h.validator.Struct(&asset)
+	if err != nil {
+		h.logger.Printf("Error in PatchAsset handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchAsset handler")
 	}
 
 	updAsset, err := h.repository.UpdateAsset(int(id), asset)
