@@ -261,7 +261,7 @@ func (r *PsqlUserRepository) CreateSession(session models.Session) (*models.Sess
 		VALUES
 		($1)
 		RETURNING
-		(access, user_id, refresh)`,
+		(id, user_id)`,
 		session.UserID,
 	).Scan(&session)
 	if err != nil {
@@ -270,7 +270,7 @@ func (r *PsqlUserRepository) CreateSession(session models.Session) (*models.Sess
 	return &session, nil
 }
 
-func (r *PsqlUserRepository) FindSessionByAccess(accessToken string) (*models.Session, error) {
+func (r *PsqlUserRepository) FindSessionByID(id string) (*models.Session, error) {
 	var session models.Session
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -279,26 +279,8 @@ func (r *PsqlUserRepository) FindSessionByAccess(accessToken string) (*models.Se
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (access, user_id, refresh) FROM "user".sessions WHERE access = $1 LIMIT 1`,
-		accessToken,
-	).Scan(&session)
-	if err != nil {
-		return nil, err
-	}
-	return &session, nil
-}
-
-func (r *PsqlUserRepository) FindSessionByRefresh(refreshToken string) (*models.Session, error) {
-	var session models.Session
-	conn, err := r.databaseClient.AcquireConn()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-
-	err = conn.QueryRow(context.Background(),
-		`SELECT (access, user_id, refresh) FROM "user".sessions WHERE refresh = $1 LIMIT 1`,
-		refreshToken,
+		`SELECT (id, user_id) FROM "user".sessions WHERE id = $1 LIMIT 1`,
+		id,
 	).Scan(&session)
 	if err != nil {
 		return nil, err
@@ -313,7 +295,7 @@ func (r *PsqlUserRepository) DeleteSession(id string) error {
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".sessions WHERE access=$1`, id)
+	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".sessions WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
 		if err != nil {
 			return err

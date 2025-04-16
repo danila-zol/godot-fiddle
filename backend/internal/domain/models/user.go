@@ -6,9 +6,8 @@ import (
 )
 
 type Session struct {
-	Access  *string `json:"access,omitempty"`
-	UserID  *string `json:"userID,omitempty"`
-	Refresh *string `json:"refresh,omitempty"`
+	ID     *string `json:"id,omitempty"`
+	UserID *string `json:"userID,omitempty"`
 }
 
 type LoginForm struct {

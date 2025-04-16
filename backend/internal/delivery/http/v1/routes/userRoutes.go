@@ -40,7 +40,6 @@ func (r *UserRoutes) InitRoutes(e *echo.Echo) {
 	sessionGroup.POST("/register", r.handler.Register)
 	sessionGroup.POST("/login", r.handler.Login)
 	sessionGroup.GET("/verify", r.handler.Verify)
-	sessionGroup.GET("/refresh", r.handler.RefreshSession)
 	sessionGroup.DELETE("/logout", r.handler.LogoutSelf)
-	sessionGroup.DELETE("/logout/:access", r.handler.LogoutOther)
+	sessionGroup.DELETE("/logout/:id", r.handler.LogoutOther)
 }

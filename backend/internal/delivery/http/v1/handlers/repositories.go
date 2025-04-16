@@ -56,8 +56,7 @@ type UserRepository interface {
 	DeleteRole(id string) error
 
 	CreateSession(session models.Session) (*models.Session, error)
-	FindSessionByAccess(accessToken string) (*models.Session, error)
-	FindSessionByRefresh(refreshToken string) (*models.Session, error)
+	FindSessionByID(id string) (*models.Session, error)
 	DeleteSession(id string) error
 
 	NotFoundErr() error

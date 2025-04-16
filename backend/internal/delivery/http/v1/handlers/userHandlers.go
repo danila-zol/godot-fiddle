@@ -295,21 +295,13 @@ func (h *UserHandler) Register(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error creating session")
 	}
 	c.SetCookie(&http.Cookie{
-		Name:     "accessToken",
-		Value:    *session.Access,
-		Expires:  time.Now().Add(6 * time.Hour),
+		Name:     "sessionID",
+		Value:    *session.ID,
+		Expires:  time.Now().Add(96 * time.Hour),
 		HttpOnly: true,
 		SameSite: 3,
 	})
-	c.SetCookie(&http.Cookie{
-		Name:     "refreshToken",
-		Value:    *session.Refresh,
-		Expires:  time.Now().Add(48 * time.Hour),
-		HttpOnly: true,
-		SameSite: 3,
-	})
-	h.logger.Printf("Access token: ", *session.Access)   // DEBUG
-	h.logger.Printf("Refresh token: ", *session.Refresh) // DEBUG
+	h.logger.Printf("Cookie value: ", *session.ID) // DEBUG
 
 	return c.JSON(http.StatusOK, &newUser)
 }
@@ -319,19 +311,19 @@ func (h *UserHandler) Register(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	text/plain
 // @Security ApiSessionCookie
-// @param accessToken header string true "Access Token"
+// @param sessionID header string true "Session ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/verify [get]
 func (h *UserHandler) Verify(c echo.Context) error {
-	cookie, err := c.Cookie("accessToken")
+	cookie, err := c.Cookie("sessionID")
 	if err != nil {
 		h.logger.Printf("Error reading cookie: %s", err)
 		return c.String(http.StatusUnauthorized, "Error reading cookie")
 	}
 
-	session, err := h.repository.FindSessionByAccess(cookie.Value)
+	session, err := h.repository.FindSessionByID(cookie.Value)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Session not found! %s", err)
@@ -388,81 +380,15 @@ func (h *UserHandler) Login(c echo.Context) error {
 	}
 
 	c.SetCookie(&http.Cookie{
-		Name:     "accessToken",
-		Value:    *session.Access,
-		Expires:  time.Now().Add(6 * time.Hour),
+		Name:     "sessionID",
+		Value:    *session.ID,
+		Expires:  time.Now().Add(96 * time.Hour),
 		HttpOnly: true,
 		SameSite: 3,
 	})
-	c.SetCookie(&http.Cookie{
-		Name:     "refreshToken",
-		Value:    *session.Refresh,
-		Expires:  time.Now().Add(48 * time.Hour),
-		HttpOnly: true,
-		SameSite: 3,
-	})
-	h.logger.Printf("Access token: ", *session.Access)   // DEBUG
-	h.logger.Printf("Refresh token: ", *session.Refresh) // DEBUG
+	h.logger.Printf("Cookie value: ", *session.ID) // DEBUG
 
 	return c.String(http.StatusOK, "Login successful")
-}
-
-// @Summary	Refreshes Session token.
-// @Tags		Login
-// @Accept		text/plain
-// @Produce	text/plain
-// @Security ApiSessionCookie
-// @param refreshToken header string true "Refresh token"
-// @Success	200	{object}	ResponseHTTP{}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/refresh [get]
-func (h *UserHandler) RefreshSession(c echo.Context) error {
-	cookie, err := c.Cookie("refreshToken")
-	if err != nil {
-		h.logger.Printf("Error reading cookie: %s", err)
-		return c.String(http.StatusUnauthorized, "Error reading cookie")
-	}
-
-	session, err := h.repository.FindSessionByRefresh(cookie.Value)
-	if err != nil {
-		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Session not found! %s", err)
-			return c.String(http.StatusUnauthorized, "Error: Session not found!")
-		}
-		h.logger.Printf("Error in FindSessionByRefresh repository: %s", err)
-		return c.String(http.StatusBadRequest, "Error in FindSessionByRefresh repository")
-	}
-	err = h.repository.DeleteSession(*session.Access)
-	if err != nil {
-		h.logger.Printf("Error in DeleteSession repository: %s", err)
-		return c.String(http.StatusBadRequest, "Error in DeleteSession repository")
-	}
-
-	newSession, err := h.repository.CreateSession(models.Session{UserID: session.UserID})
-	if err != nil {
-		h.logger.Printf("Error in CreateSession repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in CreateSession repository")
-	}
-
-	c.SetCookie(&http.Cookie{
-		Name:     "accessToken",
-		Value:    *newSession.Access,
-		Expires:  time.Now().Add(6 * time.Hour),
-		HttpOnly: true,
-		SameSite: 3,
-	})
-	c.SetCookie(&http.Cookie{
-		Name:     "refreshToken",
-		Value:    *newSession.Refresh,
-		Expires:  time.Now().Add(48 * time.Hour),
-		HttpOnly: true,
-		SameSite: 3,
-	})
-	h.logger.Printf("Access token: ", *newSession.Access)   // DEBUG
-	h.logger.Printf("Refresh token: ", *newSession.Refresh) // DEBUG
-
-	return c.String(http.StatusOK, "Session refreshed")
 }
 
 // @Summary	Invalidates and deletes current user Session.
@@ -470,19 +396,19 @@ func (h *UserHandler) RefreshSession(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	text/plain
 // @Security ApiSessionCookie
-// @param accessToken header string true "Access Token"
+// @param sessionID header string true "Session ID"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/logout [delete]
 func (h *UserHandler) LogoutSelf(c echo.Context) error {
-	accessToken, err := c.Cookie("accessToken")
+	cookie, err := c.Cookie("sessionID")
 	if err != nil {
 		h.logger.Printf("Error reading cookie: %s", err)
 		return c.String(http.StatusUnauthorized, "Error reading cookie")
 	}
 
-	err = h.repository.DeleteSession(accessToken.Value)
+	err = h.repository.DeleteSession(cookie.Value)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Session not found! %s", err)
@@ -493,14 +419,7 @@ func (h *UserHandler) LogoutSelf(c echo.Context) error {
 	}
 
 	c.SetCookie(&http.Cookie{
-		Name:     "accessToken",
-		Value:    "",
-		Expires:  time.Now().Add(-1),
-		HttpOnly: true,
-		SameSite: 3,
-	})
-	c.SetCookie(&http.Cookie{
-		Name:     "refreshToken",
+		Name:     "sessionID",
 		Value:    "",
 		Expires:  time.Now().Add(-1),
 		HttpOnly: true,
@@ -515,20 +434,20 @@ func (h *UserHandler) LogoutSelf(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	text/plain
 // @Security ApiSessionCookie
-// @param accessToken header string true "Access Token"
-// @Param		access		path		string		true	"Other access token"
+// @param sessionID header string true "Session ID"
+// @Param		id		path		string		true	"Session to invalidate"
 // @Success	200	{object}	ResponseHTTP{}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
-// @Router		/v1/logout/{access} [delete]
+// @Router		/v1/logout/{id} [delete]
 func (h *UserHandler) LogoutOther(c echo.Context) error {
-	accessToken, err := c.Cookie("accessToken")
+	cookie, err := c.Cookie("sessionID")
 	if err != nil {
 		h.logger.Printf("Error reading cookie: %s", err)
 		return c.String(http.StatusUnauthorized, "Error reading cookie")
 	}
 
-	currentSession, err := h.repository.FindSessionByAccess(accessToken.Value)
+	currentSession, err := h.repository.FindSessionByID(cookie.Value)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Session not found! %s", err)
@@ -538,8 +457,8 @@ func (h *UserHandler) LogoutOther(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in FindSessionByAccess repository")
 	}
 
-	requestedSessionAccess := c.Param("access")
-	requestedSession, err := h.repository.FindSessionByAccess(requestedSessionAccess)
+	requestedSessionID := c.Param("id")
+	requestedSession, err := h.repository.FindSessionByID(requestedSessionID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Session not found! %s", err)
@@ -553,7 +472,7 @@ func (h *UserHandler) LogoutOther(c echo.Context) error {
 		return c.String(http.StatusForbidden, "Cannot log out other user!")
 	}
 
-	err = h.repository.DeleteSession(requestedSessionAccess)
+	err = h.repository.DeleteSession(requestedSessionID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Sessions not found! %s", err)
@@ -563,13 +482,7 @@ func (h *UserHandler) LogoutOther(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in DeleteSession repository")
 	}
 
-	c.SetCookie(&http.Cookie{
-		Name:     "accessToken",
-		Value:    "",
-		Expires:  time.Now().Add(-1),
-		HttpOnly: true,
-		SameSite: 3,
-	})
+	// TODO: Delete only if current session is specified!
 	c.SetCookie(&http.Cookie{
 		Name:     "refreshToken",
 		Value:    "",
