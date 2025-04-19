@@ -102,7 +102,8 @@ func main() {
 
 	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient)
 	userIdentifier := services.NewUserIdentifier(userRepo)
-	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, userIdentifier)
+	passwordManager := services.NewPasswordManager(userRepo)
+	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, userIdentifier, passwordManager)
 	routes.NewUserRoutes(userHandler).InitRoutes(app.echo)
 
 	app.appRouter = app.routes(app.echo)

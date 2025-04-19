@@ -2,34 +2,35 @@ package services
 
 import "gamehangar/internal/domain/models"
 
-type UserRepository interface {
+type UsernameResolver interface {
 	FindUserByEmail(email string) (user *models.User, err error)
 	FindUserByUsername(username string) (user *models.User, err error)
+	NotFoundErr() error
 }
 
 type UserIdentifier struct {
-	userRepository UserRepository
+	usernameResolver UsernameResolver
 }
 
-func NewUserIdentifier(r UserRepository) *UserIdentifier {
+func NewUserIdentifier(r UsernameResolver) *UserIdentifier {
 	return &UserIdentifier{
-		userRepository: r,
+		usernameResolver: r,
 	}
 }
 
-func (l *UserIdentifier) IdentifyUser(email, username *string) (user *models.User, err error) {
+func (i *UserIdentifier) IdentifyUser(email, username *string) (user *models.User, err error) {
 	if email != nil {
-		user, err = l.userRepository.FindUserByEmail(*email)
-		if err != nil {
-			return nil, err
+		user, err = i.usernameResolver.FindUserByEmail(*email)
+		if err == nil {
+			return user, nil
 		}
 	}
 	if username != nil {
-		user, err = l.userRepository.FindUserByUsername(*username)
-		if err != nil {
-			return nil, err
+		user, err = i.usernameResolver.FindUserByUsername(*username)
+		if err == nil {
+			return user, nil
 		}
 	}
 
-	return user, nil
+	return nil, i.usernameResolver.NotFoundErr()
 }

@@ -16,19 +16,26 @@ type UserIdentifier interface {
 	IdentifyUser(email, username *string) (user *models.User, err error)
 }
 
-type UserHandler struct {
-	logger         echo.Logger
-	repository     UserRepository
-	validator      *validator.Validate
-	userIdentifier UserIdentifier
+type PasswordManager interface {
+	CreatePasswordHash(password *string) (hash *string, err error)
+	CheckPassword(password, userID *string) (err error)
 }
 
-func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, r UserIdentifier) *UserHandler {
+type UserHandler struct {
+	logger          echo.Logger
+	repository      UserRepository
+	validator       *validator.Validate
+	userIdentifier  UserIdentifier
+	passwordManager PasswordManager
+}
+
+func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, r UserIdentifier, m PasswordManager) *UserHandler {
 	return &UserHandler{
-		logger:         e.Logger,
-		repository:     repo,
-		validator:      v,
-		userIdentifier: r,
+		logger:          e.Logger,
+		repository:      repo,
+		validator:       v,
+		userIdentifier:  r,
+		passwordManager: m,
 	}
 }
 
@@ -266,6 +273,7 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 // @Accept		application/json
 // @Produce	application/json
 // @Param		User	body		models.User	true	"Create User"
+// @param password header string true "Password"
 // @Success	200		{object}	ResponseHTTP{data=models.User}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
@@ -291,13 +299,25 @@ func (h *UserHandler) Register(c echo.Context) error {
 		f := false
 		user.Verified = &f
 	} // TODO: Fix nil values for Postgres
-	// TODO: Create Salt for user's password
 
 	err = h.validator.Struct(&user)
 	if err != nil {
 		h.logger.Printf("Error in Register handler: %s", err)
 		return c.String(http.StatusUnprocessableEntity, "Error in Register handler")
 	}
+
+	passwordSlice, ok := c.Request().Header["Password"]
+	if !ok {
+		h.logger.Printf("No password provided!")
+		return c.String(http.StatusBadRequest, "No password provided!")
+	}
+	password := &passwordSlice[0]
+	err = h.validator.Var(&password, "required,min=8,alphanum")
+	if err != nil {
+		h.logger.Printf("Error in ResetPassword handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in ResetPassword handler")
+	}
+	user.Password, err = h.passwordManager.CreatePasswordHash(password)
 
 	newUser, err := h.repository.CreateUser(user)
 	if err != nil {
@@ -376,7 +396,7 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 		h.logger.Printf("No password provided!")
 		return c.String(http.StatusBadRequest, "No password provided!")
 	}
-	password := passwordSlice[0]
+	password := &passwordSlice[0]
 
 	err := h.validator.Var(&password, "required,min=8,alphanum")
 	if err != nil {
@@ -384,7 +404,9 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 		return c.String(http.StatusUnprocessableEntity, "Error in ResetPassword handler")
 	}
 
-	user, err := h.repository.UpdateUser(c.Param("id"), models.User{Password: &password})
+	password, err = h.passwordManager.CreatePasswordHash(password)
+
+	user, err := h.repository.UpdateUser(c.Param("id"), models.User{Password: password})
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: User not found! %s", err)
@@ -407,27 +429,43 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 // @Tags		Login
 // @Accept		application/json
 // @Produce	text/plain
-// @Param		LoginForm	body		models.LoginForm	true	"Log in"
+// @param email header string false "Email"
+// @param username header string false "Username"
+// @param password header string true "Password"
 // @Success	200		{object}	ResponseHTTP{}
 // @Failure	400		{object}	ResponseHTTP{}
 // @Failure	500		{object}	ResponseHTTP{}
 // @Router		/v1/login [post]
 func (h *UserHandler) Login(c echo.Context) error {
-	var loginForm models.LoginForm
+	var username, email, password string
 
-	err := c.Bind(&loginForm)
-	if err != nil {
-		h.logger.Printf("Error in PostSession handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PostSession handler")
+	passwordSlice, ok := c.Request().Header["Password"]
+	if !ok {
+		h.logger.Printf("No password provided!")
+		return c.String(http.StatusBadRequest, "No password provided!")
+	}
+	password = passwordSlice[0]
+
+	if _, ok = c.Request().Header["Username"]; ok {
+		username = c.Request().Header["Username"][0]
+		err := h.validator.Var(username, "omitempty,max=90")
+		if err != nil {
+			h.logger.Printf("Error in Login handler: %s", err)
+			return c.String(http.StatusUnprocessableEntity, "Error in Login handler")
+		}
+	} else if _, ok = c.Request().Header["Email"]; ok {
+		email = c.Request().Header["Email"][0]
+		err := h.validator.Var(email, "omitempty,email,max=50")
+		if err != nil {
+			h.logger.Printf("Error in Login handler: %s", err)
+			return c.String(http.StatusUnprocessableEntity, "Error in Login handler")
+		}
+	} else {
+		h.logger.Printf("No identifiers provided!")
+		return c.String(http.StatusUnauthorized, "No identifiers provided!")
 	}
 
-	err = h.validator.Struct(&loginForm)
-	if err != nil {
-		h.logger.Printf("Error in Login handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in Login handler")
-	}
-
-	user, err := h.userIdentifier.IdentifyUser(loginForm.Email, loginForm.Username)
+	user, err := h.userIdentifier.IdentifyUser(&email, &username)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: User not found! %s", err)
@@ -437,7 +475,10 @@ func (h *UserHandler) Login(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error identifying user")
 	}
 
-	// TODO: Service to check password
+	if h.passwordManager.CheckPassword(&password, user.ID) != nil {
+		h.logger.Printf("Password incorrect!")
+		return c.String(http.StatusUnauthorized, "Password incorrect!")
+	}
 
 	session, err := h.repository.CreateSession(models.Session{UserID: user.ID})
 	if err != nil {
