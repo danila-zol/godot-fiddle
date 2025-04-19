@@ -6,10 +6,6 @@ type ForumRepository interface {
 	CreateThread(thread models.Thread) (*models.Thread, error)
 	UpdateThread(id int, thread models.Thread) (*models.Thread, error)
 	DeleteThread(id int) error
-
-	CreateMessage(message models.Message) (*models.Message, error)
-	UpdateMessage(id int, message models.Message) (*models.Message, error)
-	DeleteMessage(id int) error
 }
 
 type DemoRepository interface {

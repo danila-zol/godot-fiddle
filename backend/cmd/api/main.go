@@ -28,6 +28,7 @@ type application struct {
 	appConfig *appConfig
 	echo      *echo.Echo
 	logger    echo.Logger
+	validator *validator.Validate
 	appRouter *echo.Router
 }
 
@@ -67,6 +68,7 @@ func main() {
 	app := &application{
 		appConfig: cfg,
 		echo:      e,
+		validator: v,
 		logger:    e.Logger,
 	}
 
@@ -86,21 +88,21 @@ func main() {
 	app.logger.Info("Database setup successful!")
 
 	assetRepo := psqlRepository.NewPsqlAssetRepository(databaseClient)
-	assetHandler := handlers.NewAssetHandler(e, assetRepo, v)
+	assetHandler := handlers.NewAssetHandler(e, assetRepo, app.validator)
 	routes.NewAssetRoutes(assetHandler).InitRoutes(app.echo)
 
 	forumRepo := psqlRepository.NewPsqlForumRepository(databaseClient)
-	forumHandler := handlers.NewForumHandler(e, forumRepo, v)
+	forumHandler := handlers.NewForumHandler(e, forumRepo, app.validator)
 	routes.NewForumRoutes(forumHandler).InitRoutes(app.echo)
 
 	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient)
 	demoThreadSyncer := services.NewThreadSyncer(forumRepo, demoRepo, 1)
-	demoHandler := handlers.NewDemoHandler(e, demoRepo, v, demoThreadSyncer)
+	demoHandler := handlers.NewDemoHandler(e, demoRepo, app.validator, demoThreadSyncer)
 	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
 
 	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient)
 	userIdentifier := services.NewUserIdentifier(userRepo)
-	userHandler := handlers.NewUserHandler(e, userRepo, v, userIdentifier)
+	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, userIdentifier)
 	routes.NewUserRoutes(userHandler).InitRoutes(app.echo)
 
 	app.appRouter = app.routes(app.echo)
