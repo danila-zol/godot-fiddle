@@ -68,7 +68,7 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/topics/{id} [get]
-func (h *ForumHandler) GetTopicById(c echo.Context) error {
+func (h *ForumHandler) GetTopicByID(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		h.logger.Printf("Error in GetTopicByID handler: %s", err)
@@ -231,7 +231,7 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/threads/{id} [get]
-func (h *ForumHandler) GetThreadById(c echo.Context) error {
+func (h *ForumHandler) GetThreadByID(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		h.logger.Printf("Error in GetThreadByID handler: %s", err)
@@ -399,7 +399,7 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/messages/{id} [get]
-func (h *ForumHandler) GetMessageById(c echo.Context) error {
+func (h *ForumHandler) GetMessageByID(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		h.logger.Printf("Error in GetMessageByID handler: %s", err)
@@ -428,6 +428,35 @@ func (h *ForumHandler) GetMessageById(c echo.Context) error {
 // @Router		/v1/messages [get]
 func (h *ForumHandler) GetMessages(c echo.Context) error {
 	messages, err := h.repository.FindMessages()
+	if err != nil {
+		if err == h.repository.NotFoundErr() {
+			h.logger.Printf("Error: Message not found! %s", err)
+			return c.String(http.StatusNotFound, "Error: Message not found!")
+		}
+		h.logger.Printf("Error in FindFirstMessage repository: %s", err)
+		return c.String(http.StatusInternalServerError, "Error in FindMessages repository")
+	}
+
+	return c.JSON(http.StatusOK, &messages)
+}
+
+// @Summary	Fetches all messages in the thread of ID.
+// @Tags		Messages
+// @Accept	text/plain
+// @Produce	application/json
+// @Param		threadID	path		int	true	"Get Messages of Thread ID"
+// @Success	200	{object}	ResponseHTTP{data=[]models.Message}
+// @Failure	400	{object}	ResponseHTTP{}
+// @Failure	500	{object}	ResponseHTTP{}
+// @Router		/v1/messages/thread/{threadID} [get]
+func (h *ForumHandler) GetMessagesByThreadID(c echo.Context) error {
+	threadID, err := strconv.ParseInt(c.Param("threadID"), 10, 64)
+	if err != nil {
+		h.logger.Printf("Error in GetMessageByThreadID handler: %s", err)
+		return c.String(http.StatusBadRequest, "Error in GetMessageByThreadID handler")
+	}
+
+	messages, err := h.repository.FindMessagesByThreadID(int(threadID))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Message not found! %s", err)

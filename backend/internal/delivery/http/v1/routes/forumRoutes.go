@@ -22,7 +22,7 @@ func (r *ForumRoutes) InitRoutes(e *echo.Echo) {
 	protectedTopicGroup := topicGroup.Group("")
 
 	protectedTopicGroup.POST("", r.handler.PostTopic)
-	topicGroup.GET("/:id", r.handler.GetTopicById)
+	topicGroup.GET("/:id", r.handler.GetTopicByID)
 	topicGroup.GET("", r.handler.GetTopics)
 	protectedTopicGroup.PATCH("/:id", r.handler.PatchTopic)
 	protectedTopicGroup.DELETE("/:id", r.handler.DeleteTopic)
@@ -32,7 +32,7 @@ func (r *ForumRoutes) InitRoutes(e *echo.Echo) {
 	protectedThreadGroup := threadGroup.Group("")
 
 	protectedThreadGroup.POST("", r.handler.PostThread)
-	threadGroup.GET("/:id", r.handler.GetThreadById)
+	threadGroup.GET("/:id", r.handler.GetThreadByID)
 	threadGroup.GET("", r.handler.GetThreads)
 	protectedThreadGroup.PATCH("/:id", r.handler.PatchThread)
 	protectedThreadGroup.DELETE("/:id", r.handler.DeleteThread)
@@ -42,7 +42,8 @@ func (r *ForumRoutes) InitRoutes(e *echo.Echo) {
 	protectedMessageGroup := messageGroup.Group("")
 
 	protectedMessageGroup.POST("", r.handler.PostMessage)
-	messageGroup.GET("/:id", r.handler.GetMessageById)
+	messageGroup.GET("/thread/:threadID", r.handler.GetMessagesByThreadID)
+	messageGroup.GET("/:id", r.handler.GetMessageByID)
 	messageGroup.GET("", r.handler.GetMessages)
 	protectedMessageGroup.PATCH("/:id", r.handler.PatchMessage)
 	protectedMessageGroup.DELETE("/:id", r.handler.DeleteMessage)
