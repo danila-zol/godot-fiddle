@@ -15,6 +15,8 @@ type DemoRepository interface {
 	CreateDemo(demo models.Demo) (*models.Demo, error)
 	FindDemos() (*[]models.Demo, error)
 	FindDemoByID(id int) (*models.Demo, error)
+	FindDemosByQuery(query string) (*[]models.Demo, error)
+	// FindDemosByDate(time time.Time) (*[]models.Demo, error)
 	UpdateDemo(id int, demo models.Demo) (*models.Demo, error)
 	DeleteDemo(id int) error
 	NotFoundErr() error

@@ -4,6 +4,7 @@ import (
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "gamehangar/docs"
@@ -117,16 +118,26 @@ func (h *DemoHandler) GetDemoById(c echo.Context) error {
 // @Summary	Fetches all demos.
 // @Tags		Demos
 // @Produce	application/json
+// @Param		textQuery	query		[]string	false	"Text Query"
 // @Success	200	{object}	ResponseHTTP{data=[]models.Demo}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/demos [get]
 func (h *DemoHandler) GetDemos(c echo.Context) error {
-	demos, err := h.repository.FindDemos()
+	var err error
+	var demos *[]models.Demo
+
+	tags := strings.Join(c.Request().URL.Query()["textQuery"], " ")
+
+	if len(tags) != 0 {
+		demos, err = h.repository.FindDemosByQuery(tags)
+	} else {
+		demos, err = h.repository.FindDemos()
+	}
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Demos not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			return c.String(http.StatusNotFound, "Error: Demos not found!")
 		}
 		h.logger.Printf("Error in FindDemos operation: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in FindDemos operation")

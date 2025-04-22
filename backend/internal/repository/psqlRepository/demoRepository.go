@@ -61,6 +61,45 @@ func (r *PsqlDemoRepository) FindDemoByID(id int) (*models.Demo, error) {
 	return &demo, nil
 }
 
+// TODO: Add query by tags
+// TODO: What about the Russian language?
+func (r *PsqlDemoRepository) FindDemosByQuery(query string) (*[]models.Demo, error) {
+	var demos []models.Demo
+
+	conn, err := r.databaseClient.AcquireConn()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	rows, err := conn.Query(context.Background(),
+		`SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes) 
+		FROM demo.demos
+		WHERE ts @@ to_tsquery('english', $1)
+		ORDER BY updated_at DESC`, query,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if rows.CommandTag().RowsAffected() == 0 {
+		return nil, r.NotFoundErr()
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var demo models.Demo
+		err = rows.Scan(&demo)
+		if err != nil {
+			return nil, err
+		}
+		demos = append(demos, demo)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return &demos, nil
+}
+
 func (r *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
 	var demos []models.Demo
 
