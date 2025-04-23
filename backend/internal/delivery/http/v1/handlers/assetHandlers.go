@@ -43,6 +43,7 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 		h.logger.Printf("Error in PostAsset handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostAsset handler")
 	}
+	asset.Method = "POST"
 
 	if asset.CreatedAt == nil {
 		currentTime := time.Now()
@@ -76,11 +77,13 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/assets/{id} [get]
 func (h *AssetHandler) GetAssetById(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in GetAssetByID handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in GetAssetByID handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in GetAssetByID handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	asset, err := h.repository.FindAssetByID(int(id))
 	if err != nil {
@@ -128,11 +131,13 @@ func (h *AssetHandler) GetAssets(c echo.Context) error {
 // @Router		/v1/assets/{id} [patch]
 func (h *AssetHandler) PatchAsset(c echo.Context) error {
 	var asset models.Asset
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in PatchAsset handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PatchAsset handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchAsset handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	if err = c.Bind(&asset); err != nil {
 		h.logger.Printf("Error in PatchAsset handler: %s", err)
@@ -168,11 +173,13 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/assets/{id} [delete]
 func (h *AssetHandler) DeleteAsset(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in DeleteAsset handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in DeleteAsset handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in DeleteAsset handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	err = h.repository.DeleteAsset(int(id))
 	if err != nil {

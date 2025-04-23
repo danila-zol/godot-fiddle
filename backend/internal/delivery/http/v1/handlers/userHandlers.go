@@ -50,6 +50,11 @@ func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, r 
 // @Router		/v1/users/{id} [get]
 func (h *UserHandler) GetUserById(c echo.Context) error {
 	id := c.Param("id")
+	err := h.validator.Var(id, "required,uuid4")
+	if err != nil {
+		h.logger.Printf("Error in GetUserById handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in GetUserById handler")
+	}
 
 	user, err := h.repository.FindUserByID(id)
 	if err != nil {
@@ -99,11 +104,22 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 	var user models.User
 
 	id := c.Param("id")
+	err := h.validator.Var(id, "required,uuid4")
+	if err != nil {
+		h.logger.Printf("Error in PatchUser handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchUser handler")
+	}
 
-	err := c.Bind(&user)
+	err = c.Bind(&user)
 	if err != nil {
 		h.logger.Printf("Error in PatchUser handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchUser handler")
+	}
+
+	err = h.validator.Struct(&user)
+	if err != nil {
+		h.logger.Printf("Error in PostUser handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PostUser handler")
 	}
 
 	updUser, err := h.repository.UpdateUser(id, user)
@@ -130,8 +146,13 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 // @Router		/v1/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c echo.Context) error {
 	id := c.Param("id")
+	err := h.validator.Var(id, "required,uuid4")
+	if err != nil {
+		h.logger.Printf("Error in DeleteUser handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in DeleteUser handler")
+	}
 
-	err := h.repository.DeleteUser(id)
+	err = h.repository.DeleteUser(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: User not found! %s", err)
@@ -161,6 +182,7 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 		h.logger.Printf("Error in PostRole handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostRole handler")
 	}
+	role.Method = "POST"
 
 	if role.ID == nil {
 		roleID := uuid.NewString()
@@ -193,6 +215,11 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 // @Router		/v1/roles/{id} [get]
 func (h *UserHandler) GetRoleById(c echo.Context) error {
 	id := c.Param("id")
+	err := h.validator.Var(id, "required,uuid4")
+	if err != nil {
+		h.logger.Printf("Error in GetRoleById handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in GetRoleById handler")
+	}
 
 	role, err := h.repository.FindRoleByID(id)
 	if err != nil {
@@ -221,8 +248,13 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 	var role models.Role
 
 	id := c.Param("id")
+	err := h.validator.Var(id, "required,uuid4")
+	if err != nil {
+		h.logger.Printf("Error in PatchRole handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchRole handler")
+	}
 
-	err := c.Bind(&role)
+	err = c.Bind(&role)
 	if err != nil {
 		h.logger.Printf("Error in PatchRole handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchRole handler")
@@ -254,8 +286,13 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 // @Router		/v1/roles/{id} [delete]
 func (h *UserHandler) DeleteRole(c echo.Context) error {
 	id := c.Param("id")
+	err := h.validator.Var(id, "required,uuid4")
+	if err != nil {
+		h.logger.Printf("Error in DeleteRole handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in DeleteRole handler")
+	}
 
-	err := h.repository.DeleteRole(id)
+	err = h.repository.DeleteRole(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Role not found! %s", err)
@@ -286,6 +323,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 		h.logger.Printf("Error in PostUser handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostUser handler")
 	}
+	user.Method = "POST"
 
 	if user.CreatedAt == nil {
 		currentTime := time.Now()
@@ -312,7 +350,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "No password provided!")
 	}
 	password := &passwordSlice[0]
-	err = h.validator.Var(&password, "required,min=8,alphanum")
+	err = h.validator.Var(&password, "required,min=8")
 	if err != nil {
 		h.logger.Printf("Error in ResetPassword handler: %s", err)
 		return c.String(http.StatusUnprocessableEntity, "Error in ResetPassword handler")
@@ -398,7 +436,7 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 	}
 	password := &passwordSlice[0]
 
-	err := h.validator.Var(&password, "required,min=8,alphanum")
+	err := h.validator.Var(&password, "required,min=8")
 	if err != nil {
 		h.logger.Printf("Error in ResetPassword handler: %s", err)
 		return c.String(http.StatusUnprocessableEntity, "Error in ResetPassword handler")

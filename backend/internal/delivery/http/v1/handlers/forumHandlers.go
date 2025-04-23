@@ -69,11 +69,13 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/topics/{id} [get]
 func (h *ForumHandler) GetTopicByID(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in GetTopicByID handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in GetTopicByID handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in GetTopicByID handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	topic, err := h.repository.FindTopicByID(int(id))
 	if err != nil {
@@ -121,11 +123,13 @@ func (h *ForumHandler) GetTopics(c echo.Context) error {
 // @Router		/v1/topics/{id} [patch]
 func (h *ForumHandler) PatchTopic(c echo.Context) error {
 	var topic models.Topic
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in PatchTopic handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PatchTopic handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchTopic handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	if err := c.Bind(&topic); err != nil {
 		h.logger.Printf("Error in PatchTopic handler: %s", err)
@@ -161,11 +165,13 @@ func (h *ForumHandler) PatchTopic(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/topics/{id} [delete]
 func (h *ForumHandler) DeleteTopic(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in DeleteTopic handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in DeleteTopic handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in DeleteTopic handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	err = h.repository.DeleteTopic(int(id))
 	if err != nil {
@@ -197,6 +203,7 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 		h.logger.Printf("Error in PostThread handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostThread handler")
 	}
+	thread.Method = "POST"
 
 	if thread.CreatedAt == nil || thread.UpdatedAt == nil {
 		currentTime := time.Now()
@@ -232,11 +239,13 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/threads/{id} [get]
 func (h *ForumHandler) GetThreadByID(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in GetThreadByID handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in GetThreadByID handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in GetThreadByID handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	thread, err := h.repository.FindThreadByID(int(id))
 	if err != nil {
@@ -284,11 +293,13 @@ func (h *ForumHandler) GetThreads(c echo.Context) error {
 // @Router		/v1/threads/{id} [patch]
 func (h *ForumHandler) PatchThread(c echo.Context) error {
 	var thread models.Thread
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in PatchThread handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PatchThread handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchThread handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	if err := c.Bind(&thread); err != nil {
 		h.logger.Printf("Error in PatchThread handler: %s", err)
@@ -329,11 +340,13 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/threads/{id} [delete]
 func (h *ForumHandler) DeleteThread(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in DeleteThread handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in DeleteThread handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in DeleteThread handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	err = h.repository.DeleteThread(int(id))
 	if err != nil {
@@ -365,6 +378,7 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 		h.logger.Printf("Error in PostMessage handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostMessage handler")
 	}
+	message.Method = "POST"
 
 	if message.CreatedAt == nil || message.UpdatedAt == nil {
 		currentTime := time.Now()
@@ -400,11 +414,13 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/messages/{id} [get]
 func (h *ForumHandler) GetMessageByID(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in GetMessageByID handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in GetMessageByID handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in GetMessageByID handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	message, err := h.repository.FindMessageByID(int(id))
 	if err != nil {
@@ -450,11 +466,13 @@ func (h *ForumHandler) GetMessages(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/messages/thread/{threadID} [get]
 func (h *ForumHandler) GetMessagesByThreadID(c echo.Context) error {
-	threadID, err := strconv.ParseInt(c.Param("threadID"), 10, 64)
+	p := c.Param("threadID")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in GetMessageByThreadID handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in GetMessageByThreadID handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in GetMessageByThreadID handler"+err.Error())
 	}
+	threadID, _ := strconv.ParseInt(p, 10, 64)
 
 	messages, err := h.repository.FindMessagesByThreadID(int(threadID))
 	if err != nil {
@@ -481,11 +499,13 @@ func (h *ForumHandler) GetMessagesByThreadID(c echo.Context) error {
 // @Router		/v1/messages/{id} [patch]
 func (h *ForumHandler) PatchMessage(c echo.Context) error {
 	var message models.Message
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in PatchMessage handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PatchMessage handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchMessage handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	if err := c.Bind(&message); err != nil {
 		h.logger.Printf("Error in PatchMessage handler: %s", err)
@@ -525,11 +545,13 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/messages/{id} [delete]
 func (h *ForumHandler) DeleteMessage(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in DeleteMessage handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in DeleteMessage handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in DeleteMessage handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	err = h.repository.DeleteMessage(int(id))
 	if err != nil {

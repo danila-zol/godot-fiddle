@@ -51,6 +51,7 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 		h.logger.Printf("Error in PostDemo handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PostDemo handler")
 	}
+	demo.Method = "POST"
 
 	if demo.CreatedAt == nil || demo.UpdatedAt == nil {
 		currentTime := time.Now()
@@ -96,11 +97,13 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/demos/{id} [get]
 func (h *DemoHandler) GetDemoById(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in GetDemoByID handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in GetDemoByID handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in GetDemoByID handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	demo, err := h.repository.FindDemoByID(int(id))
 	if err != nil {
@@ -159,17 +162,20 @@ func (h *DemoHandler) GetDemos(c echo.Context) error {
 func (h *DemoHandler) PatchDemo(c echo.Context) error {
 	var demo models.Demo
 
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in PatchDemo handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PatchDemo handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchDemo handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	err = c.Bind(&demo)
 	if err != nil {
 		h.logger.Printf("Error in PatchDemo handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchDemo handler")
 	}
+	demo.Method = "PATCH"
 
 	if demo.UpdatedAt == nil {
 		currentTime := time.Now()
@@ -215,11 +221,13 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/demos/{id} [delete]
 func (h *DemoHandler) DeleteDemo(c echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	p := c.Param("id")
+	err := h.validator.Var(p, "required,number")
 	if err != nil {
 		h.logger.Printf("Error in DeleteDemo handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in DeleteDemo handler")
+		return c.String(http.StatusUnprocessableEntity, "Error in DeleteDemo handler"+err.Error())
 	}
+	id, _ := strconv.ParseInt(p, 10, 64)
 
 	err = h.repository.DeleteDemo(int(id))
 	if err != nil {
