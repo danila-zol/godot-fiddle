@@ -28,13 +28,12 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO demo.demos
-		(title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes) 
+		(title, description, link, tags, user_id, thread_id) 
 		VALUES
-		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		($1, $2, $3, $4, $5, $6)
 		RETURNING
-		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)`,
-		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID,
-		demo.ThreadID, demo.CreatedAt, demo.UpdatedAt, demo.Upvotes, demo.Downvotes,
+		(id, title, description, link, tags, user_id, thread_id)`,
+		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
 	).Scan(&demo)
 	if err != nil {
 		return nil, err
@@ -143,13 +142,12 @@ func (r *PsqlDemoRepository) UpdateDemo(id int, demo models.Demo) (*models.Demo,
 		`UPDATE demo.demos SET 
 			title=COALESCE($1, title), description=COALESCE($2, description),
 		link=COALESCE($3, link), tags=COALESCE($4, tags), user_id=COALESCE($5, user_id),
-			thread_id=COALESCE($6, thread_id), created_at=COALESCE($7, created_at),
-		updated_at=COALESCE($8, updated_at), upvotes=COALESCE($9, upvotes), downvotes=COALESCE($10, downvotes)
-			WHERE id = $11
+			thread_id=COALESCE($6, thread_id), updated_at=NOW()
+			WHERE id = $7
 		RETURNING
 			(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
-		demo.CreatedAt, demo.UpdatedAt, demo.Upvotes, demo.Downvotes, id,
+		demo.Upvotes, demo.Downvotes, id,
 	).Scan(&demo)
 	if err != nil {
 		return nil, err

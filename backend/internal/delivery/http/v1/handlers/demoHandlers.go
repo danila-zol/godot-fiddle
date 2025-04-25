@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	_ "gamehangar/docs"
 
@@ -52,19 +51,6 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostDemo handler")
 	}
 	demo.Method = "POST"
-
-	if demo.CreatedAt == nil || demo.UpdatedAt == nil {
-		currentTime := time.Now()
-		demo.CreatedAt, demo.UpdatedAt = &currentTime, &currentTime
-	}
-	if demo.Upvotes == nil || demo.Downvotes == nil {
-		zero := uint(0)
-		demo.Upvotes, demo.Downvotes = &zero, &zero
-	}
-	if demo.Tags == nil {
-		empty := make([]string, 0)
-		demo.Tags = &empty
-	}
 
 	err = h.validator.Struct(&demo)
 	if err != nil {
@@ -176,11 +162,6 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PatchDemo handler")
 	}
 	demo.Method = "PATCH"
-
-	if demo.UpdatedAt == nil {
-		currentTime := time.Now()
-		demo.UpdatedAt = &currentTime
-	}
 
 	err = h.validator.Struct(&demo)
 	if err != nil {

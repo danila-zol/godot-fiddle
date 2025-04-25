@@ -6,5 +6,5 @@ CREATE INDEX demo_gin_index_ts ON demo.demos USING GIN (ts);
 
 ---- create above / drop below ----
 
-ALTER TABLE demo.demos DROP COLUMN ts;
-DROP INDEX demo_gin_index_ts;
+ALTER TABLE demo.demos DROP COLUMN IF EXISTS ts;
+DROP INDEX IF EXISTS demo_gin_index_ts;

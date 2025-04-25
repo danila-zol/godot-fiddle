@@ -2,84 +2,84 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE SCHEMA IF NOT EXISTS "user";
 
 CREATE TABLE "user".roles (
-	"id" uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-	"name" varchar(255) NOT NULL
-	-- "permissions" varchar(64)[]
+	"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+	"name" VARCHAR(255) NOT NULL
+	-- "permissions" VARCHAR(64)[]
 );
 
 CREATE TABLE "user".users (
-	"id" uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-	"username" varchar(255) NOT NULL UNIQUE,
-	"display_name" varchar(255),
-	"email" varchar(255) NOT NULL UNIQUE,
-	"password" varchar(255) NOT NULL,
-	"verified" boolean DEFAULT FALSE NOT NULL,
-	"role_id" uuid NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
-	"created_at" timestamp DEFAULT NOW() NOT NULL,
-	"karma" integer DEFAULT 0 NOT NULL
+	"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+	"username" VARCHAR(255) NOT NULL UNIQUE,
+	"display_name" VARCHAR(255),
+	"email" VARCHAR(255) NOT NULL UNIQUE,
+	"password" VARCHAR(255) NOT NULL,
+	"verified" BOOLEAN NOT NULL DEFAULT false,
+	"role_id" UUID NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
+	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+	"karma" INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE "user".sessions (
-	"id" uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-	"user_id" uuid NOT NULL REFERENCES "user".users (id) ON DELETE CASCADE
+	"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+	"user_id" UUID NOT NULL REFERENCES "user".users (id) ON DELETE CASCADE
 );
 
 CREATE SCHEMA IF NOT EXISTS forum;
 
 CREATE TABLE forum.topics (
-	"id"  integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	"name" varchar(255) NOT NULL
+	"id"  INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"name" VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE forum.threads (
-	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	"title" varchar(255) NOT NULL,
-	"user_id" uuid NOT NULL,
-	"topic_id" integer NOT NULL REFERENCES forum.topics (id) ON DELETE CASCADE,
-	"tags" varchar(255)[],
-	"created_at" timestamp DEFAULT NOW() NOT NULL,
-	"updated_at" timestamp DEFAULT NOW() NOT NULL,
-	"upvotes" integer NOT NULL,
-	"downvotes" integer NOT NULL
+	"id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"title" VARCHAR(255) NOT NULL,
+	"user_id" UUID NOT NULL,
+	"topic_id" INTEGER NOT NULL REFERENCES forum.topics (id) ON DELETE CASCADE,
+	"tags" VARCHAR(255)[],
+	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+	"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+	"upvotes" INTEGER NOT NULL DEFAULT 0,
+	"downvotes" INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE forum.messages (
-	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	"thread_id" integer NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
-	"user_id" uuid NOT NULL,
-	"title" varchar(255) NOT NULL,
-	"body" varchar NOT NULL,
-	"tags" varchar(255)[],
-	"created_at" timestamp DEFAULT NOW() NOT NULL,
-	"updated_at" timestamp DEFAULT NOW() NOT NULL,
-	"upvotes" integer NOT NULL,
-	"downvotes" integer NOT NULL
+	"id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
+	"user_id" UUID NOT NULL,
+	"title" VARCHAR(255) NOT NULL,
+	"body" VARCHAR NOT NULL,
+	"tags" VARCHAR(255)[],
+	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+	"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+	"upvotes" INTEGER NOT NULL DEFAULT 0,
+	"downvotes" INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE SCHEMA IF NOT EXISTS demo;
 
 CREATE TABLE demo.demos (
-	"id"  integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	"title" varchar(255) NOT NULL,
-	"description" varchar,
-	"tags" varchar(255)[],
-	"link" varchar(255) NOT NULL,
-	"user_id" uuid NOT NULL,
-	"created_at" timestamp DEFAULT NOW() NOT NULL,
-	"updated_at" timestamp DEFAULT NOW() NOT NULL,
-	"upvotes" integer NOT NULL,
-	"downvotes" integer NOT NULL,
-	"thread_id" integer NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
+	"id"  INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"title" VARCHAR(255) NOT NULL,
+	"description" VARCHAR,
+	"tags" VARCHAR(255)[],
+	"link" VARCHAR(255) NOT NULL,
+	"user_id" UUID NOT NULL,
+	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+	"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+	"upvotes" INTEGER NOT NULL DEFAULT 0,
+	"downvotes" INTEGER NOT NULL DEFAULT 0,
+	"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
 );
 
 CREATE SCHEMA IF NOT EXISTS asset;
 
 CREATE TABLE asset.assets (
-  "id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  "name" varchar(255) NOT NULL,
-  "description" varchar,
-  "link" varchar(255) NOT NULL,
-  "created_at" timestamp DEFAULT NOW() NOT NULL
+	"id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"name" VARCHAR(255) NOT NULL,
+	"description" VARCHAR,
+	"link" VARCHAR(255) NOT NULL,
+	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 ---- create above / drop below ----

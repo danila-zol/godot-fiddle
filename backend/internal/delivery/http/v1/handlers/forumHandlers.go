@@ -4,7 +4,6 @@ import (
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"strconv"
-	"time"
 
 	_ "gamehangar/docs"
 
@@ -205,15 +204,6 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 	}
 	thread.Method = "POST"
 
-	if thread.CreatedAt == nil || thread.UpdatedAt == nil {
-		currentTime := time.Now()
-		thread.CreatedAt, thread.UpdatedAt = &currentTime, &currentTime
-	}
-	if thread.Upvotes == nil || thread.Downvotes == nil {
-		zero := uint(0)
-		thread.Upvotes, thread.Downvotes = &zero, &zero
-	}
-
 	err = h.validator.Struct(&thread)
 	if err != nil {
 		h.logger.Printf("Error in PostThread handler: %s", err)
@@ -306,11 +296,6 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PatchThread handler")
 	}
 
-	if thread.UpdatedAt == nil {
-		currentTime := time.Now()
-		thread.UpdatedAt = &currentTime
-	}
-
 	err = h.validator.Struct(&thread)
 	if err != nil {
 		h.logger.Printf("Error in PatchThread handler: %s", err)
@@ -379,15 +364,6 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Error in PostMessage handler")
 	}
 	message.Method = "POST"
-
-	if message.CreatedAt == nil || message.UpdatedAt == nil {
-		currentTime := time.Now()
-		message.CreatedAt, message.UpdatedAt = &currentTime, &currentTime
-	}
-	if message.Upvotes == nil || message.Downvotes == nil {
-		zero := uint(0)
-		message.Upvotes, message.Downvotes = &zero, &zero
-	}
 
 	err = h.validator.Struct(&message)
 	if err != nil {
@@ -510,10 +486,6 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 	if err := c.Bind(&message); err != nil {
 		h.logger.Printf("Error in PatchMessage handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchMessage handler")
-	}
-	if message.UpdatedAt == nil {
-		currentTime := time.Now()
-		message.UpdatedAt = &currentTime
 	}
 
 	err = h.validator.Struct(&message)

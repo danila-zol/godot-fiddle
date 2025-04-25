@@ -28,12 +28,12 @@ func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, er
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO asset.assets
-		(name, description, link, "created_at") 
+		(name, description, link) 
 		VALUES
-		($1, $2, $3, $4)
+		($1, $2, $3)
 		RETURNING
-		(id, name, description, link, "created_at")`,
-		asset.Name, asset.Description, asset.Link, asset.CreatedAt,
+		(id, name, description, link, created_at)`,
+		asset.Name, asset.Description, asset.Link,
 	).Scan(&asset)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (r *PsqlAssetRepository) FindAssetByID(id int) (*models.Asset, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, name, description, link, "created_at") 
+		`SELECT (id, name, description, link, created_at) 
 		FROM asset.assets WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&asset)
@@ -71,7 +71,7 @@ func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	defer conn.Release()
 
 	rows, err := conn.Query(context.Background(),
-		`SELECT (id, name, description, link, "created_at") 
+		`SELECT (id, name, description, link, created_at) 
 		FROM asset.assets`,
 	)
 	if err != nil {
@@ -102,12 +102,11 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE asset.assets SET 
-		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), 
-		"created_at"=COALESCE($4, "created_at")
-			WHERE id = $5
+		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link) 
+			WHERE id = $4
 		RETURNING
-			(id, name, description, link, "created_at")`,
-		asset.Name, asset.Description, asset.Link, asset.CreatedAt,
+			(id, name, description, link, created_at)`,
+		asset.Name, asset.Description, asset.Link,
 		id,
 	).Scan(&asset)
 	if err != nil {

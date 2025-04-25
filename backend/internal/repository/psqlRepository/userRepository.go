@@ -26,13 +26,12 @@ func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".users
-			(username, display_name, email, password, verified, role_id, created_at, karma) 
+			(username, display_name, email, password, role_id) 
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8)
+			($1, $2, $3, $4, $5)
 		RETURNING
 			(id, username, display_name, email, password, verified, role_id, created_at, karma)`,
-		user.Username, user.DisplayName, user.Email, user.Password,
-		user.Verified, user.RoleID, user.CreatedAt, user.Karma,
+		user.Username, user.DisplayName, user.Email, user.Password, user.RoleID,
 	).Scan(&user) // Mind the field order!
 	if err != nil {
 		return nil, err
@@ -140,12 +139,12 @@ func (r *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.Us
 		`UPDATE "user".users SET 
 			username=COALESCE($1, username), display_name=COALESCE($2, display_name), email=COALESCE($3, email), 
 			password=COALESCE($4, password), verified=COALESCE($5, verified), role_id=COALESCE($6, role_id), 
-			created_at=COALESCE($7, created_at), karma=COALESCE($8, karma)
-		WHERE id = $9
+			karma=COALESCE($7, karma)
+		WHERE id = $8
 		RETURNING
 			(id, username, display_name, email, password, verified, role_id, created_at, karma)`,
 		user.Username, user.DisplayName, user.Email, user.Password,
-		user.Verified, user.RoleID, user.CreatedAt, user.Karma, id,
+		user.Verified, user.RoleID, user.Karma, id,
 	).Scan(&user) // Mind the field order!
 	if err != nil {
 		return nil, err

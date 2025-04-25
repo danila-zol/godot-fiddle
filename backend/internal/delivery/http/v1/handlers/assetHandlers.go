@@ -4,7 +4,6 @@ import (
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"strconv"
-	"time"
 
 	_ "gamehangar/docs"
 
@@ -45,11 +44,6 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 	}
 	asset.Method = "POST"
 
-	if asset.CreatedAt == nil {
-		currentTime := time.Now()
-		asset.CreatedAt = &currentTime
-	}
-
 	err = h.validator.Struct(&asset)
 	if err != nil {
 		h.logger.Printf("Error in PostAsset handler: %s", err)
@@ -64,7 +58,7 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in CreateAsset repository")
 	}
 
-	return c.JSON(http.StatusOK, &newAsset)
+	return c.JSON(http.StatusCreated, &newAsset)
 }
 
 // @Summary	Fetches a asset by its ID.

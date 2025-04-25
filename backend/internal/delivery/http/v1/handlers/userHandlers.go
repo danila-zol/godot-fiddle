@@ -325,19 +325,6 @@ func (h *UserHandler) Register(c echo.Context) error {
 	}
 	user.Method = "POST"
 
-	if user.CreatedAt == nil {
-		currentTime := time.Now()
-		user.CreatedAt = &currentTime
-	}
-	if user.Karma == nil {
-		zero := 0
-		user.Karma = &zero
-	}
-	if user.Verified == nil {
-		f := false
-		user.Verified = &f
-	} // TODO: Fix nil values for Postgres
-
 	err = h.validator.Struct(&user)
 	if err != nil {
 		h.logger.Printf("Error in Register handler: %s", err)
