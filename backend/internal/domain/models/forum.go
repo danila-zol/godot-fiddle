@@ -7,7 +7,7 @@ type Topic struct {
 	Name *string `json:"name,omitempty" validate:"required,lt=90"`
 }
 
-type Thread struct { // TODO: Message relation as an array of Messages, so you can count Messages in a Thread
+type Thread struct {
 	ID        *int       `json:"id,omitempty"`
 	Title     *string    `json:"title,omitempty" validate:"required_if=Method POST,omitnil,lt=90"`
 	UserID    *string    `json:"userID,omitempty" validate:"required_if=Method POST,omitnil,uuid4"`

@@ -137,6 +137,7 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 		h.logger.Printf("Error in PatchAsset handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchAsset handler")
 	}
+	asset.Method = "PATCH"
 
 	err = h.validator.Struct(&asset)
 	if err != nil {
@@ -149,6 +150,9 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Asset not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Asset not found!")
+		} else if err == h.repository.ConflictErr() {
+			h.logger.Printf("Error: unable to update the Asset due to an edit conflict, please try again!")
+			return c.String(http.StatusConflict, "Error: unable to update the Asset due to an edit conflict, please try again!")
 		}
 		h.logger.Printf("Error in UpdateAsset repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateAsset repository")

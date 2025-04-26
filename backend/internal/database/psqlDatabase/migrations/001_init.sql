@@ -79,7 +79,8 @@ CREATE TABLE asset.assets (
 	"name" VARCHAR(255) NOT NULL,
 	"description" VARCHAR,
 	"link" VARCHAR(255) NOT NULL,
-	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+	"version" INTEGER NOT NULL DEFAULT 1
 );
 
 ---- create above / drop below ----

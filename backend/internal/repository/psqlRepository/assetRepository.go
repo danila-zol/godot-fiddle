@@ -2,22 +2,28 @@ package psqlRepository
 
 import (
 	"context"
+	"errors"
 
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlAssetRepository struct {
 	databaseClient psqlDatabaseClient
+	conflictErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
 func NewPsqlAssetRepository(dbClient psqlDatabaseClient) *PsqlAssetRepository {
 	return &PsqlAssetRepository{
 		databaseClient: dbClient,
+		conflictErr:    errors.New("Record conflict!"),
 	}
 }
 
 func (r *PsqlAssetRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
+
+// Returns "Record conflict!" to specify conflicting record versions on update
+func (r *PsqlAssetRepository) ConflictErr() error { return r.conflictErr }
 
 func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, error) {
 	conn, err := r.databaseClient.AcquireConn()
@@ -32,7 +38,7 @@ func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, er
 		VALUES
 		($1, $2, $3)
 		RETURNING
-		(id, name, description, link, created_at)`,
+		(id, name, description, link, created_at, version)`,
 		asset.Name, asset.Description, asset.Link,
 	).Scan(&asset)
 	if err != nil {
@@ -51,7 +57,7 @@ func (r *PsqlAssetRepository) FindAssetByID(id int) (*models.Asset, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, name, description, link, created_at) 
+		`SELECT (id, name, description, link, created_at, version) 
 		FROM asset.assets WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&asset)
@@ -71,7 +77,7 @@ func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	defer conn.Release()
 
 	rows, err := conn.Query(context.Background(),
-		`SELECT (id, name, description, link, created_at) 
+		`SELECT (id, name, description, link, created_at, version) 
 		FROM asset.assets`,
 	)
 	if err != nil {
@@ -100,12 +106,17 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 	}
 	defer conn.Release()
 
-	err = conn.QueryRow(context.Background(),
+	ct, err := conn.Exec(context.Background(), `SELECT (id) FROM asset.assets WHERE id = $1 AND version = $2`, id, *asset.Version)
+	if err != nil || ct.RowsAffected() == 0 {
+		return nil, r.ConflictErr()
+	}
+
+	err = conn.QueryRow(context.Background(), // TODO: Create a sequence to increment on update
 		`UPDATE asset.assets SET 
-		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link) 
+		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), version=version+1
 			WHERE id = $4
 		RETURNING
-			(id, name, description, link, created_at)`,
+			(id, name, description, link, created_at, version)`,
 		asset.Name, asset.Description, asset.Link,
 		id,
 	).Scan(&asset)

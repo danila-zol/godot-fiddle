@@ -13,7 +13,7 @@ import (
 // Configured to init v1 routes and handlers
 func (app *application) routes(e *echo.Echo) *echo.Router {
 	router := echo.NewRouter(e)
-	skipCSRF := []string{"/game-hangar/v1/register", "/game-hangar/v1/login"}
+	skipCSRF := []string{"/game-hangar/v1/register", "/game-hangar/v1/login", "game-hangar/v1/roles"} // DEBUG!
 
 	e.GET("/game-hangar/docs/*", echoSwagger.WrapHandler)
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{

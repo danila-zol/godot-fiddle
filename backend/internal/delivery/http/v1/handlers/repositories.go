@@ -9,6 +9,7 @@ type AssetRepository interface {
 	UpdateAsset(id int, asset models.Asset) (*models.Asset, error)
 	DeleteAsset(id int) error
 	NotFoundErr() error
+	ConflictErr() error
 }
 
 type DemoRepository interface {
