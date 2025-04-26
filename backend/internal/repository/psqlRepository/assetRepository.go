@@ -111,9 +111,9 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 		return nil, r.ConflictErr()
 	}
 
-	err = conn.QueryRow(context.Background(), // TODO: Create a sequence to increment on update
+	err = conn.QueryRow(context.Background(),
 		`UPDATE asset.assets SET 
-		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), version=version+1
+		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link)
 			WHERE id = $4
 		RETURNING
 			(id, name, description, link, created_at, version)`,
