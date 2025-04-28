@@ -80,9 +80,6 @@ func (r *PsqlDemoRepository) FindDemosByQuery(query string) (*[]models.Demo, err
 	if err != nil {
 		return nil, err
 	}
-	if rows.CommandTag().RowsAffected() == 0 {
-		return nil, r.NotFoundErr()
-	}
 	defer rows.Close()
 	for rows.Next() {
 		var demo models.Demo

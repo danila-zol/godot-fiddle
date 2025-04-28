@@ -20,13 +20,18 @@ var (
 	// threadID         int
 	// roleID           string
 	// userID           string
-	demoTitle        string      = "Test Demo"
-	demoTitleUpdated string      = "Test UPDATE Demo"
-	demoDescription  string      = "An demo for integration testing for PSQL Repo"
-	demoLink         string      = "https://example.com"
-	demoTags         []string    = []string{"TEST", "test"}
-	demo             models.Demo = models.Demo{Title: &demoTitle, Description: &demoDescription, Link: &demoLink, ThreadID: &threadID, Tags: &demoTags}
-	demoUpdated      models.Demo = models.Demo{Title: &demoTitleUpdated}
+	demoTitle          string      = "Test Demo"
+	demoTitleAlt       string      = "Cheeseboiger"
+	demoTitleUpdated   string      = "Test UPDATE Demo"
+	demoDescription    string      = "An demo for integration testing for PSQL Repo"
+	demoDescriptionAlt string      = `This demo should be fetched by the "cheeseboiger" tag`
+	demoLink           string      = "https://example.com"
+	demoTags           []string    = []string{"TEST", "test"}
+	demoTagsAlt        []string    = []string{"Cheeseboiger"}
+	demoQuery          string      = "cheeseboiger"
+	demo               models.Demo = models.Demo{Title: &demoTitle, Description: &demoDescription, Link: &demoLink, ThreadID: &threadID, Tags: &demoTags}
+	demoAlt            models.Demo = models.Demo{Title: &demoTitleAlt, Description: &demoDescriptionAlt, Link: &demoLink, ThreadID: &threadID, Tags: &demoTagsAlt}
+	demoUpdated        models.Demo = models.Demo{Title: &demoTitleUpdated}
 )
 
 func init() {
@@ -52,6 +57,8 @@ func init() {
 		DROP SCHEMA IF EXISTS "user" CASCADE;
 		DROP SCHEMA IF EXISTS "demo" CASCADE;
 		DROP SCHEMA IF EXISTS "forum" CASCADE;
+
+		DROP INDEX IF EXISTS demo_gin_index_ts;
 
 		CREATE SCHEMA IF NOT EXISTS "user";
 
@@ -125,6 +132,12 @@ func init() {
 		"downvotes" INTEGER NOT NULL DEFAULT 0,
 		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
 		);
+
+		ALTER TABLE demo.demos ADD COLUMN ts tsvector GENERATED ALWAYS AS (
+		setweight(to_tsvector('english', "title"), 'A') ||
+		setweight(to_tsvector('english', COALESCE("description", '')), 'B')
+		) STORED;
+		CREATE INDEX demo_gin_index_ts ON demo.demos USING GIN (ts);
 		`)
 	if err != nil {
 		panic("Error resetting demo schema" + err.Error())
@@ -187,6 +200,23 @@ func TestFindDemoByIDNoRows(t *testing.T) {
 	}
 }
 
+func TestFindDemosByQuery(t *testing.T) {
+	r := PsqlDemoRepository{databaseClient: testDBClient}
+	demoAlt.UserID = &userID
+	demoAlt.ThreadID = &threadID
+	_, err := r.CreateDemo(demoAlt)
+	assert.NoError(t, err)
+	demos, err := r.FindDemosByQuery(demoQuery)
+	if assert.NoError(t, err) {
+		assert.Len(t, *demos, 1)
+		d := *demos
+		queriedDemo := d[0]
+		assert.Equal(t, queriedDemo.Title, demoAlt.Title)
+		assert.Equal(t, queriedDemo.Description, demoAlt.Description)
+		assert.Equal(t, queriedDemo.Tags, demoAlt.Tags)
+	}
+}
+
 func TestFindDemos(t *testing.T) {
 	r := PsqlDemoRepository{databaseClient: testDBClient}
 	_, err := r.FindDemos()
@@ -212,5 +242,14 @@ func TestUpdateDemo(t *testing.T) {
 func TestDeleteDemo(t *testing.T) {
 	r := PsqlDemoRepository{databaseClient: testDBClient}
 	err := r.DeleteDemo(demoID)
-	assert.NoError(t, err)
+	if assert.NoError(t, err) {
+		teardownDemo(&r)
+	}
+}
+
+func teardownDemo(r *PsqlDemoRepository) {
+	err := r.DeleteDemo(demoID)
+	if err != nil {
+		panic(err)
+	}
 }

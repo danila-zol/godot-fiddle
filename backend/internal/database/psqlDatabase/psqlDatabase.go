@@ -20,7 +20,7 @@ type PsqlDatabase struct{} // PostgreSQL-related database clients and methods
 type PsqlDatabaseClient struct {
 	config     *psqlDatabseConfig.PsqlDatabaseConfig
 	connstring string
-	ConnPool   *pgxpool.Pool // nil until Setup() is called
+	ConnPool   *pgxpool.Pool
 }
 
 func (p PsqlDatabase) NewDatabaseClient(connstring string, config *psqlDatabseConfig.PsqlDatabaseConfig) (*PsqlDatabaseClient, error) {
