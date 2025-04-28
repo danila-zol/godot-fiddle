@@ -2,21 +2,27 @@ package psqlRepository
 
 import (
 	"context"
+	"errors"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlForumRepository struct {
 	databaseClient psqlDatabaseClient
+	conflictErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
 func NewPsqlForumRepository(dbClient psqlDatabaseClient) *PsqlForumRepository {
 	return &PsqlForumRepository{
 		databaseClient: dbClient,
+		conflictErr:    errors.New("Record conflict!"),
 	}
 }
 
 func (r *PsqlForumRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
+
+// Returns "Record conflict!" to specify conflicting record versions on update
+func (r *PsqlForumRepository) ConflictErr() error { return r.conflictErr }
 
 func (r *PsqlForumRepository) CreateTopic(topic models.Topic) (*models.Topic, error) {
 	conn, err := r.databaseClient.AcquireConn()
@@ -31,7 +37,7 @@ func (r *PsqlForumRepository) CreateTopic(topic models.Topic) (*models.Topic, er
 		VALUES
 		($1)
 		RETURNING
-		(id, name)`,
+		(id, name, version)`,
 		topic.Name,
 	).Scan(&topic)
 
@@ -50,7 +56,7 @@ func (r *PsqlForumRepository) FindTopicByID(id int) (*models.Topic, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, name) FROM forum.topics WHERE id = $1 LIMIT 1`,
+		`SELECT (id, name, version) FROM forum.topics WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&topic)
 	if err != nil {
@@ -68,7 +74,7 @@ func (r *PsqlForumRepository) FindTopics() (*[]models.Topic, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(), `SELECT (id, name) FROM forum.topics`)
+	rows, err := conn.Query(context.Background(), `SELECT (id, name, version) FROM forum.topics`)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +101,21 @@ func (r *PsqlForumRepository) UpdateTopic(id int, topic models.Topic) (*models.T
 	}
 	defer conn.Release()
 
+	err = conn.QueryRow(
+		context.Background(),
+		`SELECT (id) FROM forum.topics WHERE id=$1 AND version=$2`,
+		id, *topic.Version,
+	).Scan(&id)
+	if err != nil {
+		return nil, r.ConflictErr()
+	}
+
 	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.topics SET 
 		name=COALESCE($1, name)
 		WHERE id = $2
 		RETURNING
-		(id, name)`,
+		(id, name, version)`,
 		topic.Name, id,
 	).Scan(&topic)
 	if err != nil {
@@ -357,7 +372,7 @@ func (r *PsqlForumRepository) UpdateMessage(id int, message models.Message) (*mo
 	err = conn.QueryRow(context.Background(),
 		`UPDATE forum.messages SET 
 		thread_id=COALESCE($1, thread_id), user_id=COALESCE($2, user_id), title=COALESCE($3, title), 
-		body=COALESCE($4, body), tags=COALESCE($5, tags), updated_at=NOW()
+		body=COALESCE($4, body), tags=COALESCE($5, tags), updated_at=NOW(),
 		upvotes=COALESCE($6, upvotes), downvotes=COALESCE($7, downvotes)
 		WHERE id = $8
 		RETURNING

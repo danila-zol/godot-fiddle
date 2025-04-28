@@ -3,8 +3,10 @@ package models
 import "time"
 
 type Topic struct {
-	ID   *int    `json:"id,omitempty"`
-	Name *string `json:"name,omitempty" validate:"required,lt=90"`
+	ID      *int    `json:"id,omitempty"`
+	Name    *string `json:"name,omitempty" validate:"required,lt=90"`
+	Version *int    `json:"version,omitempty" validate:"required_if=Method PATCH,omitnil,number,gt=0"`
+	Method  string  `json:"-"`
 }
 
 type Thread struct {

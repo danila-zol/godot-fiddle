@@ -142,8 +142,9 @@ func (r *PsqlDemoRepository) UpdateDemo(id int, demo models.Demo) (*models.Demo,
 		`UPDATE demo.demos SET 
 			title=COALESCE($1, title), description=COALESCE($2, description),
 		link=COALESCE($3, link), tags=COALESCE($4, tags), user_id=COALESCE($5, user_id),
-			thread_id=COALESCE($6, thread_id), updated_at=NOW()
-			WHERE id = $7
+			thread_id=COALESCE($6, thread_id), updated_at=NOW(),
+		upvotes=COALESCE($7, upvotes), downvotes=COALESCE($8, downvotes)
+			WHERE id = $9
 		RETURNING
 			(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,

@@ -11,8 +11,9 @@ type Session struct {
 }
 
 type Role struct {
-	ID   *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty" validate:"required_if=Method POST,max=90"`
+	ID      *string `json:"id,omitempty"`
+	Name    *string `json:"name,omitempty" validate:"required_if=Method POST,max=90"`
+	Version *int    `json:"version,omitempty" validate:"required_if=Method PATCH,omitnil,number,gt=0"`
 	// Permissions []gorbac.Permission `json:"permissions"`
 	//TODO: How do we manage permissions?
 	Method string `json:"-"`

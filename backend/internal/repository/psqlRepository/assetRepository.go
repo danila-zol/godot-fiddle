@@ -106,8 +106,8 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 	}
 	defer conn.Release()
 
-	ct, err := conn.Exec(context.Background(), `SELECT (id) FROM asset.assets WHERE id = $1 AND version = $2`, id, *asset.Version)
-	if err != nil || ct.RowsAffected() == 0 {
+	err = conn.QueryRow(context.Background(), `SELECT id FROM asset.assets WHERE id = $1 AND version = $2`, id, *asset.Version).Scan(&id)
+	if err != nil {
 		return nil, r.ConflictErr()
 	}
 

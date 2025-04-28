@@ -55,7 +55,7 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in CreateTopic repository")
 	}
 
-	return c.JSON(http.StatusOK, &newTopic)
+	return c.JSON(http.StatusCreated, &newTopic)
 }
 
 // @Summary	Fetches a topic by its ID.
@@ -134,6 +134,7 @@ func (h *ForumHandler) PatchTopic(c echo.Context) error {
 		h.logger.Printf("Error in PatchTopic handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchTopic handler")
 	}
+	topic.Method = "PATCH"
 
 	err = h.validator.Struct(&topic)
 	if err != nil {
@@ -146,6 +147,9 @@ func (h *ForumHandler) PatchTopic(c echo.Context) error {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Topic not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Topic not found!")
+		} else if err == h.repository.ConflictErr() {
+			h.logger.Printf("Error: unable to update the Topic due to an edit conflict, please try again!")
+			return c.String(http.StatusConflict, "Error: unable to update the Topic due to an edit conflict, please try again!")
 		}
 		h.logger.Printf("Error in UpdateTopic repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateTopic repository")

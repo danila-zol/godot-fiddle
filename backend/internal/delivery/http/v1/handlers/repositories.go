@@ -44,6 +44,7 @@ type ForumRepository interface {
 	DeleteMessage(id int) error
 
 	NotFoundErr() error
+	ConflictErr() error
 }
 
 type UserRepository interface {
@@ -64,4 +65,5 @@ type UserRepository interface {
 	DeleteAllUserSessions(userID string) error
 
 	NotFoundErr() error
+	ConflictErr() error
 }

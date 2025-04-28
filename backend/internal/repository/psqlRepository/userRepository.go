@@ -2,20 +2,26 @@ package psqlRepository
 
 import (
 	"context"
+	"errors"
 	"gamehangar/internal/domain/models"
 )
 
 type PsqlUserRepository struct {
 	databaseClient psqlDatabaseClient
+	conflictErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
 func NewPsqlUserRepository(dbClient psqlDatabaseClient) *PsqlUserRepository {
 	return &PsqlUserRepository{
 		databaseClient: dbClient,
+		conflictErr:    errors.New("Record conflict!"),
 	}
 }
 func (r *PsqlUserRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
+
+// Returns "Record conflict!" to specify conflicting record versions on update
+func (r *PsqlUserRepository) ConflictErr() error { return r.conflictErr }
 
 func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
 	conn, err := r.databaseClient.AcquireConn()
@@ -182,7 +188,7 @@ func (r *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error) 
 		VALUES
 		($1)
 		RETURNING
-		(id, name)`,
+		(id, name, version)`,
 		role.Name,
 	).Scan(&role)
 	if err != nil {
@@ -200,7 +206,7 @@ func (r *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, name) FROM "user".roles WHERE id = $1 LIMIT 1`,
+		`SELECT (id, name, version) FROM "user".roles WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&role)
 	if err != nil {
@@ -216,12 +222,21 @@ func (r *PsqlUserRepository) UpdateRole(id string, role models.Role) (*models.Ro
 	}
 	defer conn.Release()
 
+	err = conn.QueryRow(
+		context.Background(),
+		`SELECT (id) FROM "user".roles WHERE id=$1 AND version=$2`,
+		id, *role.Version,
+	).Scan(&id)
+	if err != nil {
+		return nil, r.ConflictErr()
+	}
+
 	err = conn.QueryRow(context.Background(),
 		`UPDATE "user".roles SET 
 		name=COALESCE($1, name)
 		WHERE id = $2
 		RETURNING
-		(id, name)`,
+		(id, name, version)`,
 		role.Name, id,
 	).Scan(&role)
 	if err != nil {

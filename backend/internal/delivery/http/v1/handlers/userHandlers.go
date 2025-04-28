@@ -201,7 +201,7 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in CreateRole repository")
 	}
 
-	return c.JSON(http.StatusOK, &newRole)
+	return c.JSON(http.StatusCreated, &newRole)
 }
 
 // @Summary	Fetches a role by its ID.
@@ -259,12 +259,22 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 		h.logger.Printf("Error in PatchRole handler: %s", err)
 		return c.String(http.StatusBadRequest, "Error in PatchRole handler")
 	}
+	role.Method = "PATCH"
+
+	err = h.validator.Struct(&role)
+	if err != nil {
+		h.logger.Printf("Error in PatchRole handler: %s", err)
+		return c.String(http.StatusUnprocessableEntity, "Error in PatchRole handler")
+	}
 
 	updRole, err := h.repository.UpdateRole(id, role)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Role not found! %s", err)
 			return c.String(http.StatusNotFound, "Error: Role not found!")
+		} else if err == h.repository.ConflictErr() {
+			h.logger.Printf("Error: unable to update the Role due to an edit conflict, please try again!")
+			return c.String(http.StatusConflict, "Error: unable to update the Role due to an edit conflict, please try again!")
 		}
 		h.logger.Printf("Error in UpdateRole repository: %s", err)
 		return c.String(http.StatusInternalServerError, "Error in UpdateRole repository")
