@@ -9,6 +9,7 @@ type Asset struct {
 	Link        *string    `json:"link,omitempty" validate:"required_if=Method POST,omitnil,url"` // Links to an S3 bucket
 	Tags        *[]string  `json:"tags,omitempty" validate:"omitnil,unique,max=40"`
 	CreatedAt   *time.Time `json:"createdAt,omitempty"`
+	UpdatedAt   *time.Time `json:"updatedAt,omitzero"`
 	Version     *int       `json:"version,omitempty" validate:"required_if=Method PATCH,omitnil,number,gt=0"`
 	Method      string     `json:"-"`
 }

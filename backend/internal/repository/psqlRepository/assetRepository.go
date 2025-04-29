@@ -39,7 +39,7 @@ func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, er
 		VALUES
 		($1, $2, $3, $4)
 		RETURNING
-		(id, name, description, link, tags, created_at, version)`,
+		(id, name, description, link, tags, created_at, updated_at, version)`,
 		asset.Name, asset.Description, asset.Link, asset.Tags,
 	).Scan(&asset)
 	if err != nil {
@@ -58,7 +58,7 @@ func (r *PsqlAssetRepository) FindAssetByID(id int) (*models.Asset, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, name, description, link, tags, created_at, version) 
+		`SELECT (id, name, description, link, tags, created_at, updated_at, version) 
 		FROM asset.assets WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&asset)
@@ -78,9 +78,9 @@ func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	defer conn.Release()
 
 	rows, err := conn.Query(context.Background(),
-		`SELECT (id, name, description, link, tags, created_at, version) 
+		`SELECT (id, name, description, link, tags, created_at, updated_at, version) 
 		FROM asset.assets
-		ORDER BY created_at DESC`,
+		ORDER BY updated_at DESC`,
 	)
 	if err != nil {
 		return nil, err
@@ -112,16 +112,16 @@ func (r *PsqlAssetRepository) FindAssetsByQuery(query *[]string) (*[]models.Asse
 
 	rows, err := conn.Query(context.Background(),
 		`(
-		SELECT (id, name, description, link, tags, created_at, version)
+		SELECT (id, name, description, link, tags, created_at, updated_at, version)
 		FROM asset.assets
 		WHERE asset_ts @@ to_tsquery_multilang($1)
 		)
 		UNION
 		(
-		SELECT (id, name, description, link, tags, created_at, version)
+		SELECT (id, name, description, link, tags, created_at, updated_at, version)
 		FROM asset.assets
 		WHERE tags && ($2) COLLATE case_insensitive
-		ORDER BY created_at DESC
+		ORDER BY updated_at DESC
 		)`, strings.Join(*query, " | "), *query,
 	)
 	if err != nil {
@@ -157,10 +157,10 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE asset.assets SET 
-		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), tags=COALESCE($4, tags)
+		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), tags=COALESCE($4, tags), updated_at=NOW()
 			WHERE id = $5
 		RETURNING
-			(id, name, description, link, tags, created_at, version)`,
+			(id, name, description, link, tags, created_at, updated_at, version)`,
 		asset.Name, asset.Description, asset.Link, asset.Tags,
 		id,
 	).Scan(&asset)

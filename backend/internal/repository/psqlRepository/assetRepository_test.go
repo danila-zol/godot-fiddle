@@ -60,7 +60,8 @@ func init() {
 		"link" VARCHAR(255) NOT NULL,
 		"tags" TEXT[],
 		"version" INTEGER NOT NULL DEFAULT 1,
-		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 		);
 
 		CREATE OR REPLACE FUNCTION increment_version()
@@ -175,6 +176,7 @@ func TestUpdateAsset(t *testing.T) {
 	modifiedAsset.ID = &assetID
 	modifiedAsset.Name = &assetNameUpdated
 	modifiedAsset.CreatedAt = resultAsset.CreatedAt // Timestamps are created on DB
+	modifiedAsset.UpdatedAt = resultAsset.UpdatedAt
 	newVersion := *assetUpdated.Version + 1
 	modifiedAsset.Version = &newVersion
 
@@ -200,6 +202,7 @@ func TestUpdateAssetMultiple(t *testing.T) {
 		modifiedAsset.Version = &newerVersion
 		modifiedAsset.Name = assetUpdated.Name
 		modifiedAsset.CreatedAt = resultAsset.CreatedAt // Timestamps are created on DB
+		modifiedAsset.UpdatedAt = resultAsset.UpdatedAt
 
 		assert.Equal(t, modifiedAsset, *resultAsset)
 	}
