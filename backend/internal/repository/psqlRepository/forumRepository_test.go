@@ -63,6 +63,10 @@ func init() {
 		DROP SCHEMA IF EXISTS "user" CASCADE;
 		DROP SCHEMA IF EXISTS "forum" CASCADE;
 
+		DROP COLLATION IF EXISTS case_insensitive;
+		DROP INDEX IF EXISTS thread_gin_index_ts;
+		DROP INDEX IF EXISTS message_gin_index_ts;
+
 		CREATE SCHEMA IF NOT EXISTS "user";
 
 		CREATE TABLE "user".roles (
@@ -134,6 +138,35 @@ func init() {
 		BEFORE UPDATE ON forum.topics
 		FOR EACH ROW
 		EXECUTE FUNCTION increment_version();
+
+		CREATE COLLATION IF NOT EXISTS case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
+
+		CREATE OR REPLACE FUNCTION to_tsvector_multilang(text) RETURNS tsvector AS $$
+		BEGIN
+		RETURN 
+		to_tsvector('english', $1) || 
+		to_tsvector('russian', $1);
+		END;
+		$$ LANGUAGE plpgsql IMMUTABLE;
+
+		CREATE OR REPLACE FUNCTION to_tsquery_multilang(text) RETURNS tsquery AS $$
+		BEGIN
+		RETURN
+		websearch_to_tsquery('english', $1) || 
+		websearch_to_tsquery('russian', $1);
+		END;
+		$$ LANGUAGE plpgsql IMMUTABLE;
+
+		ALTER TABLE forum.threads ADD COLUMN thread_ts tsvector GENERATED ALWAYS AS (
+		setweight(to_tsvector_multilang("title"), 'A')
+		) STORED;
+		CREATE INDEX thread_gin_index_ts ON forum.threads USING GIN (thread_ts);
+
+		ALTER TABLE forum.messages ADD COLUMN message_ts tsvector GENERATED ALWAYS AS (
+		setweight(to_tsvector_multilang("title"), 'A') ||
+		setweight(to_tsvector_multilang(COALESCE("body", '')), 'B')
+		) STORED;
+		CREATE INDEX message_gin_index_ts ON forum.messages USING GIN (message_ts);
 		`)
 	if err != nil {
 		panic("Error resetting forum schema" + err.Error())
@@ -265,6 +298,48 @@ func TestFindThreads(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestFindThreadsByQuery(t *testing.T) {
+	var (
+		threadTitleAlt string        = "Cheeseboiger"
+		threadTagsAlt  []string      = []string{"The Magnificent Seven", "Rock the Casbah"}
+		threadAlt      models.Thread = models.Thread{
+			Title:   &threadTitleAlt,
+			Tags:    &threadTagsAlt,
+			UserID:  &userID,
+			TopicID: &topicID,
+		}
+
+		threadTitleAltRu string        = "Стук"
+		threadTagsAltRu  []string      = []string{"Cheeseboiger", "Муравейник"}
+		threadAltRu      models.Thread = models.Thread{
+			Title:   &threadTitleAltRu,
+			Tags:    &threadTagsAltRu,
+			UserID:  &userID,
+			TopicID: &topicID,
+		}
+	)
+
+	r := PsqlForumRepository{databaseClient: testDBClient}
+
+	for q, th := range map[string]models.Thread{"The Magnificent Seven": threadAlt, "стук": threadAltRu} {
+		resultThread, err := r.CreateThread(th)
+		assert.NoError(t, err)
+
+		queryThreads, err := r.FindThreadsByQuery(&[]string{q})
+		t.Log(queryThreads)
+		if assert.NoError(t, err) {
+			queriedThread := *queryThreads
+			assert.Equal(t, resultThread.Title, queriedThread[0].Title)
+		}
+	}
+
+	// Try to query both
+	threads, err := r.FindThreadsByQuery(&[]string{"cheeseboiger"})
+	if assert.NoError(t, err) {
+		assert.Len(t, *threads, 2)
+	}
+}
+
 func TestUpdateThread(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
 	resultThread, err := r.UpdateThread(threadID, threadUpdated)
@@ -315,7 +390,6 @@ func TestFindMessageByThreadID(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-/*
 func TestFindMessageByThreadIDNoRows(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
 	_, err := r.FindMessagesByThreadID(9000)
@@ -323,7 +397,38 @@ func TestFindMessageByThreadIDNoRows(t *testing.T) {
 		assert.Equal(t, r.NotFoundErr(), err)
 	}
 }
-*/
+
+func TestFindMessagesByQuery(t *testing.T) {
+	var (
+		messageTitleAlt string         = "The Magnificent Seven"
+		messageBodyAlt  string         = "Marx was skint but he had sense, Engels lent him the necessary pence"
+		messageTagsAlt  []string       = []string{"Cheeseboiger", "Rock the Casbah"}
+		messageAlt      models.Message = models.Message{Title: &messageTitleAlt, Body: &messageBodyAlt, Tags: &messageTagsAlt, ThreadID: &threadID, UserID: &userID}
+
+		messageTitleAltRu string         = "Стук"
+		messageBodyAltRu  string         = `Я скажу одно лишь слово: "Cheeseboiger"`
+		messageAltRu      models.Message = models.Message{Title: &messageTitleAltRu, Body: &messageBodyAltRu, ThreadID: &threadID, UserID: &userID}
+	)
+
+	r := PsqlForumRepository{databaseClient: testDBClient}
+
+	for q, m := range map[string]models.Message{"seven": messageAlt, "стук": messageAltRu} {
+		resultMessage, err := r.CreateMessage(m)
+		assert.NoError(t, err)
+
+		queryMessages, err := r.FindMessagesByQuery(&[]string{q})
+		if assert.NoError(t, err) {
+			queriedMessage := *queryMessages
+			assert.Equal(t, resultMessage.Title, queriedMessage[0].Title)
+		}
+	}
+
+	// Try to query both
+	messages, err := r.FindMessagesByQuery(&[]string{"cheeseboiger"})
+	if assert.NoError(t, err) {
+		assert.Len(t, *messages, 2)
+	}
+}
 
 func TestFindMessages(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
@@ -356,8 +461,34 @@ func TestDeleteMessage(t *testing.T) {
 }
 
 func teardownForum(r *PsqlForumRepository) {
-	err := r.DeleteTopic(topicID)
+	remainderTopics, err := r.FindTopics()
 	if err != nil {
 		panic(err)
+	}
+	for _, t := range *remainderTopics {
+		err = r.DeleteTopic(*t.ID)
+		if err != nil {
+			panic(err)
+		}
+	}
+	remainderThreads, err := r.FindThreads()
+	if err != nil {
+		panic(err)
+	}
+	for _, t := range *remainderThreads {
+		err = r.DeleteThread(*t.ID)
+		if err != nil {
+			panic(err)
+		}
+	}
+	remainderMessages, err := r.FindMessages()
+	if err != nil {
+		panic(err)
+	}
+	for _, m := range *remainderMessages {
+		err = r.DeleteMessage(*m.ID)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

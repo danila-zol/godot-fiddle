@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"gamehangar/internal/domain/models"
+	"strings"
 )
 
 type PsqlForumRepository struct {
@@ -194,7 +195,50 @@ func (r *PsqlForumRepository) FindThreads() (*[]models.Thread, error) {
 
 	rows, err := conn.Query(context.Background(),
 		`SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)
-		FROM forum.threads`,
+		FROM forum.threads
+		ORDER BY updated_at DESC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var thread models.Thread
+		err = rows.Scan(&thread)
+		if err != nil {
+			return nil, err
+		}
+		threads = append(threads, thread)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return &threads, nil
+}
+
+func (r *PsqlForumRepository) FindThreadsByQuery(query *[]string) (*[]models.Thread, error) {
+	var threads []models.Thread
+
+	conn, err := r.databaseClient.AcquireConn()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	rows, err := conn.Query(context.Background(),
+		`(
+		SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)
+		FROM forum.threads
+		WHERE thread_ts @@ to_tsquery_multilang($1)
+		)
+		UNION
+		(
+		SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)
+		FROM forum.threads
+		WHERE tags && ($2) COLLATE case_insensitive
+		ORDER BY updated_at DESC
+		)`, strings.Join(*query, " | "), *query,
 	)
 	if err != nil {
 		return nil, err
@@ -308,7 +352,50 @@ func (r *PsqlForumRepository) FindMessages() (*[]models.Message, error) {
 
 	rows, err := conn.Query(context.Background(),
 		`SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)
-		FROM forum.messages`,
+		FROM forum.messages
+		ORDER BY updated_at DESC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var message models.Message
+		err = rows.Scan(&message)
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, message)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return &messages, nil
+}
+
+func (r *PsqlForumRepository) FindMessagesByQuery(query *[]string) (*[]models.Message, error) {
+	var messages []models.Message
+
+	conn, err := r.databaseClient.AcquireConn()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	rows, err := conn.Query(context.Background(),
+		`(
+		SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)
+		FROM forum.messages
+		WHERE message_ts @@ to_tsquery_multilang($1)
+		)
+		UNION
+		(
+		SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)
+		FROM forum.messages
+		WHERE tags && ($2) COLLATE case_insensitive
+		ORDER BY updated_at DESC
+		)`, strings.Join(*query, " | "), *query,
 	)
 	if err != nil {
 		return nil, err
@@ -358,6 +445,9 @@ func (r *PsqlForumRepository) FindMessagesByThreadID(thread_id int) (*[]models.M
 	err = rows.Err()
 	if err != nil {
 		return nil, err
+	}
+	if len(messages) == 0 {
+		return nil, r.NotFoundErr()
 	}
 	return &messages, nil
 }

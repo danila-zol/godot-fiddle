@@ -60,9 +60,9 @@ CREATE SCHEMA IF NOT EXISTS demo;
 
 CREATE TABLE demo.demos (
 	"id"  INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	"title" VARCHAR(255) NOT NULL,
-	"description" VARCHAR,
-	"tags" VARCHAR(255)[],
+	"title" TEXT NOT NULL,
+	"description" TEXT,
+	"tags" TEXT[],
 	"link" VARCHAR(255) NOT NULL,
 	"user_id" UUID NOT NULL,
 	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -76,9 +76,10 @@ CREATE SCHEMA IF NOT EXISTS asset;
 
 CREATE TABLE asset.assets (
 	"id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	"name" VARCHAR(255) NOT NULL,
-	"description" VARCHAR,
+	"name" TEXT NOT NULL,
+	"description" TEXT,
 	"link" VARCHAR(255) NOT NULL,
+	"tags" TEXT[],
 	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 

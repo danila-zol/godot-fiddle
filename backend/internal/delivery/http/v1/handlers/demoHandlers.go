@@ -4,7 +4,6 @@ import (
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"strconv"
-	"strings"
 
 	_ "gamehangar/docs"
 
@@ -107,7 +106,7 @@ func (h *DemoHandler) GetDemoById(c echo.Context) error {
 // @Summary	Fetches all demos.
 // @Tags		Demos
 // @Produce	application/json
-// @Param		textQuery	query		[]string	false	"Text Query"
+// @Param		q	query		[]string	false	"Keyword Query"
 // @Success	200	{object}	ResponseHTTP{data=[]models.Demo}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
@@ -116,10 +115,9 @@ func (h *DemoHandler) GetDemos(c echo.Context) error {
 	var err error
 	var demos *[]models.Demo
 
-	tags := strings.Join(c.Request().URL.Query()["textQuery"], " ")
-
+	tags := c.Request().URL.Query()["q"]
 	if len(tags) != 0 {
-		demos, err = h.repository.FindDemosByQuery(tags)
+		demos, err = h.repository.FindDemosByQuery(&tags)
 	} else {
 		demos, err = h.repository.FindDemos()
 	}

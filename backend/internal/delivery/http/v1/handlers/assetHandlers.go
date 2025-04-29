@@ -95,12 +95,21 @@ func (h *AssetHandler) GetAssetById(c echo.Context) error {
 // @Summary	Fetches all assets.
 // @Tags		Assets
 // @Produce	application/json
+// @Param		q	query		[]string	false	"Keyword Query"
 // @Success	200	{object}	ResponseHTTP{data=[]models.Asset}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/assets [get]
 func (h *AssetHandler) GetAssets(c echo.Context) error {
-	assets, err := h.repository.FindAssets()
+	var err error
+	var assets *[]models.Asset
+
+	tags := c.Request().URL.Query()["q"]
+	if len(tags) != 0 {
+		assets, err = h.repository.FindAssetsByQuery(&tags)
+	} else {
+		assets, err = h.repository.FindAssets()
+	}
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Asset not found! %s", err)

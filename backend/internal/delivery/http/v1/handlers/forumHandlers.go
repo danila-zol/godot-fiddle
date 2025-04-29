@@ -257,12 +257,21 @@ func (h *ForumHandler) GetThreadByID(c echo.Context) error {
 // @Summary	Fetches all threads.
 // @Tags		Threads
 // @Produce	application/json
+// @Param		q	query		[]string	false	"Keyword Query"
 // @Success	200	{object}	ResponseHTTP{data=[]models.Thread}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/threads [get]
 func (h *ForumHandler) GetThreads(c echo.Context) error {
-	threads, err := h.repository.FindThreads()
+	var err error
+	var threads *[]models.Thread
+
+	tags := c.Request().URL.Query()["q"]
+	if len(tags) != 0 {
+		threads, err = h.repository.FindThreadsByQuery(&tags)
+	} else {
+		threads, err = h.repository.FindThreads()
+	}
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Thread not found! %s", err)
@@ -418,12 +427,21 @@ func (h *ForumHandler) GetMessageByID(c echo.Context) error {
 // @Summary	Fetches all messages.
 // @Tags		Messages
 // @Produce	application/json
+// @Param		q	query		[]string	false	"Keyword Query"
 // @Success	200	{object}	ResponseHTTP{data=[]models.Message}
 // @Failure	400	{object}	ResponseHTTP{}
 // @Failure	500	{object}	ResponseHTTP{}
 // @Router		/v1/messages [get]
 func (h *ForumHandler) GetMessages(c echo.Context) error {
-	messages, err := h.repository.FindMessages()
+	var err error
+	var messages *[]models.Message
+
+	tags := c.Request().URL.Query()["q"]
+	if len(tags) != 0 {
+		messages, err = h.repository.FindMessagesByQuery(&tags)
+	} else {
+		messages, err = h.repository.FindMessages()
+	}
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			h.logger.Printf("Error: Message not found! %s", err)

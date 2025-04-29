@@ -20,18 +20,13 @@ var (
 	// threadID         int
 	// roleID           string
 	// userID           string
-	demoTitle          string      = "Test Demo"
-	demoTitleAlt       string      = "Cheeseboiger"
-	demoTitleUpdated   string      = "Test UPDATE Demo"
-	demoDescription    string      = "An demo for integration testing for PSQL Repo"
-	demoDescriptionAlt string      = `This demo should be fetched by the "cheeseboiger" tag`
-	demoLink           string      = "https://example.com"
-	demoTags           []string    = []string{"TEST", "test"}
-	demoTagsAlt        []string    = []string{"Cheeseboiger"}
-	demoQuery          string      = "cheeseboiger"
-	demo               models.Demo = models.Demo{Title: &demoTitle, Description: &demoDescription, Link: &demoLink, ThreadID: &threadID, Tags: &demoTags}
-	demoAlt            models.Demo = models.Demo{Title: &demoTitleAlt, Description: &demoDescriptionAlt, Link: &demoLink, ThreadID: &threadID, Tags: &demoTagsAlt}
-	demoUpdated        models.Demo = models.Demo{Title: &demoTitleUpdated}
+	demoTitle        string      = "Test Demo"
+	demoTitleUpdated string      = "Test UPDATE Demo"
+	demoDescription  string      = "An demo for integration testing for PSQL Repo"
+	demoLink         string      = "https://example.com"
+	demoTags         []string    = []string{"TEST", "test"}
+	demo             models.Demo = models.Demo{Title: &demoTitle, Description: &demoDescription, Link: &demoLink, ThreadID: &threadID, Tags: &demoTags}
+	demoUpdated      models.Demo = models.Demo{Title: &demoTitleUpdated}
 )
 
 func init() {
@@ -59,6 +54,8 @@ func init() {
 		DROP SCHEMA IF EXISTS "forum" CASCADE;
 
 		DROP INDEX IF EXISTS demo_gin_index_ts;
+
+		DROP COLLATION IF EXISTS case_insensitive;
 
 		CREATE SCHEMA IF NOT EXISTS "user";
 
@@ -121,9 +118,9 @@ func init() {
 
 		CREATE TABLE demo.demos (
 		"id"  INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-		"title" VARCHAR(255) NOT NULL,
-		"description" VARCHAR,
-		"tags" VARCHAR(255)[],
+		"title" TEXT NOT NULL,
+		"description" TEXT,
+		"tags" TEXT[],
 		"link" VARCHAR(255) NOT NULL,
 		"user_id" UUID NOT NULL,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -133,11 +130,29 @@ func init() {
 		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
 		);
 
-		ALTER TABLE demo.demos ADD COLUMN ts tsvector GENERATED ALWAYS AS (
-		setweight(to_tsvector('english', "title"), 'A') ||
-		setweight(to_tsvector('english', COALESCE("description", '')), 'B')
+		CREATE COLLATION IF NOT EXISTS case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
+
+		CREATE OR REPLACE FUNCTION to_tsvector_multilang(text) RETURNS tsvector AS $$
+		BEGIN
+			RETURN 
+			to_tsvector('english', $1) || 
+			to_tsvector('russian', $1);
+		END;
+		$$ LANGUAGE plpgsql IMMUTABLE;
+
+		CREATE OR REPLACE FUNCTION to_tsquery_multilang(text) RETURNS tsquery AS $$
+		BEGIN
+			RETURN
+			websearch_to_tsquery('english', $1) || 
+			websearch_to_tsquery('russian', $1);
+		END;
+		$$ LANGUAGE plpgsql IMMUTABLE;
+
+		ALTER TABLE demo.demos ADD COLUMN demo_ts tsvector GENERATED ALWAYS AS (
+		setweight(to_tsvector_multilang("title"), 'A') ||
+		setweight(to_tsvector_multilang(COALESCE("description", '')), 'B')
 		) STORED;
-		CREATE INDEX demo_gin_index_ts ON demo.demos USING GIN (ts);
+		CREATE INDEX demo_gin_index_ts ON demo.demos USING GIN (demo_ts);
 		`)
 	if err != nil {
 		panic("Error resetting demo schema" + err.Error())
@@ -201,19 +216,38 @@ func TestFindDemoByIDNoRows(t *testing.T) {
 }
 
 func TestFindDemosByQuery(t *testing.T) {
+	var (
+		demoTitleAlt       string      = "The Magnificent Seven"
+		demoDescriptionAlt string      = "Marx was skint but he had sense, Engels lent him the necessary pence"
+		demoTagsAlt        []string    = []string{"Cheeseboiger", "Rock the Casbah"}
+		demoAlt            models.Demo = models.Demo{Title: &demoTitleAlt, Description: &demoDescriptionAlt, Link: &demoLink, ThreadID: &threadID, Tags: &demoTagsAlt, UserID: &userID}
+
+		demoTitleAltRu       string      = "Стук"
+		demoDescriptionAltRu string      = `Я скажу одно лишь слово: "Cheeseboiger"`
+		demoAltRu            models.Demo = models.Demo{Title: &demoTitleAltRu, Description: &demoDescriptionAltRu, Link: &demoLink, ThreadID: &threadID, Tags: &demoTagsAlt, UserID: &userID}
+	)
+
 	r := PsqlDemoRepository{databaseClient: testDBClient}
 	demoAlt.UserID = &userID
 	demoAlt.ThreadID = &threadID
-	_, err := r.CreateDemo(demoAlt)
-	assert.NoError(t, err)
-	demos, err := r.FindDemosByQuery(demoQuery)
+
+	for q, d := range map[string]models.Demo{"seven": demoAlt, "стук": demoAltRu} {
+		resultDemo, err := r.CreateDemo(d)
+		assert.NoError(t, err)
+
+		queryDemos, err := r.FindDemosByQuery(&[]string{q})
+		if assert.NoError(t, err) {
+			queriedDemo := *queryDemos
+			assert.Equal(t, resultDemo.Title, queriedDemo[0].Title)
+			assert.Equal(t, resultDemo.Description, queriedDemo[0].Description)
+			assert.Equal(t, resultDemo.Tags, queriedDemo[0].Tags)
+		}
+	}
+
+	// Try to query both
+	demos, err := r.FindDemosByQuery(&[]string{"cheeseboiger"})
 	if assert.NoError(t, err) {
-		assert.Len(t, *demos, 1)
-		d := *demos
-		queriedDemo := d[0]
-		assert.Equal(t, queriedDemo.Title, demoAlt.Title)
-		assert.Equal(t, queriedDemo.Description, demoAlt.Description)
-		assert.Equal(t, queriedDemo.Tags, demoAlt.Tags)
+		assert.Len(t, *demos, 2)
 	}
 }
 
@@ -248,8 +282,14 @@ func TestDeleteDemo(t *testing.T) {
 }
 
 func teardownDemo(r *PsqlDemoRepository) {
-	err := r.DeleteDemo(demoID)
+	remainderDemo, err := r.FindDemos()
 	if err != nil {
 		panic(err)
+	}
+	for _, d := range *remainderDemo {
+		err = r.DeleteDemo(*d.ID)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

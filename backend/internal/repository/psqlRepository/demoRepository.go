@@ -2,6 +2,7 @@ package psqlRepository
 
 import (
 	"context"
+	"strings"
 
 	"gamehangar/internal/domain/models"
 )
@@ -60,9 +61,7 @@ func (r *PsqlDemoRepository) FindDemoByID(id int) (*models.Demo, error) {
 	return &demo, nil
 }
 
-// TODO: Add query by tags
-// TODO: What about the Russian language?
-func (r *PsqlDemoRepository) FindDemosByQuery(query string) (*[]models.Demo, error) {
+func (r *PsqlDemoRepository) FindDemosByQuery(query *[]string) (*[]models.Demo, error) {
 	var demos []models.Demo
 
 	conn, err := r.databaseClient.AcquireConn()
@@ -72,10 +71,20 @@ func (r *PsqlDemoRepository) FindDemosByQuery(query string) (*[]models.Demo, err
 	defer conn.Release()
 
 	rows, err := conn.Query(context.Background(),
-		`SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes) 
+		`(
+		SELECT (id, title, description, link, tags, user_id,
+		thread_id, created_at, updated_at, upvotes, downvotes)
 		FROM demo.demos
-		WHERE ts @@ to_tsquery('english', $1)
-		ORDER BY updated_at DESC`, query,
+		WHERE demo_ts @@ to_tsquery_multilang($1)
+		)
+		UNION
+		(
+		SELECT (id, title, description, link, tags, user_id,
+		thread_id, created_at, updated_at, upvotes, downvotes)
+		FROM demo.demos
+		WHERE tags && ($2) COLLATE case_insensitive
+		ORDER BY updated_at DESC
+		)`, strings.Join(*query, " | "), *query,
 	)
 	if err != nil {
 		return nil, err
