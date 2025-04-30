@@ -471,24 +471,4 @@ func teardownForum(r *PsqlForumRepository) {
 			panic(err)
 		}
 	}
-	remainderThreads, err := r.FindThreads()
-	if err != nil {
-		panic(err)
-	}
-	for _, t := range *remainderThreads {
-		err = r.DeleteThread(*t.ID)
-		if err != nil {
-			panic(err)
-		}
-	}
-	remainderMessages, err := r.FindMessages()
-	if err != nil {
-		panic(err)
-	}
-	for _, m := range *remainderMessages {
-		err = r.DeleteMessage(*m.ID)
-		if err != nil {
-			panic(err)
-		}
-	}
 }
