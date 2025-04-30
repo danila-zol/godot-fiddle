@@ -92,6 +92,9 @@ func (r *PsqlForumRepository) FindTopics() (*[]models.Topic, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(topics) == 0 {
+		return nil, r.NotFoundErr()
+	}
 	return &topics, nil
 }
 
@@ -213,6 +216,9 @@ func (r *PsqlForumRepository) FindThreads() (*[]models.Thread, error) {
 	err = rows.Err()
 	if err != nil {
 		return nil, err
+	}
+	if len(threads) == 0 {
+		return nil, r.NotFoundErr()
 	}
 	return &threads, nil
 }
@@ -370,6 +376,9 @@ func (r *PsqlForumRepository) FindMessages() (*[]models.Message, error) {
 	err = rows.Err()
 	if err != nil {
 		return nil, err
+	}
+	if len(messages) == 0 {
+		return nil, r.NotFoundErr()
 	}
 	return &messages, nil
 }

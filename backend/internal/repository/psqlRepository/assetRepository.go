@@ -98,6 +98,9 @@ func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(assets) == 0 {
+		return nil, r.NotFoundErr()
+	}
 	return &assets, nil
 }
 

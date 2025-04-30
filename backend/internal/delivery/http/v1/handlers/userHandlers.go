@@ -8,7 +8,6 @@ import (
 	_ "gamehangar/docs"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -44,26 +43,37 @@ func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, r 
 // @Accept		text/plain
 // @Produce	application/json
 // @Param		id	path		string	true	"Get User of ID"
-// @Success	200	{object}	ResponseHTTP{data=models.User}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{object}	models.User
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/users/{id} [get]
 func (h *UserHandler) GetUserById(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
 	if err != nil {
-		h.logger.Printf("Error in GetUserById handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in GetUserById handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in GetUserByID repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	user, err := h.repository.FindUserByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Users not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: User not found!")
+			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in FindUserByID repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in UpdateUser repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in FindUserByID repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusOK, &user)
@@ -72,19 +82,25 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 // @Summary	Fetches all users.
 // @Tags		Users
 // @Produce	application/json
-// @Success	200	{object}	ResponseHTTP{data=[]models.User}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{object}	models.User
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/users [get]
 func (h *UserHandler) GetUsers(c echo.Context) error {
 	users, err := h.repository.FindUsers()
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: User not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: User not found!")
+			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in FindUsers operation: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in FindUsers operation")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in FindUsers repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusOK, &users)
@@ -96,9 +112,11 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 // @Produce	application/json
 // @Param		id		path		string		true	"Update User of ID"
 // @Param		User	body		models.User	true	"Update User"
-// @Success	200		{object}	ResponseHTTP{data=models.User}
-// @Failure	400		{object}	ResponseHTTP{}
-// @Failure	500		{object}	ResponseHTTP{}
+// @Success	200		{object}	models.User
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/users/{id} [patch]
 func (h *UserHandler) PatchUser(c echo.Context) error {
 	var user models.User
@@ -106,30 +124,50 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
 	if err != nil {
-		h.logger.Printf("Error in PatchUser handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in PatchUser handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in PatchUser handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	err = c.Bind(&user)
 	if err != nil {
-		h.logger.Printf("Error in PatchUser handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PatchUser handler")
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error in PatchUser handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
 	}
 
 	err = h.validator.Struct(&user)
 	if err != nil {
-		h.logger.Printf("Error in PostUser handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in PostUser handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in PatchUser handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	updUser, err := h.repository.UpdateUser(id, user)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: User not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: User not found!")
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Not Found!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in UpdateUser repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in UpdateUser repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in UpdateUser repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusOK, &updUser)
@@ -140,26 +178,39 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	text/plain
 // @Param		id	path		string	true	"Delete User of ID"
-// @Success	200	{object}	ResponseHTTP{}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{string}	string
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
 	if err != nil {
-		h.logger.Printf("Error in DeleteUser handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in DeleteUser handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in DeleteUser handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	err = h.repository.DeleteUser(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: User not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: User not found!")
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Not Found!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in DeleteUser repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in DeleteUser repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in DeleteUser repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.String(http.StatusOK, "User successfully deleted!")
@@ -170,35 +221,44 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 // @Accept		application/json
 // @Produce	application/json
 // @Param		Role	body		models.Role	true	"Create Role"
-// @Success	200		{object}	ResponseHTTP{data=models.Role}
-// @Failure	400		{object}	ResponseHTTP{}
-// @Failure	500		{object}	ResponseHTTP{}
+// @Success	201	{object}	models.Role
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/roles [post]
 func (h *UserHandler) PostRole(c echo.Context) error {
 	var role models.Role
 
 	err := c.Bind(&role)
 	if err != nil {
-		h.logger.Printf("Error in PostRole handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PostRole handler")
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error in PostRole handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
 	}
 	role.Method = "POST"
 
-	if role.ID == nil {
-		roleID := uuid.NewString()
-		role.ID = &roleID
-	}
-
 	err = h.validator.Struct(&role)
 	if err != nil {
-		h.logger.Printf("Error in PostRole handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in PostRole handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in PostRole handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	newRole, err := h.repository.CreateRole(role)
 	if err != nil {
-		h.logger.Printf("Error in CreateRole repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in CreateRole repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in CreateRole repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusCreated, &newRole)
@@ -209,26 +269,37 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	application/json
 // @Param		id	path		string	true	"Get Role of ID"
-// @Success	200	{object}	ResponseHTTP{data=models.Role}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{object}	models.Role
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/roles/{id} [get]
 func (h *UserHandler) GetRoleById(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
 	if err != nil {
-		h.logger.Printf("Error in GetRoleById handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in GetRoleById handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in GetRoleByID repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	role, err := h.repository.FindRoleByID(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Role not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Role not found!")
+			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in FindRoleByID repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in UpdateRole repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in FindRoleByID repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusOK, &role)
@@ -240,9 +311,12 @@ func (h *UserHandler) GetRoleById(c echo.Context) error {
 // @Produce	application/json
 // @Param		id		path		string		true	"Update Role of ID"
 // @Param		Role	body		models.Role	true	"Update Role"
-// @Success	200		{object}	ResponseHTTP{data=models.Role}
-// @Failure	400		{object}	ResponseHTTP{}
-// @Failure	500		{object}	ResponseHTTP{}
+// @Success	200		{object}	models.Role
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	409	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/roles/{id} [patch]
 func (h *UserHandler) PatchRole(c echo.Context) error {
 	var role models.Role
@@ -250,34 +324,58 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
 	if err != nil {
-		h.logger.Printf("Error in PatchRole handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in PatchRole handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in PatchRole handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	err = c.Bind(&role)
 	if err != nil {
-		h.logger.Printf("Error in PatchRole handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PatchRole handler")
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error in PatchRole handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
 	}
 	role.Method = "PATCH"
 
 	err = h.validator.Struct(&role)
 	if err != nil {
-		h.logger.Printf("Error in PatchRole handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in PatchRole handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in PatchRole handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	updRole, err := h.repository.UpdateRole(id, role)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Role not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Role not found!")
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Not Found!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		} else if err == h.repository.ConflictErr() {
-			h.logger.Printf("Error: unable to update the Role due to an edit conflict, please try again!")
-			return c.String(http.StatusConflict, "Error: unable to update the Role due to an edit conflict, please try again!")
+			e := HTTPError{
+				Code:    http.StatusConflict,
+				Message: "Error: unable to update the Role due to an edit conflict, please try again!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusConflict, &e)
 		}
-		h.logger.Printf("Error in UpdateRole repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in UpdateRole repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in UpdateRole repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusOK, &updRole)
@@ -290,26 +388,39 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 // @Security ApiSessionCookie
 // @param sessionID header string true "Session ID"
 // @Param		id	path		string	true	"Delete Role of ID"
-// @Success	200	{object}	ResponseHTTP{}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{string}	string
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/roles/{id} [delete]
 func (h *UserHandler) DeleteRole(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
 	if err != nil {
-		h.logger.Printf("Error in DeleteRole handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in DeleteRole handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in DeleteRole handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	err = h.repository.DeleteRole(id)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Role not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Role not found!")
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Not Found!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in DeleteRole repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in DeleteRole repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in DeleteRole repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.String(http.StatusOK, "Role successfully deleted!")
@@ -321,49 +432,75 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 // @Produce	application/json
 // @Param		User	body		models.User	true	"Create User"
 // @param password header string true "Password"
-// @Success	200		{object}	ResponseHTTP{data=models.User}
-// @Failure	400		{object}	ResponseHTTP{}
-// @Failure	500		{object}	ResponseHTTP{}
+// @Success	201	{object}	models.User
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/register [post]
 func (h *UserHandler) Register(c echo.Context) error {
 	var user models.User
 
 	err := c.Bind(&user)
 	if err != nil {
-		h.logger.Printf("Error in PostUser handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PostUser handler")
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error in Register handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
 	}
 	user.Method = "POST"
 
 	err = h.validator.Struct(&user)
 	if err != nil {
-		h.logger.Printf("Error in Register handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in Register handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in Register handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	passwordSlice, ok := c.Request().Header["Password"]
 	if !ok {
-		h.logger.Printf("No password provided!")
-		return c.String(http.StatusBadRequest, "No password provided!")
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "No password provided!",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
 	}
 	password := &passwordSlice[0]
 	err = h.validator.Var(&password, "required,min=8")
 	if err != nil {
-		h.logger.Printf("Error in ResetPassword handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in ResetPassword handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in Register handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 	user.Password, err = h.passwordManager.CreatePasswordHash(password)
 
 	newUser, err := h.repository.CreateUser(user)
 	if err != nil {
-		h.logger.Printf("Error in CreateUser repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in CreateUser repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in CreateUser repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	session, err := h.repository.CreateSession(models.Session{UserID: newUser.ID})
 	if err != nil {
-		h.logger.Printf("Error creating session: %s", err)
-		return c.String(http.StatusInternalServerError, "Error creating session")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in CreateSession repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 	c.SetCookie(&http.Cookie{
 		Name:     "sessionID",
@@ -374,7 +511,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 	})
 	h.logger.Printf("Cookie value: ", *session.ID) // DEBUG
 
-	return c.JSON(http.StatusOK, &newUser)
+	return c.JSON(http.StatusCreated, &newUser)
 }
 
 // @Summary	Verifies the authenticated User.
@@ -382,33 +519,54 @@ func (h *UserHandler) Register(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	text/plain
 // @Security ApiSessionCookie
-// @param sessionID header string true "Session ID"
-// @Success	200	{object}	ResponseHTTP{}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @param sessionID header string false "Session ID"
+// @Success	200	{string}	string
+// @Failure	401	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/verify [get]
 func (h *UserHandler) Verify(c echo.Context) error {
+	var sessionID string
+
 	cookie, err := c.Cookie("sessionID")
 	if err != nil {
-		h.logger.Printf("Error reading cookie: %s", err)
-		return c.String(http.StatusUnauthorized, "Error reading cookie")
+		sessionSlice, ok := c.Request().Header["sessionID"]
+		if !ok {
+			e := HTTPError{
+				Code:    http.StatusUnauthorized,
+				Message: "No session provided!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnauthorized, &e)
+		}
+		sessionID = sessionSlice[0]
+	} else {
+		sessionID = cookie.Value
 	}
 
-	session, err := h.repository.FindSessionByID(cookie.Value)
+	session, err := h.repository.FindSessionByID(sessionID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Session not found! %s", err)
-			return c.String(http.StatusUnauthorized, "Error: Session not found!")
+			e := HTTPError{Code: http.StatusUnauthorized, Message: "Not Found!"}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnauthorized, &e)
 		}
-		h.logger.Printf("Error in FindSessionByID repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in FindSessionByID repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in FindSessionByID repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	t := true
 	_, err = h.repository.UpdateUser(*session.UserID, models.User{Verified: &t})
 	if err != nil {
-		h.logger.Printf("Error in UpdateUser repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in UpdateUser repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in UpdateUser repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.String(http.StatusOK, "User verified")
@@ -421,22 +579,31 @@ func (h *UserHandler) Verify(c echo.Context) error {
 // @Security ApiSessionCookie
 // @param password header string true "New Password"
 // @param id path string true "User ID"
-// @Success	200	{object}	ResponseHTTP{}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{string}	string
+// @Failure	400	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/reset-password/{id} [patch]
 func (h *UserHandler) ResetPassword(c echo.Context) error {
 	passwordSlice, ok := c.Request().Header["Password"]
 	if !ok {
-		h.logger.Printf("No password provided!")
-		return c.String(http.StatusBadRequest, "No password provided!")
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "No password provided!",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
 	}
 	password := &passwordSlice[0]
 
 	err := h.validator.Var(&password, "required,min=8")
 	if err != nil {
-		h.logger.Printf("Error in ResetPassword handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in ResetPassword handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in ResetPassword handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	password, err = h.passwordManager.CreatePasswordHash(password)
@@ -444,17 +611,29 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 	user, err := h.repository.UpdateUser(c.Param("id"), models.User{Password: password})
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: User not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: User not found!")
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Not Found!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in UpdateUser repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in UpdateUser repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in UpdateUser repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	err = h.repository.DeleteAllUserSessions(*user.ID)
 	if err != nil {
-		h.logger.Printf("Error in DeleteAllUserSessions repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in DeleteAllUserSessions repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in DeleteAllUserSessions repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.String(http.StatusOK, "User password reset!")
@@ -467,17 +646,21 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 // @param email header string false "Email"
 // @param username header string false "Username"
 // @param password header string true "Password"
-// @Success	200		{object}	ResponseHTTP{}
-// @Failure	400		{object}	ResponseHTTP{}
-// @Failure	500		{object}	ResponseHTTP{}
+// @Success	200		{string}	string
+// @Failure	400		{object}	HTTPError
+// @Failure	500		{object}	HTTPError
 // @Router		/v1/login [post]
 func (h *UserHandler) Login(c echo.Context) error {
 	var username, email, password string
 
 	passwordSlice, ok := c.Request().Header["Password"]
 	if !ok {
-		h.logger.Printf("No password provided!")
-		return c.String(http.StatusBadRequest, "No password provided!")
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "No password provided!",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
 	}
 	password = passwordSlice[0]
 
@@ -485,40 +668,62 @@ func (h *UserHandler) Login(c echo.Context) error {
 		username = c.Request().Header["Username"][0]
 		err := h.validator.Var(username, "omitempty,max=90")
 		if err != nil {
-			h.logger.Printf("Error in Login handler: %s", err)
-			return c.String(http.StatusUnprocessableEntity, "Error in Login handler")
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in Login handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
 		}
 	} else if _, ok = c.Request().Header["Email"]; ok {
 		email = c.Request().Header["Email"][0]
 		err := h.validator.Var(email, "omitempty,email,max=50")
 		if err != nil {
-			h.logger.Printf("Error in Login handler: %s", err)
-			return c.String(http.StatusUnprocessableEntity, "Error in Login handler")
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in Login handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
 		}
 	} else {
-		h.logger.Printf("No identifiers provided!")
-		return c.String(http.StatusUnauthorized, "No identifiers provided!")
+		e := HTTPError{
+			Code:    http.StatusUnauthorized,
+			Message: "No identifiers provided!",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnauthorized, &e)
 	}
 
 	user, err := h.userIdentifier.IdentifyUser(&email, &username)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: User not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: User not found!")
+			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error identifying user: %s", err)
-		return c.String(http.StatusInternalServerError, "Error identifying user")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in IdentifyUser service: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	if h.passwordManager.CheckPassword(&password, user.ID) != nil {
-		h.logger.Printf("Password incorrect!")
-		return c.String(http.StatusUnauthorized, "Password incorrect!")
+		e := HTTPError{Code: http.StatusUnauthorized, Message: "Password incorrect!"}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnauthorized, &e)
 	}
 
 	session, err := h.repository.CreateSession(models.Session{UserID: user.ID})
 	if err != nil {
-		h.logger.Printf("Error in CreateSession repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in CreateSession repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in CreateSession repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	c.SetCookie(&http.Cookie{
@@ -538,51 +743,88 @@ func (h *UserHandler) Login(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	text/plain
 // @Security ApiSessionCookie
-// @param sessionID header string true "Session ID"
+// @param sessionID header string false "Session ID"
 // @Param		id		path		string		true	"Session to invalidate"
-// @Success	200	{object}	ResponseHTTP{}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{string}	string
+// @Failure	400	{object}	HTTPError
+// @Failure	401	{object}	HTTPError
+// @Failure	403	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/logout/{id} [delete]
 func (h *UserHandler) Logout(c echo.Context) error {
+	var sessionID string
+
 	cookie, err := c.Cookie("sessionID")
 	if err != nil {
-		h.logger.Printf("Error reading cookie: %s", err)
-		return c.String(http.StatusUnauthorized, "Error reading cookie")
+		sessionSlice, ok := c.Request().Header["sessionID"]
+		if !ok {
+			e := HTTPError{
+				Code:    http.StatusUnauthorized,
+				Message: "No session provided!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnauthorized, &e)
+		}
+		sessionID = sessionSlice[0]
+	} else {
+		sessionID = cookie.Value
 	}
 
-	currentSession, err := h.repository.FindSessionByID(cookie.Value)
+	currentSession, err := h.repository.FindSessionByID(sessionID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Session not found! %s", err)
-			return c.String(http.StatusUnauthorized, "Error: Session not found!")
+			e := HTTPError{Code: http.StatusUnauthorized, Message: "Not Found!"}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnauthorized, &e)
 		}
-		h.logger.Printf("Error in FindSessionByAccess repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in FindSessionByAccess repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in FindSessionByID repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	requestedSession, err := h.repository.FindSessionByID(c.Param("id"))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Session not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Session not found!")
+			e := HTTPError{Code: http.StatusUnauthorized, Message: "Not Found!"}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnauthorized, &e)
 		}
-		h.logger.Printf("Error in FindSessionByAccess repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in FindSessionByAccess repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in FindSessionByID repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 	if *requestedSession.UserID != *currentSession.UserID { // TODO: Skip for admin privileges
-		h.logger.Printf("Cannot log out other user!")
-		return c.String(http.StatusForbidden, "Cannot log out other user!")
+		e := HTTPError{
+			Code:    http.StatusForbidden,
+			Message: "Cannot log out other user!",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusForbidden, &e)
 	}
 
 	err = h.repository.DeleteSession(*requestedSession.ID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Sessions not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Session not found!")
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Not Found!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in DeleteSession repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in DeleteSession repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in DeleteSession repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	// Invalidate cookie if the client invalidates the session they are logged in as

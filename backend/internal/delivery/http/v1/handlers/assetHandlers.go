@@ -30,32 +30,46 @@ func NewAssetHandler(e *echo.Echo, repo AssetRepository, v *validator.Validate) 
 // @Accept		application/json
 // @Produce	application/json
 // @Param		Asset	body		models.Asset	true	"Create Asset"
-// @Success	200		{object}	ResponseHTTP{data=models.Asset}
-// @Failure	400		{object}	ResponseHTTP{}
-// @Failure	500		{object}	ResponseHTTP{}
+// @Success	201	{object}	models.Asset
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/assets [post]
 func (h *AssetHandler) PostAsset(c echo.Context) error {
 	var asset models.Asset
 
 	err := c.Bind(&asset)
 	if err != nil {
-		h.logger.Printf("Error in PostAsset handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PostAsset handler")
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error in PostAsset handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
 	}
 	asset.Method = "POST"
 
 	err = h.validator.Struct(&asset)
 	if err != nil {
-		h.logger.Printf("Error in PostAsset handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in PostAsset handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in PostAsset handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	// TODO: Hook a Service to create links to the S3 bucket
 
 	newAsset, err := h.repository.CreateAsset(asset)
 	if err != nil {
-		h.logger.Printf("Error in CreateAsset repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in CreateAsset repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in CreateAsset repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusCreated, &newAsset)
@@ -66,27 +80,38 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	application/json
 // @Param		id	path		int	true	"Get Asset of ID"
-// @Success	200	{object}	ResponseHTTP{data=models.Asset}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{object}	models.Asset
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/assets/{id} [get]
 func (h *AssetHandler) GetAssetById(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
 	if err != nil {
-		h.logger.Printf("Error in GetAssetByID handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in GetAssetByID handler"+err.Error())
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in GetAssetByID repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 	id, _ := strconv.ParseInt(p, 10, 64)
 
 	asset, err := h.repository.FindAssetByID(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Asset not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in FindAssetByID repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in FindAssetByID repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in FindAssetByID repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusOK, &asset)
@@ -96,9 +121,10 @@ func (h *AssetHandler) GetAssetById(c echo.Context) error {
 // @Tags		Assets
 // @Produce	application/json
 // @Param		q	query		[]string	false	"Keyword Query"
-// @Success	200	{object}	ResponseHTTP{data=[]models.Asset}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{object}	models.Asset
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/assets [get]
 func (h *AssetHandler) GetAssets(c echo.Context) error {
 	var err error
@@ -112,11 +138,16 @@ func (h *AssetHandler) GetAssets(c echo.Context) error {
 	}
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Asset not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in FindFirstAsset repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in FindAssets repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in FindAssets repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusOK, &assets)
@@ -128,43 +159,71 @@ func (h *AssetHandler) GetAssets(c echo.Context) error {
 // @Produce	application/json
 // @Param		id		path		string			true	"Update Asset of ID"
 // @Param		Asset	body		models.Asset	true	"Update Asset"
-// @Success	200		{object}	ResponseHTTP{data=models.Asset}
-// @Failure	400		{object}	ResponseHTTP{}
-// @Failure	500		{object}	ResponseHTTP{}
+// @Success	200		{object}	models.Asset
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	409	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/assets/{id} [patch]
 func (h *AssetHandler) PatchAsset(c echo.Context) error {
 	var asset models.Asset
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
 	if err != nil {
-		h.logger.Printf("Error in PatchAsset handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in PatchAsset handler"+err.Error())
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in PatchAsset handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 	id, _ := strconv.ParseInt(p, 10, 64)
 
-	if err = c.Bind(&asset); err != nil {
-		h.logger.Printf("Error in PatchAsset handler: %s", err)
-		return c.String(http.StatusBadRequest, "Error in PatchAsset handler")
+	err = c.Bind(&asset)
+	if err != nil {
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error in PatchAsset handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
 	}
 	asset.Method = "PATCH"
 
 	err = h.validator.Struct(&asset)
 	if err != nil {
-		h.logger.Printf("Error in PatchAsset handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in PatchAsset handler")
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in PatchAsset handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
 	updAsset, err := h.repository.UpdateAsset(int(id), asset)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Asset not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Not Found!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		} else if err == h.repository.ConflictErr() {
-			h.logger.Printf("Error: unable to update the Asset due to an edit conflict, please try again!")
-			return c.String(http.StatusConflict, "Error: unable to update the Asset due to an edit conflict, please try again!")
+			e := HTTPError{
+				Code:    http.StatusConflict,
+				Message: "Error: unable to update the Asset due to an edit conflict, please try again!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusConflict, &e)
 		}
-		h.logger.Printf("Error in UpdateAsset repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in UpdateAsset repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in UpdateAsset repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusOK, &updAsset)
@@ -175,27 +234,40 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	text/plain
 // @Param		id	path		string	true	"Delete Asset of ID"
-// @Success	200	{object}	ResponseHTTP{}
-// @Failure	400	{object}	ResponseHTTP{}
-// @Failure	500	{object}	ResponseHTTP{}
+// @Success	200	{string}	string
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
 // @Router		/v1/assets/{id} [delete]
 func (h *AssetHandler) DeleteAsset(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
 	if err != nil {
-		h.logger.Printf("Error in DeleteAsset handler: %s", err)
-		return c.String(http.StatusUnprocessableEntity, "Error in DeleteAsset handler"+err.Error())
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Error in DeleteAsset handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 	id, _ := strconv.ParseInt(p, 10, 64)
 
 	err = h.repository.DeleteAsset(int(id))
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			h.logger.Printf("Error: Asset not found! %s", err)
-			return c.String(http.StatusNotFound, "Error: Asset not found!")
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Not Found!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
-		h.logger.Printf("Error in DeleteAsset repository: %s", err)
-		return c.String(http.StatusInternalServerError, "Error in DeleteAsset repository")
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in DeleteAsset repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.String(http.StatusOK, "Asset sucessfully deleted!")

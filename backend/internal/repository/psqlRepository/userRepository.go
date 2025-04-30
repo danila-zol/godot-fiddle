@@ -131,6 +131,9 @@ func (r *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(users) == 0 {
+		return nil, r.NotFoundErr()
+	}
 	return &users, nil
 }
 

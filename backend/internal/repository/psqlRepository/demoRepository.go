@@ -102,6 +102,9 @@ func (r *PsqlDemoRepository) FindDemosByQuery(query *[]string) (*[]models.Demo, 
 	if err != nil {
 		return nil, err
 	}
+	if len(demos) == 0 {
+		return nil, r.NotFoundErr()
+	}
 	return &demos, nil
 }
 
