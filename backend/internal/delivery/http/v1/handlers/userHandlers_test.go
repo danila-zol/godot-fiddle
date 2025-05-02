@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	// "github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,7 +37,7 @@ var (
 	}
 	au = mockUserAuthorizer{&mu}
 
-	genericUUID string = "9c6ac0b1-b97e-4356-a6e1-dc6b52324220"
+	genericUUID uuid.UUID = uuid.New()
 
 	notFoundResponse          = `{"code":404,"message":"Not Found!"}` + "\n"
 	conflictResponse          = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
@@ -47,17 +48,17 @@ var (
 	passwordIncorrectResponse = `{"code":401,"message":"Password incorrect!"}` + "\n"
 
 	roleJSON               = `{"name":"Cool role"}`
-	roleJSONExpected       = `{"id":"` + genericUUID + `","name":"Cool role","version":1}` + "\n"
+	roleJSONExpected       = `{"id":"` + genericUUID.String() + `","name":"Cool role","version":1}` + "\n"
 	roleJSONUpdate         = `{"name":"Updated cool role","version":1}`
 	roleJSONUpdateInvalid  = `{"name":"Updated cool role"}`
-	roleJSONUpdateExpected = `{"id":"` + genericUUID + `","name":"Updated cool role","version":2}` + "\n"
+	roleJSONUpdateExpected = `{"id":"` + genericUUID.String() + `","name":"Updated cool role","version":2}` + "\n"
 
-	userJSON               = `{"username":"Cool user","email":"test@example.com","roleID":"` + genericUUID + `"}`
-	userJSONExpected       = `{"id":"` + genericUUID + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID + `"}` + "\n"
-	userJSONExpectedMany   = `[{"id":"` + genericUUID + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID + `"}]` + "\n"
+	userJSON               = `{"username":"Cool user","email":"test@example.com","roleID":"` + genericUUID.String() + `"}`
+	userJSONExpected       = `{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}` + "\n"
+	userJSONExpectedMany   = `[{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}]` + "\n"
 	userJSONUpdate         = `{"username":"Updated cool user"}`
-	userJSONUpdateExpected = `{"id":"` + genericUUID + `","username":"Updated cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID + `"}` + "\n"
-	userJSONVerifyExpected = `{"id":"` + genericUUID + `","username":"Updated cool user","email":"test@example.com","verified":true,"roleID":"` + genericUUID + `"}` + "\n"
+	userJSONUpdateExpected = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}` + "\n"
+	userJSONVerifyExpected = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":true,"roleID":"` + genericUUID.String() + `"}` + "\n"
 
 	userPassword      = "qwety123"
 	userPasswordReset = "aVeryStrongPassword123"
@@ -70,27 +71,27 @@ func (r *mockUserRepo) CreateRole(role models.Role) (*models.Role, error) {
 	role.ID = &id
 	version := 1
 	role.Version = &version
-	r.roleData[id] = role
-	resultRole, ok := r.roleData[id]
+	r.roleData[id.String()] = role
+	resultRole, ok := r.roleData[id.String()]
 	if !ok {
 		return nil, r.NotFoundErr()
 	}
 	return &resultRole, nil
 }
-func (r *mockUserRepo) FindRoleByID(id string) (*models.Role, error) {
-	role, ok := r.roleData[id]
+func (r *mockUserRepo) FindRoleByID(id uuid.UUID) (*models.Role, error) {
+	role, ok := r.roleData[id.String()]
 	if !ok {
 		return nil, r.NotFoundErr()
 	}
 	return &role, nil
 }
-func (r *mockUserRepo) UpdateRole(id string, role models.Role) (*models.Role, error) {
+func (r *mockUserRepo) UpdateRole(id uuid.UUID, role models.Role) (*models.Role, error) {
 	var resultRole models.Role
-	_, ok := r.roleData[id]
+	_, ok := r.roleData[id.String()]
 	if !ok {
 		return nil, r.NotFoundErr()
 	}
-	resultRole = r.roleData[id]
+	resultRole = r.roleData[id.String()]
 	if *resultRole.Version != *role.Version {
 		return nil, r.ConflictErr()
 	}
@@ -98,49 +99,49 @@ func (r *mockUserRepo) UpdateRole(id string, role models.Role) (*models.Role, er
 		resultRole.Name = role.Name
 		n := *role.Version + 1
 		resultRole.Version = &n
-		r.roleData[id] = resultRole
+		r.roleData[id.String()] = resultRole
 	}
-	resultRole = r.roleData[id]
+	resultRole = r.roleData[id.String()]
 	return &resultRole, nil
 }
-func (r *mockUserRepo) DeleteRole(id string) error {
-	_, ok := r.roleData[id]
+func (r *mockUserRepo) DeleteRole(id uuid.UUID) error {
+	_, ok := r.roleData[id.String()]
 	if !ok {
 		return r.NotFoundErr()
 	}
-	delete(r.roleData, id)
+	delete(r.roleData, id.String())
 	return nil
 }
 
 func (r *mockUserRepo) CreateSession(session models.Session) (*models.Session, error) {
 	id := genericUUID
 	session.ID = &id
-	r.sessionData[id] = session
-	resultsession, ok := r.sessionData[id]
+	r.sessionData[id.String()] = session
+	resultsession, ok := r.sessionData[id.String()]
 	if !ok {
 		return nil, r.NotFoundErr()
 	}
 	return &resultsession, nil
 }
-func (r *mockUserRepo) FindSessionByID(id string) (*models.Session, error) {
-	session, ok := r.sessionData[id]
+func (r *mockUserRepo) FindSessionByID(id uuid.UUID) (*models.Session, error) {
+	session, ok := r.sessionData[id.String()]
 	if !ok {
 		return nil, r.NotFoundErr()
 	}
 	return &session, nil
 }
-func (r *mockUserRepo) DeleteSession(id string) error {
-	_, ok := r.sessionData[id]
+func (r *mockUserRepo) DeleteSession(id uuid.UUID) error {
+	_, ok := r.sessionData[id.String()]
 	if !ok {
 		return r.NotFoundErr()
 	}
-	delete(r.sessionData, id)
+	delete(r.sessionData, id.String())
 	return nil
 }
-func (r *mockUserRepo) DeleteAllUserSessions(userID string) error {
+func (r *mockUserRepo) DeleteAllUserSessions(userID uuid.UUID) error {
 	for _, s := range r.sessionData {
-		if s.UserID == &userID {
-			delete(r.sessionData, userID)
+		if *s.UserID == userID {
+			delete(r.sessionData, userID.String())
 		}
 	}
 	return nil
@@ -151,8 +152,8 @@ func (r *mockUserRepo) CreateUser(user models.User) (*models.User, error) {
 	f := false
 	user.ID = &id
 	user.Verified = &f
-	r.userData[id] = user
-	resultUser, ok := r.userData[id]
+	r.userData[id.String()] = user
+	resultUser, ok := r.userData[id.String()]
 	if !ok {
 		return nil, r.NotFoundErr()
 	}
@@ -165,37 +166,37 @@ func (r *mockUserRepo) FindUsers() (*[]models.User, error) {
 	}
 	return &u, nil
 }
-func (r *mockUserRepo) FindUserByID(id string) (*models.User, error) {
-	user, ok := r.userData[id]
+func (r *mockUserRepo) FindUserByID(id uuid.UUID) (*models.User, error) {
+	user, ok := r.userData[id.String()]
 	if !ok {
 		return nil, r.NotFoundErr()
 	}
 	return &user, nil
 }
-func (r *mockUserRepo) UpdateUser(id string, user models.User) (*models.User, error) {
+func (r *mockUserRepo) UpdateUser(id uuid.UUID, user models.User) (*models.User, error) {
 	var resultUser models.User
-	_, ok := r.userData[id]
+	_, ok := r.userData[id.String()]
 	if !ok {
 		return nil, r.NotFoundErr()
 	}
-	resultUser = r.userData[id]
+	resultUser = r.userData[id.String()]
 	if user.Username != nil {
 		resultUser.Username = user.Username
-		r.userData[id] = resultUser
+		r.userData[id.String()] = resultUser
 	}
 	if user.Password != nil {
 		resultUser.Password = user.Password
-		r.userData[id] = resultUser
+		r.userData[id.String()] = resultUser
 	}
-	resultUser = r.userData[id]
+	resultUser = r.userData[id.String()]
 	return &resultUser, nil
 }
-func (r *mockUserRepo) DeleteUser(id string) error {
-	_, ok := r.userData[id]
+func (r *mockUserRepo) DeleteUser(id uuid.UUID) error {
+	_, ok := r.userData[id.String()]
 	if !ok {
 		return r.NotFoundErr()
 	}
-	delete(r.userData, id)
+	delete(r.userData, id.String())
 	return nil
 }
 
@@ -222,8 +223,8 @@ func (a *mockUserAuthorizer) CreatePasswordHash(password *string) (*string, erro
 	return password, nil
 }
 
-func (a *mockUserAuthorizer) CheckPassword(password, userID *string) error {
-	u, err := a.repository.FindUserByID(*userID)
+func (a *mockUserAuthorizer) CheckPassword(password *string, userID uuid.UUID) error {
+	u, err := a.repository.FindUserByID(userID)
 	if err != nil {
 		return err
 	}
@@ -257,7 +258,7 @@ func TestGetRoleByID(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -294,7 +295,7 @@ func TestPatchRole(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -332,7 +333,7 @@ func TestPatchRoleUnprocessable(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -350,7 +351,7 @@ func TestPatchRoleConflict(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -368,7 +369,7 @@ func TestDeleteRole(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -426,7 +427,7 @@ func TestRegister(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, rec.Code)
 		assert.Equal(t, userJSONExpected, rec.Body.String())
 		s := rec.Result().Cookies()
-		assert.Equal(t, genericUUID, s[0].Value)
+		assert.Equal(t, genericUUID.String(), s[0].Value)
 	}
 }
 
@@ -435,7 +436,7 @@ func TestVerify(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/verify", nil)
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set("Sessionid", genericUUID)
+	req.Header.Set("Sessionid", genericUUID.String())
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
@@ -452,12 +453,12 @@ func TestLogoutHeader(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/game-hangar/v1/logout", nil)
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set("Sessionid", genericUUID)
+	req.Header.Set("Sessionid", genericUUID.String())
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -483,7 +484,7 @@ func TestLoginEmail(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, loginResponse, rec.Body.String())
 		s := rec.Result().Cookies()
-		assert.Equal(t, genericUUID, s[0].Value)
+		assert.Equal(t, genericUUID.String(), s[0].Value)
 	}
 }
 
@@ -492,12 +493,12 @@ func TestLogoutCookie(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/game-hangar/v1/logout", nil)
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.AddCookie(&http.Cookie{Name: "sessionID", Value: genericUUID})
+	req.AddCookie(&http.Cookie{Name: "sessionID", Value: genericUUID.String()})
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -523,7 +524,7 @@ func TestLoginUsername(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, loginResponse, rec.Body.String())
 		s := rec.Result().Cookies()
-		assert.Equal(t, genericUUID, s[0].Value)
+		assert.Equal(t, genericUUID.String(), s[0].Value)
 	}
 }
 
@@ -537,7 +538,7 @@ func TestResetPassword(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -588,7 +589,7 @@ func TestGetUserByID(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -625,7 +626,7 @@ func TestPatchUser(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
@@ -643,7 +644,7 @@ func TestDeleteUser(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID)
+	c.SetParamValues(genericUUID.String())
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions

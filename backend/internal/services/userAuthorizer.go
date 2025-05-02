@@ -3,11 +3,12 @@ package services
 import (
 	"gamehangar/internal/domain/models"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserAuthorizerRepository interface {
-	FindUserByID(id string) (*models.User, error)
+	FindUserByID(id uuid.UUID) (*models.User, error)
 	FindUserByEmail(email string) (user *models.User, err error)
 	FindUserByUsername(username string) (user *models.User, err error)
 	NotFoundErr() error
@@ -52,8 +53,8 @@ func (a *UserAuthorizer) CreatePasswordHash(password *string) (*string, error) {
 	return &hash, nil
 }
 
-func (a *UserAuthorizer) CheckPassword(password, userID *string) error {
-	user, err := a.repository.FindUserByID(*userID)
+func (a *UserAuthorizer) CheckPassword(password *string, userID uuid.UUID) error {
+	user, err := a.repository.FindUserByID(userID)
 	if err != nil {
 		return err
 	}

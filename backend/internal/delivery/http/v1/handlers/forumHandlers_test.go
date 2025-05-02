@@ -32,7 +32,7 @@ var (
 		conflictErr: errors.New("Record conflict!"),
 	}
 
-	// genericUUID string = "9c6ac0b1-b97e-4356-a6e1-dc6b52324220"
+	// genericUUID uuid.UUID = uuid.New()
 
 	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
 	// conflictResponse = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
@@ -44,21 +44,21 @@ var (
 	topicJSONUpdateInvalid  = `{"name":"Updated cool topic"}`
 	topicJSONUpdateExpected = `{"id":1,"name":"Updated cool topic","version":2}` + "\n"
 
-	threadJSON               = `{"title":"Cool Thread","userID":"` + genericUUID + `","topicID":1}`
-	threadJSONExpected       = `{"id":1,"title":"Cool Thread","userID":"` + genericUUID + `","topicID":1}` + "\n"
-	threadJSONExpectedMany   = `[{"id":1,"title":"Cool Thread","userID":"` + genericUUID + `","topicID":1}]` + "\n"
+	threadJSON               = `{"title":"Cool Thread","userID":"` + genericUUID.String() + `","topicID":1}`
+	threadJSONExpected       = `{"id":1,"title":"Cool Thread","userID":"` + genericUUID.String() + `","topicID":1}` + "\n"
+	threadJSONExpectedMany   = `[{"id":1,"title":"Cool Thread","userID":"` + genericUUID.String() + `","topicID":1}]` + "\n"
 	threadQuery              = `cheeseboiger`
-	threadJSONQueryExpected  = `[{"id":1,"title":"cheeseboiger","userID":"` + genericUUID + `","topicID":2,"tags":null},{"id":2,"title":"thread two","userID":"` + genericUUID + `","topicID":2,"tags":["cheeseboiger"]}]` + "\n"
+	threadJSONQueryExpected  = `[{"id":1,"title":"cheeseboiger","userID":"` + genericUUID.String() + `","topicID":2,"tags":null},{"id":2,"title":"thread two","userID":"` + genericUUID.String() + `","topicID":2,"tags":["cheeseboiger"]}]` + "\n"
 	threadJSONUpdate         = `{"title":"Updated cool Thread"}`
-	threadJSONUpdateExpected = `{"id":1,"title":"Updated cool Thread","userID":"` + genericUUID + `","topicID":1}` + "\n"
+	threadJSONUpdateExpected = `{"id":1,"title":"Updated cool Thread","userID":"` + genericUUID.String() + `","topicID":1}` + "\n"
 
-	messageJSON               = `{"title":"Cool message","userID":"` + genericUUID + `","threadID":1}`
-	messageJSONExpected       = `{"id":1,"threadID":1,"userID":"` + genericUUID + `","title":"Cool message"}` + "\n"
-	messageJSONExpectedMany   = `[{"id":1,"threadID":1,"userID":"` + genericUUID + `","title":"Cool message"}]` + "\n"
+	messageJSON               = `{"title":"Cool message","userID":"` + genericUUID.String() + `","threadID":1}`
+	messageJSONExpected       = `{"id":1,"threadID":1,"userID":"` + genericUUID.String() + `","title":"Cool message"}` + "\n"
+	messageJSONExpectedMany   = `[{"id":1,"threadID":1,"userID":"` + genericUUID.String() + `","title":"Cool message"}]` + "\n"
 	messageQuery              = `cheeseboiger`
-	messageJSONQueryExpected  = `[{"id":1,"threadID":2,"userID":"` + genericUUID + `","title":"cheeseboiger","tags":null},{"id":2,"threadID":2,"userID":"` + genericUUID + `","title":"message two","tags":["cheeseboiger"]}]` + "\n"
+	messageJSONQueryExpected  = `[{"id":1,"threadID":2,"userID":"` + genericUUID.String() + `","title":"cheeseboiger","tags":null},{"id":2,"threadID":2,"userID":"` + genericUUID.String() + `","title":"message two","tags":["cheeseboiger"]}]` + "\n"
 	messageJSONUpdate         = `{"title":"Updated cool message"}`
-	messageJSONUpdateExpected = `{"id":1,"threadID":1,"userID":"` + genericUUID + `","title":"Updated cool message"}` + "\n"
+	messageJSONUpdateExpected = `{"id":1,"threadID":1,"userID":"` + genericUUID.String() + `","title":"Updated cool message"}` + "\n"
 )
 
 func (r *mockForumRepo) CreateTopic(topic models.Topic) (*models.Topic, error) {

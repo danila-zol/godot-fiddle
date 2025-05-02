@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,8 +19,8 @@ var (
 
 	userAuthorizer *UserAuthorizer
 
-	roleID         string
-	userID         string
+	roleID         uuid.UUID
+	userID         uuid.UUID
 	userRepository *psqlRepository.PsqlUserRepository
 
 	testUsername string = "mike-pech"
@@ -142,7 +143,7 @@ func TestPasswordHashCreateCheck(t *testing.T) {
 	_, err = userRepository.UpdateUser(userID, models.User{Password: hash})
 	assert.NoError(t, err)
 
-	err = userAuthorizer.CheckPassword(&testPassword, &userID)
+	err = userAuthorizer.CheckPassword(&testPassword, userID)
 	if assert.NoError(t, err) {
 		teardownAuthorizer(userRepository)
 	}

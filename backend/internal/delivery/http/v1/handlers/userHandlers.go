@@ -8,13 +8,14 @@ import (
 	_ "gamehangar/docs"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
 type UserAuthorizer interface {
 	IdentifyUser(email, username *string) (user *models.User, err error)
 	CreatePasswordHash(password *string) (hash *string, err error)
-	CheckPassword(password, userID *string) (err error)
+	CheckPassword(password *string, userID uuid.UUID) (err error)
 }
 
 type UserHandler struct {
@@ -56,7 +57,8 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	user, err := h.repository.FindUserByID(id)
+	userID, _ := uuid.Parse(id)
+	user, err := h.repository.FindUserByID(userID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
@@ -147,7 +149,8 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	updUser, err := h.repository.UpdateUser(id, user)
+	userID, _ := uuid.Parse(id)
+	updUser, err := h.repository.UpdateUser(userID, user)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -190,7 +193,8 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	err = h.repository.DeleteUser(id)
+	userID, _ := uuid.Parse(id)
+	err = h.repository.DeleteUser(userID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -282,7 +286,8 @@ func (h *UserHandler) GetRoleById(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	role, err := h.repository.FindRoleByID(id)
+	roleID, _ := uuid.Parse(id)
+	role, err := h.repository.FindRoleByID(roleID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
@@ -348,7 +353,8 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	updRole, err := h.repository.UpdateRole(id, role)
+	roleID, _ := uuid.Parse(id)
+	updRole, err := h.repository.UpdateRole(roleID, role)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -400,7 +406,8 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	err = h.repository.DeleteRole(id)
+	roleID, _ := uuid.Parse(id)
+	err = h.repository.DeleteRole(roleID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -499,7 +506,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 	}
 	c.SetCookie(&http.Cookie{
 		Name:     "sessionID",
-		Value:    *session.ID,
+		Value:    session.ID.String(),
 		Expires:  time.Now().Add(96 * time.Hour),
 		HttpOnly: true,
 		SameSite: 3,
@@ -520,7 +527,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 // @Failure	500	{object}	HTTPError
 // @Router		/v1/verify [get]
 func (h *UserHandler) Verify(c echo.Context) error {
-	var sessionID string
+	var s string
 
 	cookie, err := c.Cookie("sessionID")
 	if err != nil {
@@ -533,11 +540,12 @@ func (h *UserHandler) Verify(c echo.Context) error {
 			h.logger.Print(&e)
 			return c.JSON(http.StatusUnauthorized, &e)
 		}
-		sessionID = sessionSlice[0]
+		s = sessionSlice[0]
 	} else {
-		sessionID = cookie.Value
+		s = cookie.Value
 	}
 
+	sessionID, _ := uuid.Parse(s)
 	session, err := h.repository.FindSessionByID(sessionID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
@@ -603,7 +611,8 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 
 	password, err = h.userAuthorizer.CreatePasswordHash(password)
 
-	user, err := h.repository.UpdateUser(c.Param("id"), models.User{Password: password})
+	sessionID, _ := uuid.Parse(c.Param("id"))
+	user, err := h.repository.UpdateUser(sessionID, models.User{Password: password})
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -705,7 +714,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	if h.userAuthorizer.CheckPassword(&password, user.ID) != nil {
+	if h.userAuthorizer.CheckPassword(&password, *user.ID) != nil {
 		e := HTTPError{Code: http.StatusUnauthorized, Message: "Password incorrect!"}
 		h.logger.Print(&e)
 		return c.JSON(http.StatusUnauthorized, &e)
@@ -723,7 +732,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 
 	c.SetCookie(&http.Cookie{
 		Name:     "sessionID",
-		Value:    *session.ID,
+		Value:    session.ID.String(),
 		Expires:  time.Now().Add(96 * time.Hour),
 		HttpOnly: true,
 		SameSite: 3,
@@ -748,7 +757,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 // @Failure	500	{object}	HTTPError
 // @Router		/v1/logout/{id} [delete]
 func (h *UserHandler) Logout(c echo.Context) error {
-	var sessionID string
+	var s string
 
 	cookie, err := c.Cookie("sessionID")
 	if err != nil {
@@ -761,11 +770,12 @@ func (h *UserHandler) Logout(c echo.Context) error {
 			h.logger.Print(&e)
 			return c.JSON(http.StatusUnauthorized, &e)
 		}
-		sessionID = sessionSlice[0]
+		s = sessionSlice[0]
 	} else {
-		sessionID = cookie.Value
+		s = cookie.Value
 	}
 
+	sessionID, _ := uuid.Parse(s)
 	currentSession, err := h.repository.FindSessionByID(sessionID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
@@ -781,7 +791,8 @@ func (h *UserHandler) Logout(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	requestedSession, err := h.repository.FindSessionByID(c.Param("id"))
+	reqSessionID, _ := uuid.Parse(c.Param("id"))
+	requestedSession, err := h.repository.FindSessionByID(reqSessionID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusUnauthorized, Message: "Not Found!"}

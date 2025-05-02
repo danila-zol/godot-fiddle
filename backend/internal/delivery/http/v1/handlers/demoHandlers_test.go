@@ -31,17 +31,17 @@ var (
 		notFoundErr: errors.New("Not Found"),
 	}
 
-	// genericUUID string = "9c6ac0b1-b97e-4356-a6e1-dc6b52324220"
+	// genericUUID uuid.UUID = uuid.New()
 
 	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
 
-	demoJSON               = `{"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID + `"}`
-	demoJSONExpected       = `{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID + `","threadID":1}` + "\n"
-	demoJSONExpectedMany   = `[{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID + `","threadID":1}]` + "\n"
+	demoJSON               = `{"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `"}`
+	demoJSONExpected       = `{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"
+	demoJSONExpectedMany   = `[{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}]` + "\n"
 	demoQuery              = `cheeseboiger`
-	demoJSONQueryExpected  = `[{"id":1,"title":"cheeseboiger","link":"link.com","tags":null,"userID":"` + genericUUID + `"},{"id":2,"title":"demo two","link":"example.com","tags":["cheeseboiger"],"userID":"` + genericUUID + `"}]` + "\n"
+	demoJSONQueryExpected  = `[{"id":1,"title":"cheeseboiger","link":"link.com","tags":null,"userID":"` + genericUUID.String() + `"},{"id":2,"title":"demo two","link":"example.com","tags":["cheeseboiger"],"userID":"` + genericUUID.String() + `"}]` + "\n"
 	demoJSONUpdate         = `{"title":"Updated cool demo","threadID":1}`
-	demoJSONUpdateExpected = `{"id":1,"title":"Updated cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID + `","threadID":1}` + "\n"
+	demoJSONUpdateExpected = `{"id":1,"title":"Updated cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"
 )
 
 func (r *mockDemoRepo) CreateDemo(demo models.Demo) (*models.Demo, error) {

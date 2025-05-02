@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	// "github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,8 +19,8 @@ var (
 	demoID int = 1
 	// topicID          int
 	// threadID         int
-	// roleID           string
-	// userID           string
+	// roleID           uuid.UUID
+	// userID           uuid.UUID
 	demoTitle        string      = "Test Demo"
 	demoTitleUpdated string      = "Test UPDATE Demo"
 	demoDescription  string      = "An demo for integration testing for PSQL Repo"

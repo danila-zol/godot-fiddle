@@ -16,6 +16,9 @@ import (
 var (
 	// testDBClient     *psqlDatabase.PsqlDatabaseClient
 
+	// roleID          uuid.UUID
+	// userID          uuid.UUID
+
 	topicID          int
 	topicName        string       = "Test"
 	topicNameUpdated string       = "Test UPDATE"

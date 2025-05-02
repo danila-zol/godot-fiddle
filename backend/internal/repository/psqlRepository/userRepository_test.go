@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,14 +17,14 @@ import (
 var (
 	// testDBClient     *psqlDatabase.PsqlDatabaseClient
 
-	roleID          string
+	roleID          uuid.UUID
 	roleName        string      = "Test Role"
 	roleNameUpdated string      = "Test UPDATE Role"
 	roleVersion     int         = 1
 	role            models.Role = models.Role{Name: &roleName}
 	roleUpdated     models.Role = models.Role{Name: &roleNameUpdated, Version: &roleVersion}
 
-	userID           string
+	userID           uuid.UUID
 	userName         string      = "Test User"
 	userNameUpdated  string      = "Test UPDATE User"
 	userDisplayName  string      = "A user for integration testing for PSQL Repo (yes, a display name)"
@@ -119,7 +120,7 @@ func TestFindRoleByID(t *testing.T) {
 
 func TestFindRoleByIDNoRows(t *testing.T) {
 	r := PsqlUserRepository{databaseClient: testDBClient}
-	_, err := r.FindRoleByID("c6c00b97-0264-4c4a-b01e-e2f2a3f02572") // (near) impossible to match
+	_, err := r.FindRoleByID(uuid.New()) // (near) impossible to match
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
 	}
@@ -206,7 +207,7 @@ func TestFindUserByUsername(t *testing.T) {
 
 func TestFindUserByIDNoRows(t *testing.T) {
 	r := PsqlUserRepository{databaseClient: testDBClient}
-	_, err := r.FindUserByID("c6c00b97-0264-4c4a-b01e-e2f2a3f02572") // (near) impossible to match
+	_, err := r.FindUserByID(uuid.New()) // (near) impossible to match
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
 	}
@@ -250,7 +251,7 @@ func TestFindSessionByID(t *testing.T) {
 
 func TestFindSessionByIDNoRows(t *testing.T) {
 	r := PsqlUserRepository{databaseClient: testDBClient}
-	_, err := r.FindSessionByID("c6c00b97-0264-4c4a-b01e-e2f2a3f02572") // (near) impossible to match
+	_, err := r.FindSessionByID(uuid.New()) // (near) impossible to match
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
 	}

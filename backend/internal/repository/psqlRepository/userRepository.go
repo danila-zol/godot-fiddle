@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"gamehangar/internal/domain/models"
+
+	"github.com/google/uuid"
 )
 
 type PsqlUserRepository struct {
@@ -45,7 +47,7 @@ func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) 
 	return &user, nil
 }
 
-func (r *PsqlUserRepository) FindUserByID(id string) (*models.User, error) {
+func (r *PsqlUserRepository) FindUserByID(id uuid.UUID) (*models.User, error) {
 	var user models.User
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -137,7 +139,7 @@ func (r *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 	return &users, nil
 }
 
-func (r *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.User, error) {
+func (r *PsqlUserRepository) UpdateUser(id uuid.UUID, user models.User) (*models.User, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -161,7 +163,7 @@ func (r *PsqlUserRepository) UpdateUser(id string, user models.User) (*models.Us
 	return &user, nil
 }
 
-func (r *PsqlUserRepository) DeleteUser(id string) error {
+func (r *PsqlUserRepository) DeleteUser(id uuid.UUID) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
@@ -200,7 +202,7 @@ func (r *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error) 
 	return &role, nil
 }
 
-func (r *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
+func (r *PsqlUserRepository) FindRoleByID(id uuid.UUID) (*models.Role, error) {
 	var role models.Role
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -218,7 +220,7 @@ func (r *PsqlUserRepository) FindRoleByID(id string) (*models.Role, error) {
 	return &role, nil
 }
 
-func (r *PsqlUserRepository) UpdateRole(id string, role models.Role) (*models.Role, error) {
+func (r *PsqlUserRepository) UpdateRole(id uuid.UUID, role models.Role) (*models.Role, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -248,7 +250,7 @@ func (r *PsqlUserRepository) UpdateRole(id string, role models.Role) (*models.Ro
 	return &role, nil
 }
 
-func (r *PsqlUserRepository) DeleteRole(id string) error {
+func (r *PsqlUserRepository) DeleteRole(id uuid.UUID) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
@@ -287,7 +289,7 @@ func (r *PsqlUserRepository) CreateSession(session models.Session) (*models.Sess
 	return &session, nil
 }
 
-func (r *PsqlUserRepository) FindSessionByID(id string) (*models.Session, error) {
+func (r *PsqlUserRepository) FindSessionByID(id uuid.UUID) (*models.Session, error) {
 	var session models.Session
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -305,7 +307,7 @@ func (r *PsqlUserRepository) FindSessionByID(id string) (*models.Session, error)
 	return &session, nil
 }
 
-func (r *PsqlUserRepository) DeleteAllUserSessions(userID string) error {
+func (r *PsqlUserRepository) DeleteAllUserSessions(userID uuid.UUID) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
@@ -322,7 +324,7 @@ func (r *PsqlUserRepository) DeleteAllUserSessions(userID string) error {
 	return nil
 }
 
-func (r *PsqlUserRepository) DeleteSession(id string) error {
+func (r *PsqlUserRepository) DeleteSession(id uuid.UUID) error {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err

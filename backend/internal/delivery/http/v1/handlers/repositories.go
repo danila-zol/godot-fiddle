@@ -1,6 +1,10 @@
 package handlers
 
-import "gamehangar/internal/domain/models"
+import (
+	"gamehangar/internal/domain/models"
+
+	"github.com/google/uuid"
+)
 
 type AssetRepository interface {
 	CreateAsset(asset models.Asset) (*models.Asset, error)
@@ -52,19 +56,19 @@ type ForumRepository interface {
 type UserRepository interface {
 	CreateUser(user models.User) (*models.User, error)
 	FindUsers() (*[]models.User, error)
-	FindUserByID(id string) (*models.User, error)
-	UpdateUser(id string, user models.User) (*models.User, error)
-	DeleteUser(id string) error
+	FindUserByID(id uuid.UUID) (*models.User, error)
+	UpdateUser(id uuid.UUID, user models.User) (*models.User, error)
+	DeleteUser(id uuid.UUID) error
 
 	CreateRole(role models.Role) (*models.Role, error)
-	FindRoleByID(id string) (*models.Role, error)
-	UpdateRole(id string, role models.Role) (*models.Role, error)
-	DeleteRole(id string) error
+	FindRoleByID(id uuid.UUID) (*models.Role, error)
+	UpdateRole(id uuid.UUID, role models.Role) (*models.Role, error)
+	DeleteRole(id uuid.UUID) error
 
 	CreateSession(session models.Session) (*models.Session, error)
-	FindSessionByID(id string) (*models.Session, error)
-	DeleteSession(id string) error
-	DeleteAllUserSessions(userID string) error
+	FindSessionByID(id uuid.UUID) (*models.Session, error)
+	DeleteSession(id uuid.UUID) error
+	DeleteAllUserSessions(userid uuid.UUID) error
 
 	NotFoundErr() error
 	ConflictErr() error
