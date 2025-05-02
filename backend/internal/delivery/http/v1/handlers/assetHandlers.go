@@ -213,7 +213,7 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 		} else if err == h.repository.ConflictErr() {
 			e := HTTPError{
 				Code:    http.StatusConflict,
-				Message: "Error: unable to update the Asset due to an edit conflict, please try again!",
+				Message: "Error: unable to update the record due to an edit conflict, please try again!",
 			}
 			h.logger.Print(&e)
 			return c.JSON(http.StatusConflict, &e)

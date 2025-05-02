@@ -87,7 +87,7 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	return c.JSON(http.StatusOK, &newDemo)
+	return c.JSON(http.StatusCreated, &newDemo)
 }
 
 // @Summary	Fetches a demo by its ID.
