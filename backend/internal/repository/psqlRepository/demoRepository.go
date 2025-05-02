@@ -33,7 +33,7 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 		VALUES
 		($1, $2, $3, $4, $5, $6)
 		RETURNING
-		(id, title, description, link, tags, user_id, thread_id)`,
+		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
 	).Scan(&demo)
 	if err != nil {
