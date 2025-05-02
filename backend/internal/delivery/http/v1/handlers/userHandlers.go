@@ -11,30 +11,25 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type UserIdentifier interface {
+type UserAuthorizer interface {
 	IdentifyUser(email, username *string) (user *models.User, err error)
-}
-
-type PasswordManager interface {
 	CreatePasswordHash(password *string) (hash *string, err error)
 	CheckPassword(password, userID *string) (err error)
 }
 
 type UserHandler struct {
-	logger          echo.Logger
-	repository      UserRepository
-	validator       *validator.Validate
-	userIdentifier  UserIdentifier
-	passwordManager PasswordManager
+	logger         echo.Logger
+	repository     UserRepository
+	validator      *validator.Validate
+	userAuthorizer UserAuthorizer
 }
 
-func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, r UserIdentifier, m PasswordManager) *UserHandler {
+func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, a UserAuthorizer) *UserHandler {
 	return &UserHandler{
-		logger:          e.Logger,
-		repository:      repo,
-		validator:       v,
-		userIdentifier:  r,
-		passwordManager: m,
+		logger:         e.Logger,
+		repository:     repo,
+		validator:      v,
+		userAuthorizer: a,
 	}
 }
 
@@ -481,7 +476,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 		h.logger.Print(&e)
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
-	user.Password, err = h.passwordManager.CreatePasswordHash(password)
+	user.Password, err = h.userAuthorizer.CreatePasswordHash(password)
 
 	newUser, err := h.repository.CreateUser(user)
 	if err != nil {
@@ -606,7 +601,7 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	password, err = h.passwordManager.CreatePasswordHash(password)
+	password, err = h.userAuthorizer.CreatePasswordHash(password)
 
 	user, err := h.repository.UpdateUser(c.Param("id"), models.User{Password: password})
 	if err != nil {
@@ -695,7 +690,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, &e)
 	}
 
-	user, err := h.userIdentifier.IdentifyUser(&email, &username)
+	user, err := h.userAuthorizer.IdentifyUser(&email, &username)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
@@ -710,7 +705,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	if h.passwordManager.CheckPassword(&password, user.ID) != nil {
+	if h.userAuthorizer.CheckPassword(&password, user.ID) != nil {
 		e := HTTPError{Code: http.StatusUnauthorized, Message: "Password incorrect!"}
 		h.logger.Print(&e)
 		return c.JSON(http.StatusUnauthorized, &e)

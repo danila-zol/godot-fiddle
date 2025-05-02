@@ -101,9 +101,8 @@ func main() {
 	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
 
 	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient)
-	userIdentifier := services.NewUserIdentifier(userRepo)
-	passwordManager := services.NewPasswordManager(userRepo)
-	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, userIdentifier, passwordManager)
+	userAuthorizer := services.NewUserAuthorizer(userRepo)
+	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, userAuthorizer)
 	routes.NewUserRoutes(userHandler).InitRoutes(app.echo)
 
 	app.appRouter = app.routes(app.echo)
