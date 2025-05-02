@@ -233,4 +233,24 @@ func TestPatchThread(t *testing.T) {
 		assert.Equal(t, demoCreated.Downvotes, thread.Downvotes)
 		assert.Equal(t, demoCreated.Tags, thread.Tags)
 	}
+	if assert.NoError(t, err) {
+		teardownSyncer(demoRepository, forumRepository)
+	}
+}
+
+func teardownSyncer(rd *psqlRepository.PsqlDemoRepository, rf *psqlRepository.PsqlForumRepository) {
+	remainderDemos, err := rd.FindDemos()
+	if err != nil {
+		panic(err)
+	}
+	for _, d := range *remainderDemos {
+		err = rd.DeleteDemo(*d.ID)
+		if err != nil {
+			panic(err)
+		}
+	}
+	err = rf.DeleteTopic(topicID)
+	if err != nil {
+		panic(err)
+	}
 }

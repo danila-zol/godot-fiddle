@@ -143,5 +143,18 @@ func TestPasswordHashCreateCheck(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = userAuthorizer.CheckPassword(&testPassword, &userID)
-	assert.NoError(t, err)
+	if assert.NoError(t, err) {
+		teardownAuthorizer(userRepository)
+	}
+}
+
+func teardownAuthorizer(r *psqlRepository.PsqlUserRepository) {
+	err := r.DeleteUser(userID)
+	if err != nil {
+		panic(err)
+	}
+	err = r.DeleteRole(roleID)
+	if err != nil {
+		panic(err)
+	}
 }
