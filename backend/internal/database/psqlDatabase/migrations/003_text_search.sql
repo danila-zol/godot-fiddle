@@ -53,6 +53,6 @@ DROP INDEX IF EXISTS demo_gin_index_ts;
 DROP INDEX IF EXISTS asset_gin_index_ts;
 DROP INDEX IF EXISTS thread_gin_index_ts;
 DROP INDEX IF EXISTS message_gin_index_ts;
-DROP FUNCTION IF EXISTS to_tsvector_multilang;
-DROP FUNCTION IF EXISTS to_tsquery_multilang;
+DROP FUNCTION IF EXISTS to_tsvector_multilang(varchar);
+DROP FUNCTION IF EXISTS to_tsquery_multilang(varchar);
 DROP COLLATION IF EXISTS case_insensitive;

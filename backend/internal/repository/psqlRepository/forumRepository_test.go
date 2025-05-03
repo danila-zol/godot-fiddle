@@ -6,6 +6,7 @@ import (
 	"gamehangar/internal/config/psqlDatabseConfig"
 	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
+	"gamehangar/pkg/ternMigrate"
 	"os"
 	"testing"
 
@@ -55,7 +56,7 @@ func init() {
 		panic("Error loading PSQL database Config")
 	}
 	testDBClient, err = psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
-		os.Getenv("PSQL_CONNSTRING"), databaseConfig,
+		os.Getenv("PSQL_CONNSTRING"), ternMigrate.Migrator{}, databaseConfig,
 	)
 	if err != nil {
 		panic("Error setting up new DatabaseClient")

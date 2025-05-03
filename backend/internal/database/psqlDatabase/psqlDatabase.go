@@ -3,9 +3,7 @@ package psqlDatabase
 import (
 	"context"
 	"embed"
-	"errors"
 	"gamehangar/internal/config/psqlDatabseConfig"
-	"gamehangar/pkg/ternMigrate"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,26 +18,39 @@ type PsqlDatabase struct{} // PostgreSQL-related database clients and methods
 type PsqlDatabaseClient struct {
 	config     *psqlDatabseConfig.PsqlDatabaseConfig
 	connstring string
+	migrator   PsqlDatabaseMigrator
 	ConnPool   *pgxpool.Pool
 }
 
-func (p PsqlDatabase) NewDatabaseClient(connstring string, config *psqlDatabseConfig.PsqlDatabaseConfig) (*PsqlDatabaseClient, error) {
+type PsqlDatabaseMigrator interface {
+	NewMigrator(migrationFiles any, migrationRoot, versionTable string) (any, error)
+	MigrateDatabase(conn *pgx.Conn, expectedVersion int) error
+}
+
+func (p PsqlDatabase) NewDatabaseClient(connstring string, migrator PsqlDatabaseMigrator, config *psqlDatabseConfig.PsqlDatabaseConfig) (*PsqlDatabaseClient, error) {
+	var err error
 	var dbClient = &PsqlDatabaseClient{
 		config:     config,
 		connstring: connstring,
 	}
 
-	err := p.setup(dbClient)
+	m, err := migrator.NewMigrator(MigrationFiles, config.MigrationsRoot, config.VersionTable)
+	if err != nil {
+		return nil, err
+	}
+	dbClient.migrator = m.(PsqlDatabaseMigrator)
+
+	err = p.setup(dbClient)
 	if err != nil {
 		return nil, err
 	}
 	return dbClient, nil
 }
 
-func (p PsqlDatabase) setup(pdc *PsqlDatabaseClient) error {
+func (p PsqlDatabase) setup(c *PsqlDatabaseClient) error {
 	var err error
 
-	pdc.ConnPool, err = pgxpool.New(context.Background(), pdc.connstring)
+	c.ConnPool, err = pgxpool.New(context.Background(), c.connstring)
 	if err != nil {
 		return err
 	}
@@ -47,14 +58,14 @@ func (p PsqlDatabase) setup(pdc *PsqlDatabaseClient) error {
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	err = pdc.ConnPool.Ping(ctx)
+	err = c.ConnPool.Ping(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Migrate database
-	if pdc.config.MigrateDatabse {
-		err := pdc.autoMigrate()
+	if c.config.MigrateDatabse {
+		err := c.autoMigrate()
 		if err != nil {
 			return err
 		}
@@ -64,22 +75,13 @@ func (p PsqlDatabase) setup(pdc *PsqlDatabaseClient) error {
 }
 
 func (c *PsqlDatabaseClient) autoMigrate() error {
-	migrationFiles, ok := c.config.Migrations.(embed.FS)
-	if !ok {
-		return errors.New("Failed to migrate PSQL Database: Invalid migration files!")
-	}
-	migrator := &ternMigrate.Migrator{
-		MigrationFiles: migrationFiles,
-		MigrationRoot:  c.config.MigrationsRoot,
-		VersionTable:   c.config.VersionTable,
-	}
 	conn, err := c.ConnPool.Acquire(context.Background())
 	defer conn.Release()
 	if err != nil {
 		return err
 	}
-	migrator.MigrateDatabase(conn.Conn(), int32(c.config.ExpectedVersion))
-	return nil
+
+	return c.migrator.MigrateDatabase(conn.Conn(), c.config.ExpectedVersion)
 }
 
 func (c *PsqlDatabaseClient) AcquireConn() (*pgxpool.Conn, error) {

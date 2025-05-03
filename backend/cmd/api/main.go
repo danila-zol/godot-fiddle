@@ -9,6 +9,7 @@ import (
 	"gamehangar/internal/delivery/http/v1/routes"
 	"gamehangar/internal/repository/psqlRepository"
 	"gamehangar/internal/services"
+	"gamehangar/pkg/ternMigrate"
 	"net/http"
 	"os"
 	"os/signal"
@@ -80,7 +81,7 @@ func main() {
 		app.logger.Fatalf("Error loading PSQL database Config: %v", err)
 	}
 	databaseClient, err := psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
-		os.Getenv("PSQL_CONNSTRING"), databaseConfig,
+		os.Getenv("PSQL_CONNSTRING"), ternMigrate.Migrator{}, databaseConfig,
 	)
 	if err != nil {
 		app.logger.Fatalf("Error setting up new DatabaseClient: %v", err)
