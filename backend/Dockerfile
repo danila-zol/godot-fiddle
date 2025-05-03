@@ -7,6 +7,7 @@ RUN go mod download && go mod verify
 
 ARG MAXPROCS=1
 COPY . .
+RUN go test ./...
 
 # Creates a staticaly-linked binary
 RUN CGO_ENABLED=0 go build -v -o ./bin/ -gcflags=GOMAXPROCS=$MAXPROCS ./...
