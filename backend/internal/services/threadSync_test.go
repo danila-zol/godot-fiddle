@@ -240,7 +240,7 @@ func TestPatchThread(t *testing.T) {
 }
 
 func teardownSyncer(rd *psqlRepository.PsqlDemoRepository, rf *psqlRepository.PsqlForumRepository) {
-	remainderDemos, err := rd.FindDemos()
+	remainderDemos, err := rd.FindDemos(nil, 0)
 	if err != nil {
 		panic(err)
 	}

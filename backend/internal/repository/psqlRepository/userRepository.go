@@ -3,9 +3,12 @@ package psqlRepository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gamehangar/internal/domain/models"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type PsqlUserRepository struct {
@@ -104,7 +107,7 @@ func (r *PsqlUserRepository) FindUserByUsername(username string) (*models.User, 
 	return &user, nil
 }
 
-func (r *PsqlUserRepository) FindUsers() (*[]models.User, error) {
+func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]models.User, error) {
 	var users []models.User
 
 	conn, err := r.databaseClient.AcquireConn()
@@ -113,13 +116,42 @@ func (r *PsqlUserRepository) FindUsers() (*[]models.User, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(),
-		`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma)
-		FROM "user".users`,
-	)
-	if err != nil {
-		return nil, err
+	var rows pgx.Rows
+	if len(keywords) != 0 {
+		query :=
+			`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma) 
+				FROM
+					((SELECT id, username, display_name, email, password, verified, role_id, created_at, karma
+					FROM "user".users
+					WHERE asset_ts @@ to_tsquery_multilang($1))
+				UNION
+					(SELECT id, username, display_name, email, password, verified, role_id, created_at, karma 
+					FROM "user".users
+					WHERE tags && ($2) COLLATE case_insensitive))
+			ORDER BY created_at DESC`
+		if limit != 0 {
+			query = query + fmt.Sprintf(` LIMIT %v`, limit)
+		}
+		rows, err = conn.Query(context.Background(),
+			query, strings.Join(keywords, " | "), keywords,
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		query := `SELECT 
+			(id, username, display_name, email, password, verified, role_id, created_at, karma) 
+			FROM "user".users
+			ORDER BY created_at DESC`
+		if limit != 0 {
+			query = query + fmt.Sprintf(` LIMIT %v`, limit)
+		}
+		rows, err = conn.Query(context.Background(), query)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	defer rows.Close()
 	for rows.Next() {
 		var user models.User

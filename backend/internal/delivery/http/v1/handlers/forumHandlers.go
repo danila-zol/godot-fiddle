@@ -355,6 +355,7 @@ func (h *ForumHandler) GetThreadByID(c echo.Context) error {
 // @Tags		Threads
 // @Produce	application/json
 // @Param		q	query		[]string	false	"Keyword Query"
+// @Param		l	query		int	false	"Record number limit"
 // @Success	200	{object}	models.Thread
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
@@ -362,14 +363,25 @@ func (h *ForumHandler) GetThreadByID(c echo.Context) error {
 // @Router		/v1/threads [get]
 func (h *ForumHandler) GetThreads(c echo.Context) error {
 	var err error
+	var limit uint64
 	var threads *[]models.Thread
 
-	tags := c.Request().URL.Query()["q"]
-	if len(tags) != 0 {
-		threads, err = h.repository.FindThreadsByQuery(&tags)
-	} else {
-		threads, err = h.repository.FindThreads()
+	l := c.Request().URL.Query()["l"]
+	if l != nil {
+		err = h.validator.Var(l[0], "omitnil,number,min=0")
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetThreads repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		limit, err = strconv.ParseUint(l[0], 10, 64)
 	}
+	tags := c.Request().URL.Query()["q"]
+
+	threads, err = h.repository.FindThreads(tags, limit)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
@@ -592,6 +604,7 @@ func (h *ForumHandler) GetMessageByID(c echo.Context) error {
 // @Tags		Messages
 // @Produce	application/json
 // @Param		q	query		[]string	false	"Keyword Query"
+// @Param		l	query		int	false	"Record number limit"
 // @Success	200	{object}	models.Message
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
@@ -599,14 +612,25 @@ func (h *ForumHandler) GetMessageByID(c echo.Context) error {
 // @Router		/v1/messages [get]
 func (h *ForumHandler) GetMessages(c echo.Context) error {
 	var err error
+	var limit uint64
 	var messages *[]models.Message
 
-	tags := c.Request().URL.Query()["q"]
-	if len(tags) != 0 {
-		messages, err = h.repository.FindMessagesByQuery(&tags)
-	} else {
-		messages, err = h.repository.FindMessages()
+	l := c.Request().URL.Query()["l"]
+	if l != nil {
+		err = h.validator.Var(l[0], "omitnil,number,min=0")
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetMessages repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		limit, err = strconv.ParseUint(l[0], 10, 64)
 	}
+	tags := c.Request().URL.Query()["q"]
+
+	messages, err = h.repository.FindMessages(tags, limit)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}

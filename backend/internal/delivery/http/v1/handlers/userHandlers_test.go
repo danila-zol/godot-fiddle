@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"net/http/httptest"
@@ -47,18 +48,22 @@ var (
 	passwordResetResponse     = `User password reset!`
 	passwordIncorrectResponse = `{"code":401,"message":"Password incorrect!"}` + "\n"
 
+	// query             = `cheeseboiger`
+	// queryLimit uint64 = 1
+
 	roleJSON               = `{"name":"Cool role"}`
 	roleJSONExpected       = `{"id":"` + genericUUID.String() + `","name":"Cool role","version":1}` + "\n"
 	roleJSONUpdate         = `{"name":"Updated cool role","version":1}`
 	roleJSONUpdateInvalid  = `{"name":"Updated cool role"}`
 	roleJSONUpdateExpected = `{"id":"` + genericUUID.String() + `","name":"Updated cool role","version":2}` + "\n"
 
-	userJSON               = `{"username":"Cool user","email":"test@example.com","roleID":"` + genericUUID.String() + `"}`
-	userJSONExpected       = `{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}` + "\n"
-	userJSONExpectedMany   = `[{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}]` + "\n"
-	userJSONUpdate         = `{"username":"Updated cool user"}`
-	userJSONUpdateExpected = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}` + "\n"
-	userJSONVerifyExpected = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":true,"roleID":"` + genericUUID.String() + `"}` + "\n"
+	userJSON                  = `{"username":"Cool user","email":"test@example.com","roleID":"` + genericUUID.String() + `"}`
+	userJSONExpected          = `{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}` + "\n"
+	userJSONExpectedMany      = `[{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}]` + "\n"
+	userJSONExpectedManyLimit = `[{"username":"cheeseboiger","email":"link.com"}]` + "\n"
+	userJSONUpdate            = `{"username":"Updated cool user"}`
+	userJSONUpdateExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}` + "\n"
+	userJSONVerifyExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":true,"roleID":"` + genericUUID.String() + `"}` + "\n"
 
 	userPassword      = "qwety123"
 	userPasswordReset = "aVeryStrongPassword123"
@@ -159,12 +164,31 @@ func (r *mockUserRepo) CreateUser(user models.User) (*models.User, error) {
 	}
 	return &resultUser, nil
 }
-func (r *mockUserRepo) FindUsers() (*[]models.User, error) {
-	var u []models.User
-	for _, v := range r.userData {
-		u = append(u, v)
+func (r *mockUserRepo) FindUsers(query []string, limit uint64) (*[]models.User, error) {
+	var (
+		userNames  []string      = []string{"cheeseboiger", "user two", "user three"}
+		userEmails []string      = []string{"link.com", "example.com", "e.com"}
+		users      []models.User = []models.User{
+			{Username: &userNames[0], Email: &userEmails[0]},
+			{Username: &userNames[1], Email: &userEmails[1]},
+			{Username: &userNames[2], Email: &userEmails[2]},
+		}
+		resultUsers []models.User
+	)
+
+	if len(query) != 0 {
+		for _, u := range users {
+			if *u.Username == query[0] {
+				resultUsers = append(resultUsers, u)
+			}
+		}
+	} else {
+		for _, u := range r.userData {
+			resultUsers = append(resultUsers, u)
+		}
+		return &resultUsers, nil
 	}
-	return &u, nil
+	return &resultUsers, nil
 }
 func (r *mockUserRepo) FindUserByID(id uuid.UUID) (*models.User, error) {
 	user, ok := r.userData[id.String()]
@@ -578,6 +602,21 @@ func TestGetUsers(t *testing.T) {
 	if assert.NoError(t, h.GetUsers(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, userJSONExpectedMany, rec.Body.String())
+	}
+}
+
+func TestGetUsersQueryLimit(t *testing.T) {
+	// Setup
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/users?q=%v&?l=%v", query, queryLimit), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
+
+	// Assertions
+	if assert.NoError(t, h.GetUsers(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, userJSONExpectedManyLimit, rec.Body.String())
 	}
 }
 

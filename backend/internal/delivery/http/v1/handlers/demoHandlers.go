@@ -136,6 +136,7 @@ func (h *DemoHandler) GetDemoById(c echo.Context) error {
 // @Tags		Demos
 // @Produce	application/json
 // @Param		q	query		[]string	false	"Keyword Query"
+// @Param		l	query		int	false	"Record number limit"
 // @Success	200	{object}	models.Demo
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
@@ -143,14 +144,25 @@ func (h *DemoHandler) GetDemoById(c echo.Context) error {
 // @Router		/v1/demos [get]
 func (h *DemoHandler) GetDemos(c echo.Context) error {
 	var err error
+	var limit uint64
 	var demos *[]models.Demo
 
-	tags := c.Request().URL.Query()["q"]
-	if len(tags) != 0 {
-		demos, err = h.repository.FindDemosByQuery(&tags)
-	} else {
-		demos, err = h.repository.FindDemos()
+	l := c.Request().URL.Query()["l"]
+	if l != nil {
+		err = h.validator.Var(l[0], "omitnil,number,min=0")
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetDemos repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		limit, err = strconv.ParseUint(l[0], 10, 64)
 	}
+	tags := c.Request().URL.Query()["q"]
+
+	demos, err = h.repository.FindDemos(tags, limit)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}

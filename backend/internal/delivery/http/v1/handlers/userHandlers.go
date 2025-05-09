@@ -3,6 +3,7 @@ package handlers
 import (
 	"gamehangar/internal/domain/models"
 	"net/http"
+	"strconv"
 	"time"
 
 	_ "gamehangar/docs"
@@ -79,13 +80,34 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 // @Summary	Fetches all users.
 // @Tags		Users
 // @Produce	application/json
+// @Param		q	query		[]string	false	"Keyword Query"
+// @Param		l	query		int	false	"Record number limit"
 // @Success	200	{object}	models.User
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
 // @Failure	500	{object}	HTTPError
 // @Router		/v1/users [get]
 func (h *UserHandler) GetUsers(c echo.Context) error {
-	users, err := h.repository.FindUsers()
+	var err error
+	var limit uint64
+	var users *[]models.User
+
+	l := c.Request().URL.Query()["l"]
+	if l != nil {
+		err = h.validator.Var(l[0], "omitnil,number,min=0")
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetUsers repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		limit, err = strconv.ParseUint(l[0], 10, 64)
+	}
+	tags := c.Request().URL.Query()["q"]
+
+	users, err = h.repository.FindUsers(tags, limit)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}

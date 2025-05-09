@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"net/http/httptest"
@@ -31,13 +32,16 @@ var (
 	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
 	// conflictResponse = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
 
-	assetJSON               = `{"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com"}`
-	assetJSONExpected       = `{"id":1,"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com","version":1}` + "\n"
-	assetJSONExpectedMany   = `[{"id":1,"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com","version":1}]` + "\n"
-	assetQuery              = `cheeseboiger`
-	assetJSONQueryExpected  = `[{"id":1,"name":"cheeseboiger","link":"link.com","tags":null,"version":1},{"id":2,"name":"asset two","link":"example.com","tags":["cheeseboiger"],"version":1}]` + "\n"
-	assetJSONUpdate         = `{"name":"Updated cool asset","version":1}`
-	assetJSONUpdateExpected = `{"id":1,"name":"Updated cool asset","description":"A very nice asset to use in your game!","link":"https://example.com","version":2}` + "\n"
+	// query                        = `cheeseboiger`
+	// queryLimit                 uint64 = 1
+
+	assetJSON                   = `{"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com"}`
+	assetJSONExpected           = `{"id":1,"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com","version":1}` + "\n"
+	assetJSONExpectedMany       = `[{"id":1,"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com","version":1}]` + "\n"
+	assetJSONQueryExpected      = `[{"id":1,"name":"cheeseboiger","tags":null},{"id":2,"name":"asset two","tags":["cheeseboiger"]}]` + "\n"
+	assetJSONQueryExpectedLimit = `[{"id":1,"name":"cheeseboiger","tags":null}]` + "\n"
+	assetJSONUpdate             = `{"name":"Updated cool asset","version":1}`
+	assetJSONUpdateExpected     = `{"id":1,"name":"Updated cool asset","description":"A very nice asset to use in your game!","link":"https://example.com","version":2}` + "\n"
 )
 
 func (r *mockAssetRepo) CreateAsset(asset models.Asset) (*models.Asset, error) {
@@ -54,35 +58,35 @@ func (r *mockAssetRepo) FindAssetByID(id int) (*models.Asset, error) {
 	}
 	return &a, nil
 }
-func (r *mockAssetRepo) FindAssets() (*[]models.Asset, error) {
-	var a []models.Asset
-	for _, v := range r.data {
-		a = append(a, v)
-	}
-	return &a, nil
-}
-func (r *mockAssetRepo) FindAssetsByQuery(query *[]string) (*[]models.Asset, error) {
+func (r *mockAssetRepo) FindAssets(query []string, limit uint64) (*[]models.Asset, error) {
 	var (
-		assetVersion int            = 1
-		assetIDs     []int          = []int{1, 2, 3}
-		assetNames   []string       = []string{"cheeseboiger", "asset two", "asset three"}
-		assetLinks   []string       = []string{"link.com", "example.com", "e.com"}
-		assetTags    [][]string     = [][]string{nil, []string{"cheeseboiger"}, nil}
-		assets       []models.Asset = []models.Asset{
-			{ID: &assetIDs[0], Name: &assetNames[0], Link: &assetLinks[0], Tags: &assetTags[0], Version: &assetVersion},
-			{ID: &assetIDs[1], Name: &assetNames[1], Link: &assetLinks[1], Tags: &assetTags[1], Version: &assetVersion},
-			{ID: &assetIDs[2], Name: &assetNames[2], Link: &assetLinks[2], Tags: &assetTags[2], Version: &assetVersion},
+		assetIDs    []int          = []int{1, 2, 3}
+		assetTitles []string       = []string{"cheeseboiger", "asset two", "asset three"}
+		assetTags   [][]string     = [][]string{nil, []string{"cheeseboiger"}, nil}
+		assets      []models.Asset = []models.Asset{
+			{ID: &assetIDs[0], Name: &assetTitles[0], Tags: &assetTags[0]},
+			{ID: &assetIDs[1], Name: &assetTitles[1], Tags: &assetTags[1]},
+			{ID: &assetIDs[2], Name: &assetTitles[2], Tags: &assetTags[2]},
 		}
 		resultAssets []models.Asset
 	)
-	q := *query
-	for _, t := range assets {
-		if *t.Name == q[0] {
-			resultAssets = append(resultAssets, t)
+
+	if len(query) != 0 {
+		for _, a := range assets {
+			if *a.Name == query[0] {
+				resultAssets = append(resultAssets, a)
+			}
+			if slices.Contains(*a.Tags, query[0]) {
+				resultAssets = append(resultAssets, a)
+			}
 		}
-		if slices.Contains(*t.Tags, q[0]) {
-			resultAssets = append(resultAssets, t)
+	} else {
+		for _, v := range r.data {
+			resultAssets = append(resultAssets, v)
 		}
+	}
+	if limit != 0 {
+		resultAssets = resultAssets[:limit]
 	}
 	return &resultAssets, nil
 }
@@ -202,10 +206,10 @@ func TestPatchAsset(t *testing.T) {
 	}
 }
 
-func TestGetAssetsByQuery(t *testing.T) {
+func TestGetAssetsQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/assets?q="+assetQuery, nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/assets?q=%v", query), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &AssetHandler{logger: e.Logger, validator: v, repository: &ma}
@@ -214,6 +218,21 @@ func TestGetAssetsByQuery(t *testing.T) {
 	if assert.NoError(t, h.GetAssets(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, assetJSONQueryExpected, rec.Body.String())
+	}
+}
+
+func TestGetAssetsQueryLimit(t *testing.T) {
+	// Setup
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/assets?q=%v&l=%v", query, queryLimit), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	h := &AssetHandler{logger: e.Logger, validator: v, repository: &ma}
+
+	// Assertions
+	if assert.NoError(t, h.GetAssets(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, assetJSONQueryExpectedLimit, rec.Body.String())
 	}
 }
 

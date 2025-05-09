@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"net/http/httptest"
@@ -35,13 +36,16 @@ var (
 
 	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
 
-	demoJSON               = `{"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `"}`
-	demoJSONExpected       = `{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"
-	demoJSONExpectedMany   = `[{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}]` + "\n"
-	demoQuery              = `cheeseboiger`
-	demoJSONQueryExpected  = `[{"id":1,"title":"cheeseboiger","link":"link.com","tags":null,"userID":"` + genericUUID.String() + `"},{"id":2,"title":"demo two","link":"example.com","tags":["cheeseboiger"],"userID":"` + genericUUID.String() + `"}]` + "\n"
-	demoJSONUpdate         = `{"title":"Updated cool demo","threadID":1}`
-	demoJSONUpdateExpected = `{"id":1,"title":"Updated cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"
+	query             = `cheeseboiger`
+	queryLimit uint64 = 1
+
+	demoJSON                   = `{"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `"}`
+	demoJSONExpected           = `{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"
+	demoJSONExpectedMany       = `[{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}]` + "\n"
+	demoJSONQueryExpected      = `[{"id":1,"title":"cheeseboiger","link":"link.com","tags":null,"userID":"` + genericUUID.String() + `"},{"id":2,"title":"demo two","link":"example.com","tags":["cheeseboiger"],"userID":"` + genericUUID.String() + `"}]` + "\n"
+	demoJSONQueryExpectedLimit = `[{"id":1,"title":"cheeseboiger","link":"link.com","tags":null,"userID":"` + genericUUID.String() + `"}]` + "\n"
+	demoJSONUpdate             = `{"title":"Updated cool demo","threadID":1}`
+	demoJSONUpdateExpected     = `{"id":1,"title":"Updated cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"
 )
 
 func (r *mockDemoRepo) CreateDemo(demo models.Demo) (*models.Demo, error) {
@@ -57,14 +61,7 @@ func (r *mockDemoRepo) FindDemoByID(id int) (*models.Demo, error) {
 	}
 	return &a, nil
 }
-func (r *mockDemoRepo) FindDemos() (*[]models.Demo, error) {
-	var a []models.Demo
-	for _, v := range r.data {
-		a = append(a, v)
-	}
-	return &a, nil
-}
-func (r *mockDemoRepo) FindDemosByQuery(query *[]string) (*[]models.Demo, error) {
+func (r *mockDemoRepo) FindDemos(query []string, limit uint64) (*[]models.Demo, error) {
 	var (
 		demoIDs    []int         = []int{1, 2, 3}
 		demoTitles []string      = []string{"cheeseboiger", "demo two", "demo three"}
@@ -77,14 +74,23 @@ func (r *mockDemoRepo) FindDemosByQuery(query *[]string) (*[]models.Demo, error)
 		}
 		resultDemos []models.Demo
 	)
-	q := *query
-	for _, d := range demos {
-		if *d.Title == q[0] {
-			resultDemos = append(resultDemos, d)
+
+	if len(query) != 0 {
+		for _, d := range demos {
+			if *d.Title == query[0] {
+				resultDemos = append(resultDemos, d)
+			}
+			if slices.Contains(*d.Tags, query[0]) {
+				resultDemos = append(resultDemos, d)
+			}
 		}
-		if slices.Contains(*d.Tags, q[0]) {
-			resultDemos = append(resultDemos, d)
+	} else {
+		for _, v := range r.data {
+			resultDemos = append(resultDemos, v)
 		}
+	}
+	if limit != 0 {
+		resultDemos = resultDemos[:limit]
 	}
 	return &resultDemos, nil
 }
@@ -204,10 +210,10 @@ func TestPatchDemo(t *testing.T) {
 	}
 }
 
-func TestGetDemosByQuery(t *testing.T) {
+func TestGetDemosQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/demos?q="+demoQuery, nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/demos?q=%v", query), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt}
@@ -216,6 +222,21 @@ func TestGetDemosByQuery(t *testing.T) {
 	if assert.NoError(t, h.GetDemos(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, demoJSONQueryExpected, rec.Body.String())
+	}
+}
+
+func TestGetDemosQueryLimit(t *testing.T) {
+	// Setup
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/demos?q=%v&l=%v", query, queryLimit), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt}
+
+	// Assertions
+	if assert.NoError(t, h.GetDemos(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, demoJSONQueryExpectedLimit, rec.Body.String())
 	}
 }
 

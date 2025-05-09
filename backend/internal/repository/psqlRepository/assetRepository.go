@@ -3,9 +3,12 @@ package psqlRepository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"gamehangar/internal/domain/models"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type PsqlAssetRepository struct {
@@ -68,7 +71,7 @@ func (r *PsqlAssetRepository) FindAssetByID(id int) (*models.Asset, error) {
 	return &asset, nil
 }
 
-func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
+func (r *PsqlAssetRepository) FindAssets(keywords []string, limit uint64) (*[]models.Asset, error) {
 	var assets []models.Asset
 
 	conn, err := r.databaseClient.AcquireConn()
@@ -77,13 +80,39 @@ func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(),
-		`SELECT (id, name, description, link, tags, created_at, updated_at, version) 
-		FROM asset.assets
-		ORDER BY updated_at DESC`,
-	)
-	if err != nil {
-		return nil, err
+	var rows pgx.Rows
+	if len(keywords) != 0 {
+		query :=
+			`SELECT (id, name, description, link, tags, created_at, updated_at, version) 
+				FROM
+			((SELECT id, name, description, link, tags, created_at, updated_at, version
+				FROM asset.assets
+				WHERE asset_ts @@ to_tsquery_multilang($1))
+			UNION
+			(SELECT id, name, description, link, tags, created_at, updated_at, version 
+				FROM asset.assets
+				WHERE tags && ($2) COLLATE case_insensitive))
+			ORDER BY updated_at DESC`
+		if limit != 0 {
+			query = query + fmt.Sprintf(` LIMIT %v`, limit)
+		}
+		rows, err = conn.Query(context.Background(),
+			query, strings.Join(keywords, " | "), keywords,
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		query := `SELECT 
+			(id, name, description, link, tags, created_at, updated_at, version) 
+			FROM asset.assets`
+		if limit != 0 {
+			query = query + fmt.Sprintf(` LIMIT %v`, limit)
+		}
+		rows, err = conn.Query(context.Background(), query)
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -100,48 +129,6 @@ func (r *PsqlAssetRepository) FindAssets() (*[]models.Asset, error) {
 	}
 	if len(assets) == 0 {
 		return nil, r.NotFoundErr()
-	}
-	return &assets, nil
-}
-
-func (r *PsqlAssetRepository) FindAssetsByQuery(query *[]string) (*[]models.Asset, error) {
-	var assets []models.Asset
-
-	conn, err := r.databaseClient.AcquireConn()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-
-	rows, err := conn.Query(context.Background(),
-		`(
-		SELECT (id, name, description, link, tags, created_at, updated_at, version)
-		FROM asset.assets
-		WHERE asset_ts @@ to_tsquery_multilang($1)
-		)
-		UNION
-		(
-		SELECT (id, name, description, link, tags, created_at, updated_at, version)
-		FROM asset.assets
-		WHERE tags && ($2) COLLATE case_insensitive
-		ORDER BY updated_at DESC
-		)`, strings.Join(*query, " | "), *query,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var asset models.Asset
-		err = rows.Scan(&asset)
-		if err != nil {
-			return nil, err
-		}
-		assets = append(assets, asset)
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
 	}
 	return &assets, nil
 }

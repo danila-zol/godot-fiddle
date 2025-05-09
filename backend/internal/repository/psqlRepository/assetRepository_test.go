@@ -9,6 +9,7 @@ import (
 	"gamehangar/pkg/ternMigrate"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
@@ -130,7 +131,7 @@ func TestFindAssetByIDNoRows(t *testing.T) {
 
 func TestFindAssets(t *testing.T) {
 	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
-	_, err := r.FindAssets()
+	_, err := r.FindAssets(nil, 0)
 	assert.NoError(t, err)
 
 }
@@ -153,7 +154,7 @@ func TestFindAssetsByQuery(t *testing.T) {
 		resultAsset, err := r.CreateAsset(d)
 		assert.NoError(t, err)
 
-		queryAssets, err := r.FindAssetsByQuery(&[]string{q})
+		queryAssets, err := r.FindAssets([]string{q}, 0)
 		if assert.NoError(t, err) {
 			queriedAsset := *queryAssets
 			assert.Equal(t, resultAsset.Name, queriedAsset[0].Name)
@@ -161,10 +162,26 @@ func TestFindAssetsByQuery(t *testing.T) {
 		}
 	}
 
-	// Try to query both
-	assets, err := r.FindAssetsByQuery(&[]string{"cheeseboiger"})
+	// Try to query both and check ordering
+	assets, err := r.FindAssets([]string{"cheeseboiger"}, 0)
 	if assert.NoError(t, err) {
-		assert.Len(t, *assets, 2)
+		a := *assets
+		assert.Len(t, a, 2)
+		var timeOrder, timeOrderExpected []time.Time
+		timeOrderExpected = []time.Time{*a[0].UpdatedAt, *a[1].UpdatedAt}
+		for _, m := range a {
+			timeOrder = append(timeOrder, *m.UpdatedAt)
+		}
+		assert.Equal(
+			t,
+			timeOrderExpected,
+			timeOrder,
+		)
+	}
+	// Query with limit
+	assets, err = r.FindAssets([]string{"cheeseboiger"}, 1)
+	if assert.NoError(t, err) {
+		assert.Len(t, *assets, 1)
 	}
 }
 
@@ -226,7 +243,7 @@ func TestDeleteAsset(t *testing.T) {
 }
 
 func teardownAsset(r *PsqlAssetRepository) {
-	remainderAssets, err := r.FindAssets()
+	remainderAssets, err := r.FindAssets(nil, 0)
 	if err != nil {
 		panic(err)
 	}

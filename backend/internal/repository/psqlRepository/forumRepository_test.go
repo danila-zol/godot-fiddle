@@ -9,6 +9,7 @@ import (
 	"gamehangar/pkg/ternMigrate"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
@@ -298,7 +299,7 @@ func TestFindThreadByIDNoRows(t *testing.T) {
 
 func TestFindThreads(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
-	_, err := r.FindThreads()
+	_, err := r.FindThreads(nil, 0)
 	assert.NoError(t, err)
 }
 
@@ -329,7 +330,7 @@ func TestFindThreadsByQuery(t *testing.T) {
 		resultThread, err := r.CreateThread(th)
 		assert.NoError(t, err)
 
-		queryThreads, err := r.FindThreadsByQuery(&[]string{q})
+		queryThreads, err := r.FindThreads([]string{q}, 0)
 		t.Log(queryThreads)
 		if assert.NoError(t, err) {
 			queriedThread := *queryThreads
@@ -337,10 +338,26 @@ func TestFindThreadsByQuery(t *testing.T) {
 		}
 	}
 
-	// Try to query both
-	threads, err := r.FindThreadsByQuery(&[]string{"cheeseboiger"})
+	// Try to query both and check ordering
+	threads, err := r.FindThreads([]string{"cheeseboiger"}, 0)
 	if assert.NoError(t, err) {
-		assert.Len(t, *threads, 2)
+		th := *threads
+		assert.Len(t, th, 2)
+		var timeOrder, timeOrderExpected []time.Time
+		timeOrderExpected = []time.Time{*th[0].UpdatedAt, *th[1].UpdatedAt}
+		for _, m := range th {
+			timeOrder = append(timeOrder, *m.UpdatedAt)
+		}
+		assert.Equal(
+			t,
+			timeOrderExpected,
+			timeOrder,
+		)
+	}
+	// Query with limit
+	threads, err = r.FindThreads([]string{"cheeseboiger"}, 1)
+	if assert.NoError(t, err) {
+		assert.Len(t, *threads, 1)
 	}
 }
 
@@ -420,23 +437,39 @@ func TestFindMessagesByQuery(t *testing.T) {
 		resultMessage, err := r.CreateMessage(m)
 		assert.NoError(t, err)
 
-		queryMessages, err := r.FindMessagesByQuery(&[]string{q})
+		queryMessages, err := r.FindMessages([]string{q}, 0)
 		if assert.NoError(t, err) {
 			queriedMessage := *queryMessages
 			assert.Equal(t, resultMessage.Title, queriedMessage[0].Title)
 		}
 	}
 
-	// Try to query both
-	messages, err := r.FindMessagesByQuery(&[]string{"cheeseboiger"})
+	// Try to query both and check ordering
+	messages, err := r.FindMessages([]string{"cheeseboiger"}, 0)
 	if assert.NoError(t, err) {
-		assert.Len(t, *messages, 2)
+		m := *messages
+		assert.Len(t, m, 2)
+		var timeOrder, timeOrderExpected []time.Time
+		timeOrderExpected = []time.Time{*m[0].UpdatedAt, *m[1].UpdatedAt}
+		for _, m := range m {
+			timeOrder = append(timeOrder, *m.UpdatedAt)
+		}
+		assert.Equal(
+			t,
+			timeOrderExpected,
+			timeOrder,
+		)
+	}
+	// Query with limit
+	messages, err = r.FindMessages([]string{"cheeseboiger"}, 1)
+	if assert.NoError(t, err) {
+		assert.Len(t, *messages, 1)
 	}
 }
 
 func TestFindMessages(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
-	_, err := r.FindMessages()
+	_, err := r.FindMessages(nil, 0)
 	assert.NoError(t, err)
 }
 

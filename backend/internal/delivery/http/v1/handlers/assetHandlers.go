@@ -121,6 +121,7 @@ func (h *AssetHandler) GetAssetById(c echo.Context) error {
 // @Tags		Assets
 // @Produce	application/json
 // @Param		q	query		[]string	false	"Keyword Query"
+// @Param		l	query		int	false	"Record number limit"
 // @Success	200	{object}	models.Asset
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
@@ -128,14 +129,25 @@ func (h *AssetHandler) GetAssetById(c echo.Context) error {
 // @Router		/v1/assets [get]
 func (h *AssetHandler) GetAssets(c echo.Context) error {
 	var err error
+	var limit uint64
 	var assets *[]models.Asset
 
-	tags := c.Request().URL.Query()["q"]
-	if len(tags) != 0 {
-		assets, err = h.repository.FindAssetsByQuery(&tags)
-	} else {
-		assets, err = h.repository.FindAssets()
+	l := c.Request().URL.Query()["l"]
+	if l != nil {
+		err = h.validator.Var(l[0], "omitnil,number,min=0")
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetAssets repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		limit, err = strconv.ParseUint(l[0], 10, 64)
 	}
+	tags := c.Request().URL.Query()["q"]
+
+	assets, err = h.repository.FindAssets(tags, limit)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}

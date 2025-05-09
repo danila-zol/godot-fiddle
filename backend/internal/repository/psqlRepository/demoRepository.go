@@ -2,9 +2,12 @@ package psqlRepository
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"gamehangar/internal/domain/models"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type PsqlDemoRepository struct {
@@ -61,7 +64,7 @@ func (r *PsqlDemoRepository) FindDemoByID(id int) (*models.Demo, error) {
 	return &demo, nil
 }
 
-func (r *PsqlDemoRepository) FindDemosByQuery(query *[]string) (*[]models.Demo, error) {
+func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64) (*[]models.Demo, error) {
 	var demos []models.Demo
 
 	conn, err := r.databaseClient.AcquireConn()
@@ -70,59 +73,40 @@ func (r *PsqlDemoRepository) FindDemosByQuery(query *[]string) (*[]models.Demo, 
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(context.Background(),
-		`(
-		SELECT (id, title, description, link, tags, user_id,
-		thread_id, created_at, updated_at, upvotes, downvotes)
-		FROM demo.demos
-		WHERE demo_ts @@ to_tsquery_multilang($1)
+	var rows pgx.Rows
+	if len(keywords) != 0 {
+		query := `SELECT (id, title, description, link, tags, user_id,
+			thread_id, created_at, updated_at, upvotes, downvotes)
+		FROM 
+			((SELECT id, title, description, link, tags, user_id,
+				thread_id, created_at, updated_at, upvotes, downvotes
+			FROM demo.demos
+			WHERE demo_ts @@ to_tsquery_multilang($1))
+			UNION
+			(SELECT id, title, description, link, tags, user_id,
+				thread_id, created_at, updated_at, upvotes, downvotes
+			FROM demo.demos
+			WHERE tags && ($2) COLLATE case_insensitive))
+		ORDER BY updated_at DESC`
+		if limit != 0 {
+			query = query + fmt.Sprintf(` LIMIT %v`, limit)
+		}
+		rows, err = conn.Query(context.Background(),
+			query, strings.Join(keywords, " | "), keywords,
 		)
-		UNION
-		(
-		SELECT (id, title, description, link, tags, user_id,
-		thread_id, created_at, updated_at, upvotes, downvotes)
-		FROM demo.demos
-		WHERE tags && ($2) COLLATE case_insensitive
-		ORDER BY updated_at DESC
-		)`, strings.Join(*query, " | "), *query,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var demo models.Demo
-		err = rows.Scan(&demo)
 		if err != nil {
 			return nil, err
 		}
-		demos = append(demos, demo)
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
-	}
-	if len(demos) == 0 {
-		return nil, r.NotFoundErr()
-	}
-	return &demos, nil
-}
-
-func (r *PsqlDemoRepository) FindDemos() (*[]models.Demo, error) {
-	var demos []models.Demo
-
-	conn, err := r.databaseClient.AcquireConn()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-
-	rows, err := conn.Query(context.Background(),
-		`SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes) 
-		FROM demo.demos`,
-	)
-	if err != nil {
-		return nil, err
+	} else {
+		query := `SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes) 
+		FROM demo.demos`
+		if limit != 0 {
+			query = query + fmt.Sprintf(` LIMIT %v`, limit)
+		}
+		rows, err = conn.Query(context.Background(), query)
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer rows.Close()
 	for rows.Next() {

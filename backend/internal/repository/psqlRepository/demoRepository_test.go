@@ -8,6 +8,7 @@ import (
 	"gamehangar/pkg/ternMigrate"
 	"os"
 	"testing"
+	"time"
 
 	// "github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -237,7 +238,7 @@ func TestFindDemosByQuery(t *testing.T) {
 		resultDemo, err := r.CreateDemo(d)
 		assert.NoError(t, err)
 
-		queryDemos, err := r.FindDemosByQuery(&[]string{q})
+		queryDemos, err := r.FindDemos([]string{q}, 0)
 		if assert.NoError(t, err) {
 			queriedDemo := *queryDemos
 			assert.Equal(t, resultDemo.Title, queriedDemo[0].Title)
@@ -246,16 +247,32 @@ func TestFindDemosByQuery(t *testing.T) {
 		}
 	}
 
-	// Try to query both
-	demos, err := r.FindDemosByQuery(&[]string{"cheeseboiger"})
+	// Try to query both and check ordering
+	demos, err := r.FindDemos([]string{"cheeseboiger"}, 0)
 	if assert.NoError(t, err) {
-		assert.Len(t, *demos, 2)
+		d := *demos
+		assert.Len(t, d, 2)
+		var timeOrder, timeOrderExpected []time.Time
+		timeOrderExpected = []time.Time{*d[0].UpdatedAt, *d[1].UpdatedAt}
+		for _, m := range d {
+			timeOrder = append(timeOrder, *m.UpdatedAt)
+		}
+		assert.Equal(
+			t,
+			timeOrderExpected,
+			timeOrder,
+		)
+	}
+	// Query with limit
+	demos, err = r.FindDemos([]string{"cheeseboiger"}, 1)
+	if assert.NoError(t, err) {
+		assert.Len(t, *demos, 1)
 	}
 }
 
 func TestFindDemos(t *testing.T) {
 	r := PsqlDemoRepository{databaseClient: testDBClient}
-	_, err := r.FindDemos()
+	_, err := r.FindDemos(nil, 0)
 	assert.NoError(t, err)
 }
 
@@ -284,7 +301,7 @@ func TestDeleteDemo(t *testing.T) {
 }
 
 func teardownDemo(r *PsqlDemoRepository) {
-	remainderDemo, err := r.FindDemos()
+	remainderDemo, err := r.FindDemos(nil, 0)
 	if err != nil {
 		panic(err)
 	}
