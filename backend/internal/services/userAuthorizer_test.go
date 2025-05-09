@@ -24,8 +24,8 @@ var (
 	userID         uuid.UUID
 	userRepository *psqlRepository.PsqlUserRepository
 
-	testUsername string = "mike-pech"
-	testEmail    string = "test@email.com"
+	testUsername string = "danila-zol"
+	testEmail    string = "tset@email.com"
 	testPassword string = "aVeryStrongPassword123"
 )
 

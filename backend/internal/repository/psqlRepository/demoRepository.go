@@ -36,7 +36,7 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 		VALUES
 		($1, $2, $3, $4, $5, $6)
 		RETURNING
-		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)`,
+		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, views)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
 	).Scan(&demo)
 	if err != nil {
@@ -54,8 +54,10 @@ func (r *PsqlDemoRepository) FindDemoByID(id int) (*models.Demo, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)
-		FROM demo.demos WHERE id = $1 LIMIT 1`,
+		`UPDATE demo.demos SET views=views+1
+		WHERE id = $1
+		RETURNING
+		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, views)`,
 		id,
 	).Scan(&demo)
 	if err != nil {
@@ -76,15 +78,15 @@ func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64) (*[]mode
 	var rows pgx.Rows
 	if len(keywords) != 0 {
 		query := `SELECT (id, title, description, link, tags, user_id,
-			thread_id, created_at, updated_at, upvotes, downvotes)
+			thread_id, created_at, updated_at, upvotes, downvotes, views)
 		FROM 
 			((SELECT id, title, description, link, tags, user_id,
-				thread_id, created_at, updated_at, upvotes, downvotes
+				thread_id, created_at, updated_at, upvotes, downvotes, views
 			FROM demo.demos
 			WHERE demo_ts @@ to_tsquery_multilang($1))
 			UNION
 			(SELECT id, title, description, link, tags, user_id,
-				thread_id, created_at, updated_at, upvotes, downvotes
+				thread_id, created_at, updated_at, upvotes, downvotes, views
 			FROM demo.demos
 			WHERE tags && ($2) COLLATE case_insensitive))
 		ORDER BY updated_at DESC`
@@ -98,7 +100,7 @@ func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64) (*[]mode
 			return nil, err
 		}
 	} else {
-		query := `SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes) 
+		query := `SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, views) 
 		FROM demo.demos`
 		if limit != 0 {
 			query = query + fmt.Sprintf(` LIMIT %v`, limit)
@@ -139,7 +141,7 @@ func (r *PsqlDemoRepository) UpdateDemo(id int, demo models.Demo) (*models.Demo,
 		upvotes=COALESCE($7, upvotes), downvotes=COALESCE($8, downvotes)
 			WHERE id = $9
 		RETURNING
-			(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes)`,
+			(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, views)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
 		demo.Upvotes, demo.Downvotes, id,
 	).Scan(&demo)

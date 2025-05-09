@@ -23,6 +23,7 @@ type Thread struct {
 	UpdatedAt *time.Time `json:"updatedAt,omitzero"`
 	Upvotes   *uint      `json:"upvotes,omitempty" validate:"omitnil,number,min=0"`
 	Downvotes *uint      `json:"downvotes,omitempty" validate:"omitnil,number,min=0"`
+	Views     *uint      `json:"views,omitzero" validate:"omitnil,number,min=0"`
 	Method    string     `json:"-"`
 }
 
@@ -37,5 +38,6 @@ type Message struct {
 	UpdatedAt *time.Time `json:"updatedAt,omitzero"`
 	Upvotes   *uint      `json:"upvotes,omitempty" validate:"omitnil,number,min=0"`
 	Downvotes *uint      `json:"downvotes,omitempty" validate:"omitnil,number,min=0"`
+	Views     *uint      `json:"views,omitzero" validate:"omitnil,number,min=0"`
 	Method    string     `json:"-"`
 }

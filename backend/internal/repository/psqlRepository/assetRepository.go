@@ -42,7 +42,7 @@ func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, er
 		VALUES
 		($1, $2, $3, $4)
 		RETURNING
-		(id, name, description, link, tags, created_at, updated_at, version)`,
+		(id, name, description, link, tags, created_at, updated_at, version, views)`,
 		asset.Name, asset.Description, asset.Link, asset.Tags,
 	).Scan(&asset)
 	if err != nil {
@@ -61,8 +61,11 @@ func (r *PsqlAssetRepository) FindAssetByID(id int) (*models.Asset, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, name, description, link, tags, created_at, updated_at, version) 
-		FROM asset.assets WHERE id = $1 LIMIT 1`,
+		`UPDATE asset.assets SET 
+		views=views+1
+		WHERE id = $1
+		RETURNING
+		(id, name, description, link, tags, created_at, updated_at, version, views)`,
 		id,
 	).Scan(&asset)
 	if err != nil {
@@ -83,13 +86,13 @@ func (r *PsqlAssetRepository) FindAssets(keywords []string, limit uint64) (*[]mo
 	var rows pgx.Rows
 	if len(keywords) != 0 {
 		query :=
-			`SELECT (id, name, description, link, tags, created_at, updated_at, version) 
+			`SELECT (id, name, description, link, tags, created_at, updated_at, version, views) 
 				FROM
-			((SELECT id, name, description, link, tags, created_at, updated_at, version
+			((SELECT id, name, description, link, tags, created_at, updated_at, version, views
 				FROM asset.assets
 				WHERE asset_ts @@ to_tsquery_multilang($1))
 			UNION
-			(SELECT id, name, description, link, tags, created_at, updated_at, version 
+			(SELECT id, name, description, link, tags, created_at, updated_at, version, views 
 				FROM asset.assets
 				WHERE tags && ($2) COLLATE case_insensitive))
 			ORDER BY updated_at DESC`
@@ -104,8 +107,9 @@ func (r *PsqlAssetRepository) FindAssets(keywords []string, limit uint64) (*[]mo
 		}
 	} else {
 		query := `SELECT 
-			(id, name, description, link, tags, created_at, updated_at, version) 
-			FROM asset.assets`
+			(id, name, description, link, tags, created_at, updated_at, version, views) 
+			FROM asset.assets
+			ORDER BY updated_at DESC`
 		if limit != 0 {
 			query = query + fmt.Sprintf(` LIMIT %v`, limit)
 		}
@@ -150,7 +154,7 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), tags=COALESCE($4, tags), updated_at=NOW()
 			WHERE id = $5
 		RETURNING
-			(id, name, description, link, tags, created_at, updated_at, version)`,
+			(id, name, description, link, tags, created_at, updated_at, version, views)`,
 		asset.Name, asset.Description, asset.Link, asset.Tags,
 		id,
 	).Scan(&asset)

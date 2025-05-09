@@ -114,7 +114,8 @@ func init() {
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0
+		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE TABLE forum.messages (
@@ -127,7 +128,8 @@ func init() {
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0
+		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE OR REPLACE FUNCTION increment_version()
@@ -285,8 +287,10 @@ func TestCreateThread(t *testing.T) {
 
 func TestFindThreadByID(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
-	_, err := r.FindThreadByID(threadID)
-	assert.NoError(t, err)
+	thread, err := r.FindThreadByID(threadID)
+	if assert.NoError(t, err) { // Test view incrementation
+		assert.Equal(t, uint(1), *thread.Views)
+	}
 }
 
 func TestFindThreadByIDNoRows(t *testing.T) {
@@ -373,6 +377,7 @@ func TestUpdateThread(t *testing.T) {
 	modifiedThread.UpdatedAt = resultThread.UpdatedAt
 	modifiedThread.Upvotes = resultThread.Upvotes
 	modifiedThread.Downvotes = resultThread.Downvotes
+	modifiedThread.Views = resultThread.Views
 
 	assert.Equal(t, modifiedThread, *resultThread)
 }
@@ -393,8 +398,10 @@ func TestCreateMessage(t *testing.T) {
 
 func TestFindMessageByID(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
-	_, err := r.FindMessageByID(messageID)
-	assert.NoError(t, err)
+	message, err := r.FindMessageByID(messageID)
+	if assert.NoError(t, err) { // Test view incrementation
+		assert.Equal(t, uint(1), *message.Views)
+	}
 }
 
 func TestFindMessageByIDNoRows(t *testing.T) {
@@ -485,6 +492,7 @@ func TestUpdateMessage(t *testing.T) {
 	modifiedMessage.UpdatedAt = resultMessage.UpdatedAt
 	modifiedMessage.Upvotes = resultMessage.Upvotes
 	modifiedMessage.Downvotes = resultMessage.Downvotes
+	modifiedMessage.Views = resultMessage.Views
 
 	assert.Equal(t, modifiedMessage, *resultMessage)
 }

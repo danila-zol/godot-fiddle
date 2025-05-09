@@ -16,7 +16,10 @@ import (
 )
 
 var (
-	testDBClient     *psqlDatabase.PsqlDatabaseClient
+	testDBClient *psqlDatabase.PsqlDatabaseClient
+
+	views uint = 0
+
 	assetID          int          = 1
 	assetName        string       = "Test Asset"
 	assetNameUpdated string       = "Test UPDATE Asset"
@@ -63,7 +66,8 @@ func init() {
 		"tags" TEXT[],
 		"version" INTEGER NOT NULL DEFAULT 1,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE OR REPLACE FUNCTION increment_version()
@@ -78,6 +82,10 @@ func init() {
 		CREATE TRIGGER increment_asset_version_on_update
 		BEFORE UPDATE ON asset.assets
 		FOR EACH ROW
+		WHEN ((OLD.name IS DISTINCT FROM NEW.name) 
+		OR (OLD.description IS DISTINCT FROM NEW.description)
+		OR (OLD.link IS DISTINCT FROM NEW.link)
+		OR (OLD.tags IS DISTINCT FROM NEW.tags))
 		EXECUTE FUNCTION increment_version();
 
 		CREATE COLLATION IF NOT EXISTS case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
@@ -117,8 +125,10 @@ func TestCreateAsset(t *testing.T) {
 
 func TestFindAssetByID(t *testing.T) {
 	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
-	_, err := r.FindAssetByID(assetID)
-	assert.NoError(t, err)
+	asset, err := r.FindAssetByID(assetID)
+	if assert.NoError(t, err) { // Test view incrementation
+		assert.Equal(t, uint(1), *asset.Views)
+	}
 }
 
 func TestFindAssetByIDNoRows(t *testing.T) {
@@ -195,6 +205,7 @@ func TestUpdateAsset(t *testing.T) {
 	modifiedAsset.Name = &assetNameUpdated
 	modifiedAsset.CreatedAt = resultAsset.CreatedAt // Timestamps are created on DB
 	modifiedAsset.UpdatedAt = resultAsset.UpdatedAt
+	modifiedAsset.Views = resultAsset.Views
 	newVersion := *assetUpdated.Version + 1
 	modifiedAsset.Version = &newVersion
 
@@ -221,6 +232,7 @@ func TestUpdateAssetMultiple(t *testing.T) {
 		modifiedAsset.Name = assetUpdated.Name
 		modifiedAsset.CreatedAt = resultAsset.CreatedAt // Timestamps are created on DB
 		modifiedAsset.UpdatedAt = resultAsset.UpdatedAt
+		modifiedAsset.Views = resultAsset.Views
 
 		assert.Equal(t, modifiedAsset, *resultAsset)
 	}

@@ -161,7 +161,7 @@ func (r *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread
 		VALUES
 			($1, $2, $3, $4)
 		RETURNING
-			(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)`,
+			(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes, views)`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags,
 	).Scan(&thread)
 	if err != nil {
@@ -180,8 +180,11 @@ func (r *PsqlForumRepository) FindThreadByID(id int) (*models.Thread, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)
-		FROM forum.threads WHERE id = $1 LIMIT 1`,
+		`UPDATE forum.threads SET 
+		views=views+1
+		WHERE id = $1
+		RETURNING
+		(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes, views)`,
 		id,
 	).Scan(&thread)
 	if err != nil {
@@ -201,14 +204,13 @@ func (r *PsqlForumRepository) FindThreads(keywords []string, limit uint64) (*[]m
 
 	var rows pgx.Rows
 	if len(keywords) != 0 {
-		query :=
-			`SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes) 
+		query := `SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes, views) 
 				FROM
-				((SELECT id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes
+				((SELECT id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes, views
 				FROM forum.threads
 				WHERE thread_ts @@ to_tsquery_multilang($1))
 			UNION
-				(SELECT id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes 
+				(SELECT id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes, views 
 				FROM forum.threads
 				WHERE tags && ($2) COLLATE case_insensitive))
 			ORDER BY updated_at DESC`
@@ -222,7 +224,7 @@ func (r *PsqlForumRepository) FindThreads(keywords []string, limit uint64) (*[]m
 			return nil, err
 		}
 	} else {
-		query := `SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)
+		query := `SELECT (id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes, views)
 		FROM forum.threads
 		ORDER BY updated_at DESC`
 		if limit != 0 {
@@ -267,7 +269,7 @@ func (r *PsqlForumRepository) UpdateThread(id int, thread models.Thread) (*model
 			updated_at=NOW()
 			WHERE id = $7
 		RETURNING
-			(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes)`,
+			(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes, views)`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags,
 		thread.Upvotes, thread.Downvotes, id,
 	).Scan(&thread)
@@ -307,7 +309,7 @@ func (r *PsqlForumRepository) CreateMessage(message models.Message) (*models.Mes
 		VALUES
 		($1, $2, $3, $4, $5)
 		RETURNING
-		(id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)`,
+		(id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes, views)`,
 		message.ThreadID, message.UserID, message.Title, message.Body, message.Tags,
 	).Scan(&message)
 	if err != nil {
@@ -325,8 +327,11 @@ func (r *PsqlForumRepository) FindMessageByID(id int) (*models.Message, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)
-		FROM forum.messages WHERE id = $1 LIMIT 1`,
+		`UPDATE forum.messages SET 
+		views=views+1
+		WHERE id = $1
+		RETURNING
+		(id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes, views)`,
 		id,
 	).Scan(&message)
 	if err != nil {
@@ -346,14 +351,13 @@ func (r *PsqlForumRepository) FindMessages(keywords []string, limit uint64) (*[]
 
 	var rows pgx.Rows
 	if len(keywords) != 0 {
-		query :=
-			`SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes) 
+		query := `SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes, views) 
 			FROM
-				((SELECT id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes
+				((SELECT id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes, views
 				FROM forum.messages
 				WHERE message_ts @@ to_tsquery_multilang($1))
 			UNION
-				(SELECT id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes 
+				(SELECT id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes, views
 				FROM forum.messages
 				WHERE tags && ($2) COLLATE case_insensitive))
 			ORDER BY updated_at DESC`
@@ -367,7 +371,7 @@ func (r *PsqlForumRepository) FindMessages(keywords []string, limit uint64) (*[]
 			return nil, err
 		}
 	} else {
-		query := `SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)
+		query := `SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes, views)
 			FROM forum.messages
 			ORDER BY updated_at DESC`
 		if limit != 0 {
@@ -407,8 +411,17 @@ func (r *PsqlForumRepository) FindMessagesByThreadID(thread_id int) (*[]models.M
 	}
 	defer conn.Release()
 
+	_, err = conn.Exec(context.Background(),
+		`UPDATE forum.threads SET 
+		views=views+1
+		WHERE id = $1`, thread_id,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	rows, err := conn.Query(context.Background(),
-		`SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)
+		`SELECT (id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes, views)
 		FROM forum.messages WHERE thread_id=$1`,
 		thread_id,
 	)
@@ -448,7 +461,7 @@ func (r *PsqlForumRepository) UpdateMessage(id int, message models.Message) (*mo
 		upvotes=COALESCE($6, upvotes), downvotes=COALESCE($7, downvotes)
 		WHERE id = $8
 		RETURNING
-		(id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes)`,
+		(id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes, views)`,
 		message.ThreadID, message.UserID, message.Title, message.Body,
 		message.Tags, message.Upvotes, message.Downvotes, id,
 	).Scan(&message)

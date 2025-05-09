@@ -19,7 +19,7 @@ var (
 	forumRepository *psqlRepository.PsqlForumRepository
 	demoRepository  *psqlRepository.PsqlDemoRepository
 
-	topicID int = 1
+	topicID int
 	// roleID string
 	// userID string
 
@@ -101,7 +101,8 @@ func init() {
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0
+		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE TABLE forum.messages (
@@ -114,7 +115,8 @@ func init() {
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0
+		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE SCHEMA IF NOT EXISTS demo;
@@ -130,7 +132,8 @@ func init() {
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"upvotes" INTEGER NOT NULL DEFAULT 0,
 		"downvotes" INTEGER NOT NULL DEFAULT 0,
-		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
+		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE COLLATION IF NOT EXISTS case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false);

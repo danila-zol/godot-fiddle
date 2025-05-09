@@ -130,6 +130,7 @@ func init() {
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"upvotes" INTEGER NOT NULL DEFAULT 0,
 		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"views" INTEGER NOT NULL DEFAULT 0,
 		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
 		);
 
@@ -206,8 +207,10 @@ func TestCreateDemo(t *testing.T) {
 
 func TestFindDemoByID(t *testing.T) {
 	r := PsqlDemoRepository{databaseClient: testDBClient}
-	_, err := r.FindDemoByID(demoID)
-	assert.NoError(t, err)
+	demo, err := r.FindDemoByID(demoID)
+	if assert.NoError(t, err) { // Test view incrementation
+		assert.Equal(t, uint(1), *demo.Views)
+	}
 }
 
 func TestFindDemoByIDNoRows(t *testing.T) {
@@ -288,6 +291,7 @@ func TestUpdateDemo(t *testing.T) {
 	modifiedDemo.UpdatedAt = resultDemo.UpdatedAt
 	modifiedDemo.Upvotes = resultDemo.Upvotes
 	modifiedDemo.Downvotes = resultDemo.Downvotes
+	modifiedDemo.Views = resultDemo.Views
 
 	assert.Equal(t, modifiedDemo, *resultDemo)
 }

@@ -18,5 +18,6 @@ type Demo struct {
 	UpdatedAt   *time.Time `json:"updatedAt,omitzero"`
 	Upvotes     *uint      `json:"upvotes,omitzero" validate:"omitnil,number,min=0"`
 	Downvotes   *uint      `json:"downvotes,omitzero" validate:"omitnil,number,min=0"`
+	Views       *uint      `json:"views,omitzero" validate:"omitnil,number,min=0"`
 	Method      string     `json:"-"`
 }

@@ -14,6 +14,10 @@ $func$ LANGUAGE plpgsql;
 CREATE TRIGGER increment_asset_version_on_update
 	BEFORE UPDATE ON asset.assets
 	FOR EACH ROW
+		WHEN ((OLD.name IS DISTINCT FROM NEW.name) 
+			OR (OLD.description IS DISTINCT FROM NEW.description)
+			OR (OLD.link IS DISTINCT FROM NEW.link)
+			OR (OLD.tags IS DISTINCT FROM NEW.tags))
 	EXECUTE FUNCTION increment_version();
 
 CREATE TRIGGER increment_topic_version_on_update
