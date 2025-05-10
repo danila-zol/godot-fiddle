@@ -356,7 +356,7 @@ func (h *ForumHandler) GetThreadByID(c echo.Context) error {
 // @Produce	application/json
 // @Param		q	query		[]string	false	"Keyword Query"
 // @Param		l	query		int	false	"Record number limit"
-// @Param		o	query		string	false	"Record ordering. Default newest updated" Enums(newestUpdated, highestRated, mostViews)
+// @Param		o	query		string	false	"Record ordering. Default newest updated" Enums(newest-updated, highest-rated, most-views)
 // @Success	200	{object}	models.Thread
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
@@ -387,7 +387,7 @@ func (h *ForumHandler) GetThreads(c echo.Context) error {
 
 	o := c.Request().URL.Query()["o"]
 	if o != nil {
-		err = h.validator.Var(o[0], `oneof=newestUpdated highestRated mostViews`)
+		err = h.validator.Var(o[0], `oneof=newest-updated highest-rated most-views`)
 		if err != nil {
 			e := HTTPError{
 				Code:    http.StatusUnprocessableEntity,
@@ -398,7 +398,7 @@ func (h *ForumHandler) GetThreads(c echo.Context) error {
 		}
 		order = o[0]
 	} else {
-		order = "newestUpdated"
+		order = "newest-updated"
 	}
 
 	threads, err = h.repository.FindThreads(tags, limit, order)
@@ -625,7 +625,7 @@ func (h *ForumHandler) GetMessageByID(c echo.Context) error {
 // @Produce	application/json
 // @Param		q	query		[]string	false	"Keyword Query"
 // @Param		l	query		int	false	"Record number limit"
-// @Param		o	query		string	false	"Record ordering. Default newest updated" Enums(newestUpdated, highestRated, mostViews)
+// @Param		o	query		string	false	"Record ordering. Default newest updated" Enums(newest-updated, highest-rated, most-views)
 // @Success	200	{object}	models.Message
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
@@ -656,7 +656,7 @@ func (h *ForumHandler) GetMessages(c echo.Context) error {
 
 	o := c.Request().URL.Query()["o"]
 	if o != nil {
-		err = h.validator.Var(o[0], `oneof=newestUpdated highestRated mostViews`)
+		err = h.validator.Var(o[0], `oneof=newest-updated highest-rated most-views`)
 		if err != nil {
 			e := HTTPError{
 				Code:    http.StatusUnprocessableEntity,
@@ -667,7 +667,7 @@ func (h *ForumHandler) GetMessages(c echo.Context) error {
 		}
 		order = o[0]
 	} else {
-		order = "newestUpdated"
+		order = "newest-updated"
 	}
 
 	messages, err = h.repository.FindMessages(tags, limit, order)

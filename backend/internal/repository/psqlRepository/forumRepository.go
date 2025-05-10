@@ -215,11 +215,11 @@ func (r *PsqlForumRepository) FindThreads(keywords []string, limit uint64, order
 				WHERE tags && ($2) COLLATE case_insensitive))`
 
 		switch order {
-		case "newestUpdated":
+		case "newest-updated":
 			query = query + ` ORDER BY updated_at DESC`
-		case "highestRated":
+		case "highest-rated":
 			query = query + ` ORDER BY rating DESC`
-		case "mostViews":
+		case "most-views":
 			query = query + ` ORDER BY views DESC`
 		default:
 			query = query + ` ORDER BY updated_at DESC`
@@ -238,11 +238,11 @@ func (r *PsqlForumRepository) FindThreads(keywords []string, limit uint64, order
 		FROM forum.threads`
 
 		switch order {
-		case "newestUpdated":
+		case "newest-updated":
 			query = query + ` ORDER BY updated_at DESC`
-		case "highestRated":
+		case "highest-rated":
 			query = query + ` ORDER BY rating DESC`
-		case "mostViews":
+		case "most-views":
 			query = query + ` ORDER BY views DESC`
 		default:
 			query = query + ` ORDER BY updated_at DESC`
@@ -382,11 +382,11 @@ func (r *PsqlForumRepository) FindMessages(keywords []string, limit uint64, orde
 				WHERE tags && ($2) COLLATE case_insensitive))`
 
 		switch order {
-		case "newestUpdated":
+		case "newest-updated":
 			query = query + ` ORDER BY updated_at DESC`
-		case "highestRated":
+		case "highest-rated":
 			query = query + ` ORDER BY rating DESC`
-		case "mostViews":
+		case "most-views":
 			query = query + ` ORDER BY views DESC`
 		default:
 			query = query + ` ORDER BY updated_at DESC`
@@ -405,11 +405,11 @@ func (r *PsqlForumRepository) FindMessages(keywords []string, limit uint64, orde
 			FROM forum.messages`
 
 		switch order {
-		case "newestUpdated":
+		case "newest-updated":
 			query = query + ` ORDER BY updated_at DESC`
-		case "highestRated":
+		case "highest-rated":
 			query = query + ` ORDER BY rating DESC`
-		case "mostViews":
+		case "most-views":
 			query = query + ` ORDER BY views DESC`
 		default:
 			query = query + ` ORDER BY updated_at DESC`

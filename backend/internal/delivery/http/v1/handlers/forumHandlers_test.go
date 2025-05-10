@@ -40,7 +40,7 @@ var (
 
 	// queryTags             = `cheeseboiger`
 	// queryLimit uint64 = 1
-	// queryOrder                  = `newestUpdated`
+	// queryOrder                  = `newest-updated`
 
 	topicJSON               = `{"name":"Cool topic"}`
 	topicJSONExpected       = `{"id":1,"name":"Cool topic","version":1}` + "\n"

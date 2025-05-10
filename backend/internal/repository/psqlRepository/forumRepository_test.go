@@ -336,7 +336,7 @@ func TestFindThreadsByQuery(t *testing.T) {
 		resultThread, err := r.CreateThread(th)
 		assert.NoError(t, err)
 
-		queryThreads, err := r.FindThreads([]string{q}, 0, "highestRated")
+		queryThreads, err := r.FindThreads([]string{q}, 0, "highest-rated")
 		t.Log(queryThreads)
 		if assert.NoError(t, err) {
 			queriedThread := *queryThreads
@@ -345,7 +345,7 @@ func TestFindThreadsByQuery(t *testing.T) {
 	}
 
 	// Try to query both and check ordering
-	threads, err := r.FindThreads([]string{"cheeseboiger"}, 0, "newestUpdated")
+	threads, err := r.FindThreads([]string{"cheeseboiger"}, 0, "newest-updated")
 	if assert.NoError(t, err) {
 		th := *threads
 		assert.Len(t, th, 2)
@@ -361,7 +361,7 @@ func TestFindThreadsByQuery(t *testing.T) {
 		)
 	}
 	// Query with limit
-	threads, err = r.FindThreads([]string{"cheeseboiger"}, 1, "mostViews")
+	threads, err = r.FindThreads([]string{"cheeseboiger"}, 1, "most-views")
 	if assert.NoError(t, err) {
 		assert.Len(t, *threads, 1)
 	}
@@ -449,7 +449,7 @@ func TestFindMessagesByQuery(t *testing.T) {
 		resultMessage, err := r.CreateMessage(m)
 		assert.NoError(t, err)
 
-		queryMessages, err := r.FindMessages([]string{q}, 0, "highestRated")
+		queryMessages, err := r.FindMessages([]string{q}, 0, "highest-rated")
 		if assert.NoError(t, err) {
 			queriedMessage := *queryMessages
 			assert.Equal(t, resultMessage.Title, queriedMessage[0].Title)
@@ -457,7 +457,7 @@ func TestFindMessagesByQuery(t *testing.T) {
 	}
 
 	// Try to query both and check ordering
-	messages, err := r.FindMessages([]string{"cheeseboiger"}, 0, "newestUpdated")
+	messages, err := r.FindMessages([]string{"cheeseboiger"}, 0, "newest-updated")
 	if assert.NoError(t, err) {
 		m := *messages
 		assert.Len(t, m, 2)
@@ -473,7 +473,7 @@ func TestFindMessagesByQuery(t *testing.T) {
 		)
 	}
 	// Query with limit
-	messages, err = r.FindMessages([]string{"cheeseboiger"}, 1, "mostViews")
+	messages, err = r.FindMessages([]string{"cheeseboiger"}, 1, "most-views")
 	if assert.NoError(t, err) {
 		assert.Len(t, *messages, 1)
 	}

@@ -176,7 +176,7 @@ func TestFindAssetsByQuery(t *testing.T) {
 	}
 
 	// Try to query both and check ordering
-	assets, err := r.FindAssets([]string{"cheeseboiger"}, 0, "newestUpdated")
+	assets, err := r.FindAssets([]string{"cheeseboiger"}, 0, "newest-updated")
 	if assert.NoError(t, err) {
 		a := *assets
 		assert.Len(t, a, 2)

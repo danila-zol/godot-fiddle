@@ -91,11 +91,11 @@ func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64, order st
 			WHERE tags && ($2) COLLATE case_insensitive))`
 
 		switch order {
-		case "newestUpdated":
+		case "newest-updated":
 			query = query + ` ORDER BY updated_at DESC`
-		case "highestRated":
+		case "highest-rated":
 			query = query + ` ORDER BY rating DESC`
-		case "mostViews":
+		case "most-views":
 			query = query + ` ORDER BY views DESC`
 		default:
 			query = query + ` ORDER BY updated_at DESC`
@@ -114,11 +114,11 @@ func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64, order st
 		FROM demo.demos`
 
 		switch order {
-		case "newestUpdated":
+		case "newest-updated":
 			query = query + ` ORDER BY updated_at DESC`
-		case "highestRated":
+		case "highest-rated":
 			query = query + ` ORDER BY upvotes DESC`
-		case "mostViews":
+		case "most-views":
 			query = query + ` ORDER BY views DESC`
 		default:
 			query = query + ` ORDER BY updated_at DESC`

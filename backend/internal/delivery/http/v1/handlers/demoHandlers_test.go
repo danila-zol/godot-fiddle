@@ -38,7 +38,7 @@ var (
 
 	queryTags         = `cheeseboiger`
 	queryLimit uint64 = 1
-	queryOrder        = `newestUpdated`
+	queryOrder        = `newest-updated`
 
 	demoJSON                   = `{"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `"}`
 	demoJSONExpected           = `{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"

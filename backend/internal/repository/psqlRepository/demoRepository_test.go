@@ -246,7 +246,7 @@ func TestFindDemosByQuery(t *testing.T) {
 		resultDemo, err := r.CreateDemo(d)
 		assert.NoError(t, err)
 
-		queryDemos, err := r.FindDemos([]string{q}, 0, "highestRated")
+		queryDemos, err := r.FindDemos([]string{q}, 0, "highest-rated")
 		if assert.NoError(t, err) {
 			queriedDemo := *queryDemos
 			assert.Equal(t, resultDemo.Title, queriedDemo[0].Title)
@@ -256,7 +256,7 @@ func TestFindDemosByQuery(t *testing.T) {
 	}
 
 	// Try to query both and check ordering
-	demos, err := r.FindDemos([]string{"cheeseboiger"}, 0, "newestUpdated")
+	demos, err := r.FindDemos([]string{"cheeseboiger"}, 0, "newest-updated")
 	if assert.NoError(t, err) {
 		d := *demos
 		assert.Len(t, d, 2)
@@ -272,7 +272,7 @@ func TestFindDemosByQuery(t *testing.T) {
 		)
 	}
 	// Query with limit
-	demos, err = r.FindDemos([]string{"cheeseboiger"}, 1, "newestUpdated")
+	demos, err = r.FindDemos([]string{"cheeseboiger"}, 1, "newest-updated")
 	if assert.NoError(t, err) {
 		assert.Len(t, *demos, 1)
 	}

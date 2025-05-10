@@ -34,7 +34,7 @@ var (
 
 	// queryTags             = `cheeseboiger`
 	// queryLimit                 uint64 = 1
-	// queryOrder                  = `newestUpdated`
+	// queryOrder                  = `newest-updated`
 
 	assetJSON                   = `{"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com"}`
 	assetJSONExpected           = `{"id":1,"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com","version":1}` + "\n"

@@ -50,7 +50,6 @@ var (
 
 	// queryTags             = `cheeseboiger`
 	// queryLimit uint64 = 1
-	// queryOrder             = `newestUpdated`
 
 	roleJSON               = `{"name":"Cool role"}`
 	roleJSONExpected       = `{"id":"` + genericUUID.String() + `","name":"Cool role","version":1}` + "\n"
