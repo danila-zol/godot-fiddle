@@ -15,6 +15,8 @@ import (
 )
 
 var (
+	independent bool = false
+
 	threadSyncer    *ThreadSyncer
 	forumRepository *psqlRepository.PsqlForumRepository
 	demoRepository  *psqlRepository.PsqlDemoRepository
@@ -32,27 +34,29 @@ var (
 	demoUpdated      models.Demo = models.Demo{Title: &demoTitleUpdated}
 )
 
-func init() { // TODO: Fix the mishmash of init functions
-	wd, _ := os.Getwd()
-	err := godotenv.Load(wd + "/../../.env")
-	if err != nil {
-		panic("Error loading .env file:" + err.Error() + ": " + wd)
-	}
-	databaseConfig, err := psqlDatabseConfig.PsqlConfig{}.NewConfig(
-		psqlDatabase.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"),
-	)
-	if err != nil {
-		panic("Error loading PSQL database Config")
-	}
-	testDBClient, err = psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
-		os.Getenv("PSQL_CONNSTRING"), ternMigrate.Migrator{}, databaseConfig,
-	)
-	if err != nil {
-		panic("Error setting up new DatabaseClient")
+func init() {
+	var err error
+	if independent || 1 == 1 { // HACK!
+		wd, _ := os.Getwd()
+		err := godotenv.Load(wd + "/../../.env")
+		if err != nil {
+			panic("Error loading .env file:" + err.Error() + ": " + wd)
+		}
+		databaseConfig, err := psqlDatabseConfig.PsqlConfig{}.NewConfig(
+			psqlDatabase.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"),
+		)
+		if err != nil {
+			panic("Error loading PSQL database Config")
+		}
+		testDBClient, err = psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
+			os.Getenv("PSQL_CONNSTRING"), ternMigrate.Migrator{}, databaseConfig,
+		)
+		if err != nil {
+			panic("Error setting up new DatabaseClient")
+		}
 	}
 	c, _ := testDBClient.AcquireConn() // WARNING! Integration tests DROP TABLEs
 	_, err = c.Exec(context.Background(), `
-		DROP SCHEMA IF EXISTS "user" CASCADE;
 		DROP SCHEMA IF EXISTS "demo" CASCADE;
 		DROP SCHEMA IF EXISTS "forum" CASCADE;
 
@@ -60,36 +64,12 @@ func init() { // TODO: Fix the mishmash of init functions
 
 		DROP COLLATION IF EXISTS case_insensitive;
 
-		CREATE SCHEMA IF NOT EXISTS "user";
-
-		CREATE TABLE "user".roles (
-		"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-		"name" VARCHAR(255) NOT NULL
-		-- "permissions" VARCHAR(64)[]
-		);
-
-		CREATE TABLE "user".users (
-		"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-		"username" VARCHAR(255) NOT NULL UNIQUE,
-		"display_name" VARCHAR(255),
-		"email" VARCHAR(255) NOT NULL UNIQUE,
-		"password" VARCHAR(255) NOT NULL,
-		"verified" BOOLEAN NOT NULL DEFAULT false,
-		"role_id" UUID NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
-		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"karma" INTEGER NOT NULL DEFAULT 0
-		);
-
-		CREATE TABLE "user".sessions (
-		"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-		"user_id" UUID NOT NULL REFERENCES "user".users (id) ON DELETE CASCADE
-		);
-
 		CREATE SCHEMA IF NOT EXISTS forum;
 
 		CREATE TABLE forum.topics (
 		"id"  INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-		"name" VARCHAR(255) NOT NULL
+		"name" VARCHAR(255) NOT NULL,
+		"version" INTEGER NOT NULL DEFAULT 1
 		);
 
 		CREATE TABLE forum.threads (
@@ -173,22 +153,24 @@ func init() { // TODO: Fix the mishmash of init functions
 	if err != nil {
 		panic("Error resetting demo schema" + err.Error())
 	}
-	err = c.QueryRow(
-		context.Background(),
-		`INSERT INTO "user".roles (name) VALUES ($1) RETURNING (id)`,
-		"admin").Scan(&roleID)
-	if err != nil {
-		panic("Error resetting demo schema" + err.Error())
-	}
-	err = c.QueryRow(
-		context.Background(),
-		`INSERT INTO "user".users
-		(username, display_name, email, password, role_id)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING (id)`,
-		"mike-pech", "Mike", "test@email.com", "TestPassword", roleID).Scan(&userID)
-	if err != nil {
-		panic("Error resetting demo schema" + err.Error())
+	if independent {
+		err = c.QueryRow(
+			context.Background(),
+			`INSERT INTO "user".roles (name) VALUES ($1) RETURNING (id)`,
+			"admin").Scan(&roleID)
+		if err != nil {
+			panic("Error resetting demo schema" + err.Error())
+		}
+		err = c.QueryRow(
+			context.Background(),
+			`INSERT INTO "user".users
+			(username, display_name, email, password, role_id)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING (id)`,
+			"mike-pech", "Mike", "test@email.com", "TestPassword", roleID).Scan(&userID)
+		if err != nil {
+			panic("Error resetting demo schema" + err.Error())
+		}
 	}
 	demo.UserID = &userID
 	forumRepository = psqlRepository.NewPsqlForumRepository(testDBClient)

@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	// independent bool = false
 	testDBClient *psqlDatabase.PsqlDatabaseClient
 
 	userAuthorizer *UserAuthorizer
@@ -30,22 +31,25 @@ var (
 )
 
 func init() {
-	wd, _ := os.Getwd()
-	err := godotenv.Load(wd + "/../../.env")
-	if err != nil {
-		panic("Error loading .env file:" + err.Error() + ": " + wd)
-	}
-	databaseConfig, err := psqlDatabseConfig.PsqlConfig{}.NewConfig(
-		psqlDatabase.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"),
-	)
-	if err != nil {
-		panic("Error loading PSQL database Config")
-	}
-	testDBClient, err = psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
-		os.Getenv("PSQL_CONNSTRING"), ternMigrate.Migrator{}, databaseConfig,
-	)
-	if err != nil {
-		panic("Error setting up new DatabaseClient")
+	var err error
+	if independent {
+		wd, _ := os.Getwd()
+		err := godotenv.Load(wd + "/../../.env")
+		if err != nil {
+			panic("Error loading .env file:" + err.Error() + ": " + wd)
+		}
+		databaseConfig, err := psqlDatabseConfig.PsqlConfig{}.NewConfig(
+			psqlDatabase.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"),
+		)
+		if err != nil {
+			panic("Error loading PSQL database Config")
+		}
+		testDBClient, err = psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
+			os.Getenv("PSQL_CONNSTRING"), ternMigrate.Migrator{}, databaseConfig,
+		)
+		if err != nil {
+			panic("Error setting up new DatabaseClient")
+		}
 	}
 	c, _ := testDBClient.AcquireConn() // WARNING! Integration tests DROP TABLEs
 	_, err = c.Exec(context.Background(), `
