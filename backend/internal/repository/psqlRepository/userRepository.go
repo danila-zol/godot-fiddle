@@ -128,7 +128,7 @@ func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]mode
 					(SELECT id, username, display_name, email, password, verified, role_id, created_at, karma 
 					FROM "user".users
 					WHERE tags && ($2) COLLATE case_insensitive))
-			ORDER BY created_at DESC`
+			ORDER BY karma DESC`
 		if limit != 0 {
 			query = query + fmt.Sprintf(` LIMIT %v`, limit)
 		}
@@ -142,7 +142,7 @@ func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]mode
 		query := `SELECT 
 			(id, username, display_name, email, password, verified, role_id, created_at, karma) 
 			FROM "user".users
-			ORDER BY created_at DESC`
+			ORDER BY karma DESC`
 		if limit != 0 {
 			query = query + fmt.Sprintf(` LIMIT %v`, limit)
 		}

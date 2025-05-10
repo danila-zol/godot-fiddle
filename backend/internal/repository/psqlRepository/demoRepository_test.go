@@ -100,8 +100,10 @@ func init() {
 		"tags" VARCHAR(255)[],
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE TABLE forum.messages (
@@ -113,8 +115,10 @@ func init() {
 		"tags" VARCHAR(255)[],
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE SCHEMA IF NOT EXISTS demo;
@@ -128,8 +132,9 @@ func init() {
 		"user_id" UUID NOT NULL,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
 		"views" INTEGER NOT NULL DEFAULT 0,
 		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
 		);
@@ -241,7 +246,7 @@ func TestFindDemosByQuery(t *testing.T) {
 		resultDemo, err := r.CreateDemo(d)
 		assert.NoError(t, err)
 
-		queryDemos, err := r.FindDemos([]string{q}, 0)
+		queryDemos, err := r.FindDemos([]string{q}, 0, "highestRated")
 		if assert.NoError(t, err) {
 			queriedDemo := *queryDemos
 			assert.Equal(t, resultDemo.Title, queriedDemo[0].Title)
@@ -251,7 +256,7 @@ func TestFindDemosByQuery(t *testing.T) {
 	}
 
 	// Try to query both and check ordering
-	demos, err := r.FindDemos([]string{"cheeseboiger"}, 0)
+	demos, err := r.FindDemos([]string{"cheeseboiger"}, 0, "newestUpdated")
 	if assert.NoError(t, err) {
 		d := *demos
 		assert.Len(t, d, 2)
@@ -267,7 +272,7 @@ func TestFindDemosByQuery(t *testing.T) {
 		)
 	}
 	// Query with limit
-	demos, err = r.FindDemos([]string{"cheeseboiger"}, 1)
+	demos, err = r.FindDemos([]string{"cheeseboiger"}, 1, "newestUpdated")
 	if assert.NoError(t, err) {
 		assert.Len(t, *demos, 1)
 	}
@@ -275,25 +280,28 @@ func TestFindDemosByQuery(t *testing.T) {
 
 func TestFindDemos(t *testing.T) {
 	r := PsqlDemoRepository{databaseClient: testDBClient}
-	_, err := r.FindDemos(nil, 0)
+	_, err := r.FindDemos(nil, 0, "")
 	assert.NoError(t, err)
 }
 
 func TestUpdateDemo(t *testing.T) {
 	r := PsqlDemoRepository{databaseClient: testDBClient}
-	resultDemo, err := r.UpdateDemo(demoID, demoUpdated)
+
+	oldDemo, err := r.FindDemoByID(demoID)
 	assert.NoError(t, err)
 
-	modifiedDemo := demo
-	modifiedDemo.ID = &demoID
-	modifiedDemo.Title = &demoTitleUpdated
-	modifiedDemo.CreatedAt = resultDemo.CreatedAt // Timestamps are created on DB
-	modifiedDemo.UpdatedAt = resultDemo.UpdatedAt
-	modifiedDemo.Upvotes = resultDemo.Upvotes
-	modifiedDemo.Downvotes = resultDemo.Downvotes
-	modifiedDemo.Views = resultDemo.Views
+	resultDemo, err := r.UpdateDemo(demoID, demoUpdated)
+	if assert.NoError(t, err) {
+		assert.Equal(t, oldDemo.CreatedAt, resultDemo.CreatedAt)
+		assert.Equal(t, oldDemo.Link, resultDemo.Link)
+		assert.Equal(t, oldDemo.Rating, resultDemo.Rating)
+		assert.Equal(t, oldDemo.Views, resultDemo.Views)
 
-	assert.Equal(t, modifiedDemo, *resultDemo)
+		assert.NotEqual(t, oldDemo.UpdatedAt, resultDemo.UpdatedAt)
+
+		assert.NotEqual(t, oldDemo.Title, resultDemo.Title)
+		assert.Equal(t, demoUpdated.Title, resultDemo.Title)
+	}
 }
 
 func TestDeleteDemo(t *testing.T) {
@@ -305,7 +313,7 @@ func TestDeleteDemo(t *testing.T) {
 }
 
 func teardownDemo(r *PsqlDemoRepository) {
-	remainderDemo, err := r.FindDemos(nil, 0)
+	remainderDemo, err := r.FindDemos(nil, 0, "")
 	if err != nil {
 		panic(err)
 	}

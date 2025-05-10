@@ -32,8 +32,9 @@ var (
 	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
 	// conflictResponse = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
 
-	// query                        = `cheeseboiger`
+	// queryTags             = `cheeseboiger`
 	// queryLimit                 uint64 = 1
+	// queryOrder                  = `newestUpdated`
 
 	assetJSON                   = `{"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com"}`
 	assetJSONExpected           = `{"id":1,"name":"Cool asset","description":"A very nice asset to use in your game!","link":"https://example.com","version":1}` + "\n"
@@ -58,7 +59,7 @@ func (r *mockAssetRepo) FindAssetByID(id int) (*models.Asset, error) {
 	}
 	return &a, nil
 }
-func (r *mockAssetRepo) FindAssets(query []string, limit uint64) (*[]models.Asset, error) {
+func (r *mockAssetRepo) FindAssets(query []string, limit uint64, order string) (*[]models.Asset, error) {
 	var (
 		assetIDs    []int          = []int{1, 2, 3}
 		assetTitles []string       = []string{"cheeseboiger", "asset two", "asset three"}
@@ -209,7 +210,7 @@ func TestPatchAsset(t *testing.T) {
 func TestGetAssetsQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/assets?q=%v", query), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/assets?q=%v", queryTags), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &AssetHandler{logger: e.Logger, validator: v, repository: &ma}
@@ -221,10 +222,10 @@ func TestGetAssetsQuery(t *testing.T) {
 	}
 }
 
-func TestGetAssetsQueryLimit(t *testing.T) {
+func TestGetAssetsQueryLimitOrder(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/assets?q=%v&l=%v", query, queryLimit), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/assets?q=%v&l=%v&o=%v", queryTags, queryLimit, queryOrder), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &AssetHandler{logger: e.Logger, validator: v, repository: &ma}

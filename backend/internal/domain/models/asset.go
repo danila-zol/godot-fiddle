@@ -11,6 +11,9 @@ type Asset struct {
 	CreatedAt   *time.Time `json:"createdAt,omitempty"`
 	UpdatedAt   *time.Time `json:"updatedAt,omitzero"`
 	Version     *int       `json:"version,omitempty" validate:"required_if=Method PATCH,omitnil,number,gt=0"`
+	Upvotes     *uint      `json:"upvotes,omitzero" validate:"omitnil,number,min=0"`
+	Downvotes   *uint      `json:"downvotes,omitzero" validate:"omitnil,number,min=0"`
+	Rating      *float64   `json:"rating,omitzero" validate:"omitnil,excluded_if=Method GET"`
 	Views       *uint      `json:"views,omitzero" validate:"omitnil,number,min=0"`
 	Method      string     `json:"-"`
 }

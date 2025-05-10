@@ -38,8 +38,9 @@ var (
 	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
 	// conflictResponse = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
 
-	// query             = `cheeseboiger`
+	// queryTags             = `cheeseboiger`
 	// queryLimit uint64 = 1
+	// queryOrder                  = `newestUpdated`
 
 	topicJSON               = `{"name":"Cool topic"}`
 	topicJSONExpected       = `{"id":1,"name":"Cool topic","version":1}` + "\n"
@@ -129,7 +130,7 @@ func (r *mockForumRepo) CreateThread(thread models.Thread) (*models.Thread, erro
 	}
 	return &resultThread, nil
 }
-func (r *mockForumRepo) FindThreads(query []string, limit uint64) (*[]models.Thread, error) {
+func (r *mockForumRepo) FindThreads(query []string, limit uint64, order string) (*[]models.Thread, error) {
 	var (
 		topicID      int             = 2
 		threadIDs    []int           = []int{1, 2, 3}
@@ -208,7 +209,7 @@ func (r *mockForumRepo) FindMessageByID(id int) (*models.Message, error) {
 	}
 	return &message, nil
 }
-func (r *mockForumRepo) FindMessages(query []string, limit uint64) (*[]models.Message, error) {
+func (r *mockForumRepo) FindMessages(query []string, limit uint64, order string) (*[]models.Message, error) {
 	var (
 		topicID       int              = 2
 		messageIDs    []int            = []int{1, 2, 3}
@@ -529,7 +530,7 @@ func TestGetThreadByIDNotFound(t *testing.T) {
 func TestGetThreadsQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/threads?q="+query, nil)
+	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/threads?q="+queryTags, nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &ForumHandler{logger: e.Logger, validator: v, repository: &mf}
@@ -544,7 +545,7 @@ func TestGetThreadsQuery(t *testing.T) {
 func TestGetThreadsQueryLimit(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/threads?q=%v&l=%v", query, queryLimit), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/threads?q=%v&l=%v&o=%v", queryTags, queryLimit, queryOrder), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &ForumHandler{logger: e.Logger, validator: v, repository: &mf}
@@ -716,7 +717,7 @@ func TestGetMessageByIDNotFound(t *testing.T) {
 func TestGetMessagesQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/messages?q="+query, nil)
+	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/messages?q="+queryTags, nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &ForumHandler{logger: e.Logger, validator: v, repository: &mf}
@@ -731,7 +732,7 @@ func TestGetMessagesQuery(t *testing.T) {
 func TestGetMessagesQueryLimit(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/messages?q=%v&l=%v", query, queryLimit), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/messages?q=%v&l=%v&o=%v", queryTags, queryLimit, queryOrder), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &ForumHandler{logger: e.Logger, validator: v, repository: &mf}

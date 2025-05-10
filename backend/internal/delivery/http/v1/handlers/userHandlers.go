@@ -88,9 +88,11 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 // @Failure	500	{object}	HTTPError
 // @Router		/v1/users [get]
 func (h *UserHandler) GetUsers(c echo.Context) error {
-	var err error
-	var limit uint64
-	var users *[]models.User
+	var (
+		err   error
+		limit uint64
+		users *[]models.User
+	)
 
 	l := c.Request().URL.Query()["l"]
 	if l != nil {

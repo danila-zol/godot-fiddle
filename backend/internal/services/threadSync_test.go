@@ -32,7 +32,7 @@ var (
 	demoUpdated      models.Demo = models.Demo{Title: &demoTitleUpdated}
 )
 
-func init() {
+func init() { // TODO: Fix the mishmash of init functions
 	wd, _ := os.Getwd()
 	err := godotenv.Load(wd + "/../../.env")
 	if err != nil {
@@ -100,8 +100,9 @@ func init() {
 		"tags" VARCHAR(255)[],
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
 		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
@@ -114,8 +115,9 @@ func init() {
 		"tags" VARCHAR(255)[],
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
 		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
@@ -130,8 +132,9 @@ func init() {
 		"user_id" UUID NOT NULL,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
 		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
 		"views" INTEGER NOT NULL DEFAULT 0
 		);
@@ -243,7 +246,7 @@ func TestPatchThread(t *testing.T) {
 }
 
 func teardownSyncer(rd *psqlRepository.PsqlDemoRepository, rf *psqlRepository.PsqlForumRepository) {
-	remainderDemos, err := rd.FindDemos(nil, 0)
+	remainderDemos, err := rd.FindDemos(nil, 0, "")
 	if err != nil {
 		panic(err)
 	}

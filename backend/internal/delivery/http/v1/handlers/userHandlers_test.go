@@ -48,8 +48,9 @@ var (
 	passwordResetResponse     = `User password reset!`
 	passwordIncorrectResponse = `{"code":401,"message":"Password incorrect!"}` + "\n"
 
-	// query             = `cheeseboiger`
+	// queryTags             = `cheeseboiger`
 	// queryLimit uint64 = 1
+	// queryOrder             = `newestUpdated`
 
 	roleJSON               = `{"name":"Cool role"}`
 	roleJSONExpected       = `{"id":"` + genericUUID.String() + `","name":"Cool role","version":1}` + "\n"
@@ -605,10 +606,10 @@ func TestGetUsers(t *testing.T) {
 	}
 }
 
-func TestGetUsersQueryLimit(t *testing.T) {
+func TestGetUsersQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/users?q=%v&?l=%v", query, queryLimit), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/users?q=%v&?l=%v", queryTags, queryLimit), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}

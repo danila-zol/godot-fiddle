@@ -67,6 +67,9 @@ func init() {
 		"version" INTEGER NOT NULL DEFAULT 1,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,		
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
 		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
@@ -141,7 +144,7 @@ func TestFindAssetByIDNoRows(t *testing.T) {
 
 func TestFindAssets(t *testing.T) {
 	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
-	_, err := r.FindAssets(nil, 0)
+	_, err := r.FindAssets(nil, 0, "")
 	assert.NoError(t, err)
 
 }
@@ -164,7 +167,7 @@ func TestFindAssetsByQuery(t *testing.T) {
 		resultAsset, err := r.CreateAsset(d)
 		assert.NoError(t, err)
 
-		queryAssets, err := r.FindAssets([]string{q}, 0)
+		queryAssets, err := r.FindAssets([]string{q}, 0, "")
 		if assert.NoError(t, err) {
 			queriedAsset := *queryAssets
 			assert.Equal(t, resultAsset.Name, queriedAsset[0].Name)
@@ -173,7 +176,7 @@ func TestFindAssetsByQuery(t *testing.T) {
 	}
 
 	// Try to query both and check ordering
-	assets, err := r.FindAssets([]string{"cheeseboiger"}, 0)
+	assets, err := r.FindAssets([]string{"cheeseboiger"}, 0, "newestUpdated")
 	if assert.NoError(t, err) {
 		a := *assets
 		assert.Len(t, a, 2)
@@ -189,7 +192,7 @@ func TestFindAssetsByQuery(t *testing.T) {
 		)
 	}
 	// Query with limit
-	assets, err = r.FindAssets([]string{"cheeseboiger"}, 1)
+	assets, err = r.FindAssets([]string{"cheeseboiger"}, 1, "")
 	if assert.NoError(t, err) {
 		assert.Len(t, *assets, 1)
 	}
@@ -197,26 +200,29 @@ func TestFindAssetsByQuery(t *testing.T) {
 
 func TestUpdateAsset(t *testing.T) {
 	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
-	resultAsset, err := r.UpdateAsset(assetID, assetUpdated)
+
+	oldAsset, err := r.FindAssetByID(assetID)
 	assert.NoError(t, err)
 
-	modifiedAsset := asset // Manual update
-	modifiedAsset.ID = &assetID
-	modifiedAsset.Name = &assetNameUpdated
-	modifiedAsset.CreatedAt = resultAsset.CreatedAt // Timestamps are created on DB
-	modifiedAsset.UpdatedAt = resultAsset.UpdatedAt
-	modifiedAsset.Views = resultAsset.Views
-	newVersion := *assetUpdated.Version + 1
-	modifiedAsset.Version = &newVersion
+	resultAsset, err := r.UpdateAsset(assetID, assetUpdated)
+	if assert.NoError(t, err) {
+		assert.Equal(t, oldAsset.CreatedAt, resultAsset.CreatedAt)
+		assert.Equal(t, oldAsset.Link, resultAsset.Link)
+		assert.Equal(t, oldAsset.Rating, resultAsset.Rating)
+		assert.Equal(t, oldAsset.Views, resultAsset.Views)
 
-	assert.Equal(t, modifiedAsset, *resultAsset)
+		assert.NotEqual(t, oldAsset.UpdatedAt, resultAsset.UpdatedAt)
+
+		assert.NotEqual(t, oldAsset.Name, resultAsset.Name)
+		assert.Equal(t, assetUpdated.Name, resultAsset.Name)
+
+		newVersion := *assetUpdated.Version + 1
+		assert.Equal(t, newVersion, *resultAsset.Version)
+	}
 }
 
 func TestUpdateAssetMultiple(t *testing.T) {
 	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
-
-	modifiedAsset := asset // Manual update
-	modifiedAsset.ID = &assetID
 
 	for i := 2; i < 6; i++ {
 		newName := *assetUpdated.Name + " New"
@@ -224,17 +230,24 @@ func TestUpdateAssetMultiple(t *testing.T) {
 		newVersion := i
 		assetUpdated.Version = &newVersion
 
-		resultAsset, err := r.UpdateAsset(assetID, assetUpdated)
+		oldAsset, err := r.FindAssetByID(assetID)
 		assert.NoError(t, err)
 
-		newerVersion := i + 1
-		modifiedAsset.Version = &newerVersion
-		modifiedAsset.Name = assetUpdated.Name
-		modifiedAsset.CreatedAt = resultAsset.CreatedAt // Timestamps are created on DB
-		modifiedAsset.UpdatedAt = resultAsset.UpdatedAt
-		modifiedAsset.Views = resultAsset.Views
+		resultAsset, err := r.UpdateAsset(assetID, assetUpdated)
+		if assert.NoError(t, err) {
+			assert.Equal(t, oldAsset.CreatedAt, resultAsset.CreatedAt)
+			assert.Equal(t, oldAsset.Link, resultAsset.Link)
+			assert.Equal(t, oldAsset.Rating, resultAsset.Rating)
+			assert.Equal(t, oldAsset.Views, resultAsset.Views)
 
-		assert.Equal(t, modifiedAsset, *resultAsset)
+			assert.NotEqual(t, oldAsset.UpdatedAt, resultAsset.UpdatedAt)
+
+			assert.NotEqual(t, oldAsset.Name, resultAsset.Name)
+			assert.Equal(t, assetUpdated.Name, resultAsset.Name)
+
+			newVersion := *assetUpdated.Version + 1
+			assert.Equal(t, newVersion, *resultAsset.Version)
+		}
 	}
 }
 
@@ -255,7 +268,7 @@ func TestDeleteAsset(t *testing.T) {
 }
 
 func teardownAsset(r *PsqlAssetRepository) {
-	remainderAssets, err := r.FindAssets(nil, 0)
+	remainderAssets, err := r.FindAssets(nil, 0, "")
 	if err != nil {
 		panic(err)
 	}

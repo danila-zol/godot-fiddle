@@ -36,8 +36,9 @@ var (
 
 	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
 
-	query             = `cheeseboiger`
+	queryTags         = `cheeseboiger`
 	queryLimit uint64 = 1
+	queryOrder        = `newestUpdated`
 
 	demoJSON                   = `{"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `"}`
 	demoJSONExpected           = `{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"
@@ -61,7 +62,7 @@ func (r *mockDemoRepo) FindDemoByID(id int) (*models.Demo, error) {
 	}
 	return &a, nil
 }
-func (r *mockDemoRepo) FindDemos(query []string, limit uint64) (*[]models.Demo, error) {
+func (r *mockDemoRepo) FindDemos(query []string, limit uint64, order string) (*[]models.Demo, error) {
 	var (
 		demoIDs    []int         = []int{1, 2, 3}
 		demoTitles []string      = []string{"cheeseboiger", "demo two", "demo three"}
@@ -213,7 +214,7 @@ func TestPatchDemo(t *testing.T) {
 func TestGetDemosQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/demos?q=%v", query), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/demos?q=%v", queryTags), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt}
@@ -228,7 +229,7 @@ func TestGetDemosQuery(t *testing.T) {
 func TestGetDemosQueryLimit(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/demos?q=%v&l=%v", query, queryLimit), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/demos?q=%v&l=%v", queryTags, queryLimit), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt}

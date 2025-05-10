@@ -36,7 +36,7 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 		VALUES
 		($1, $2, $3, $4, $5, $6)
 		RETURNING
-		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, views)`,
+		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, rating, views)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
 	).Scan(&demo)
 	if err != nil {
@@ -57,7 +57,7 @@ func (r *PsqlDemoRepository) FindDemoByID(id int) (*models.Demo, error) {
 		`UPDATE demo.demos SET views=views+1
 		WHERE id = $1
 		RETURNING
-		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, views)`,
+		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, rating, views)`,
 		id,
 	).Scan(&demo)
 	if err != nil {
@@ -66,7 +66,7 @@ func (r *PsqlDemoRepository) FindDemoByID(id int) (*models.Demo, error) {
 	return &demo, nil
 }
 
-func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64) (*[]models.Demo, error) {
+func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64, order string) (*[]models.Demo, error) {
 	var demos []models.Demo
 
 	conn, err := r.databaseClient.AcquireConn()
@@ -78,18 +78,28 @@ func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64) (*[]mode
 	var rows pgx.Rows
 	if len(keywords) != 0 {
 		query := `SELECT (id, title, description, link, tags, user_id,
-			thread_id, created_at, updated_at, upvotes, downvotes, views)
+			thread_id, created_at, updated_at, upvotes, downvotes, rating, views)
 		FROM 
 			((SELECT id, title, description, link, tags, user_id,
-				thread_id, created_at, updated_at, upvotes, downvotes, views
+				thread_id, created_at, updated_at, upvotes, downvotes, rating, views
 			FROM demo.demos
 			WHERE demo_ts @@ to_tsquery_multilang($1))
 			UNION
 			(SELECT id, title, description, link, tags, user_id,
-				thread_id, created_at, updated_at, upvotes, downvotes, views
+				thread_id, created_at, updated_at, upvotes, downvotes, rating, views
 			FROM demo.demos
-			WHERE tags && ($2) COLLATE case_insensitive))
-		ORDER BY updated_at DESC`
+			WHERE tags && ($2) COLLATE case_insensitive))`
+
+		switch order {
+		case "newestUpdated":
+			query = query + ` ORDER BY updated_at DESC`
+		case "highestRated":
+			query = query + ` ORDER BY rating DESC`
+		case "mostViews":
+			query = query + ` ORDER BY views DESC`
+		default:
+			query = query + ` ORDER BY updated_at DESC`
+		}
 		if limit != 0 {
 			query = query + fmt.Sprintf(` LIMIT %v`, limit)
 		}
@@ -100,8 +110,19 @@ func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64) (*[]mode
 			return nil, err
 		}
 	} else {
-		query := `SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, views) 
+		query := `SELECT (id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, rating, views) 
 		FROM demo.demos`
+
+		switch order {
+		case "newestUpdated":
+			query = query + ` ORDER BY updated_at DESC`
+		case "highestRated":
+			query = query + ` ORDER BY upvotes DESC`
+		case "mostViews":
+			query = query + ` ORDER BY views DESC`
+		default:
+			query = query + ` ORDER BY updated_at DESC`
+		}
 		if limit != 0 {
 			query = query + fmt.Sprintf(` LIMIT %v`, limit)
 		}
@@ -141,7 +162,7 @@ func (r *PsqlDemoRepository) UpdateDemo(id int, demo models.Demo) (*models.Demo,
 		upvotes=COALESCE($7, upvotes), downvotes=COALESCE($8, downvotes)
 			WHERE id = $9
 		RETURNING
-			(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, views)`,
+			(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, rating, views)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
 		demo.Upvotes, demo.Downvotes, id,
 	).Scan(&demo)

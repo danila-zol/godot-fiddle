@@ -113,8 +113,9 @@ func init() {
 		"tags" VARCHAR(255)[],
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
 		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
@@ -127,8 +128,9 @@ func init() {
 		"tags" VARCHAR(255)[],
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0,
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
 		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
@@ -303,7 +305,7 @@ func TestFindThreadByIDNoRows(t *testing.T) {
 
 func TestFindThreads(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
-	_, err := r.FindThreads(nil, 0)
+	_, err := r.FindThreads(nil, 0, "")
 	assert.NoError(t, err)
 }
 
@@ -334,7 +336,7 @@ func TestFindThreadsByQuery(t *testing.T) {
 		resultThread, err := r.CreateThread(th)
 		assert.NoError(t, err)
 
-		queryThreads, err := r.FindThreads([]string{q}, 0)
+		queryThreads, err := r.FindThreads([]string{q}, 0, "highestRated")
 		t.Log(queryThreads)
 		if assert.NoError(t, err) {
 			queriedThread := *queryThreads
@@ -343,7 +345,7 @@ func TestFindThreadsByQuery(t *testing.T) {
 	}
 
 	// Try to query both and check ordering
-	threads, err := r.FindThreads([]string{"cheeseboiger"}, 0)
+	threads, err := r.FindThreads([]string{"cheeseboiger"}, 0, "newestUpdated")
 	if assert.NoError(t, err) {
 		th := *threads
 		assert.Len(t, th, 2)
@@ -359,7 +361,7 @@ func TestFindThreadsByQuery(t *testing.T) {
 		)
 	}
 	// Query with limit
-	threads, err = r.FindThreads([]string{"cheeseboiger"}, 1)
+	threads, err = r.FindThreads([]string{"cheeseboiger"}, 1, "mostViews")
 	if assert.NoError(t, err) {
 		assert.Len(t, *threads, 1)
 	}
@@ -367,19 +369,22 @@ func TestFindThreadsByQuery(t *testing.T) {
 
 func TestUpdateThread(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
-	resultThread, err := r.UpdateThread(threadID, threadUpdated)
+
+	oldThread, err := r.FindThreadByID(threadID)
 	assert.NoError(t, err)
 
-	modifiedThread := thread
-	modifiedThread.ID = &assetID
-	modifiedThread.Title = &threadTitleUpdated
-	modifiedThread.CreatedAt = resultThread.CreatedAt // Timestamps are created on DB
-	modifiedThread.UpdatedAt = resultThread.UpdatedAt
-	modifiedThread.Upvotes = resultThread.Upvotes
-	modifiedThread.Downvotes = resultThread.Downvotes
-	modifiedThread.Views = resultThread.Views
+	resultThread, err := r.UpdateThread(threadID, threadUpdated)
+	if assert.NoError(t, err) {
+		assert.Equal(t, oldThread.CreatedAt, resultThread.CreatedAt)
+		assert.Equal(t, oldThread.Tags, resultThread.Tags)
+		assert.Equal(t, oldThread.Rating, resultThread.Rating)
+		assert.Equal(t, oldThread.Views, resultThread.Views)
 
-	assert.Equal(t, modifiedThread, *resultThread)
+		assert.NotEqual(t, oldThread.UpdatedAt, resultThread.UpdatedAt)
+
+		assert.NotEqual(t, oldThread.Title, resultThread.Title)
+		assert.Equal(t, threadUpdated.Title, resultThread.Title)
+	}
 }
 
 func TestDeleteThread(t *testing.T) {
@@ -444,7 +449,7 @@ func TestFindMessagesByQuery(t *testing.T) {
 		resultMessage, err := r.CreateMessage(m)
 		assert.NoError(t, err)
 
-		queryMessages, err := r.FindMessages([]string{q}, 0)
+		queryMessages, err := r.FindMessages([]string{q}, 0, "highestRated")
 		if assert.NoError(t, err) {
 			queriedMessage := *queryMessages
 			assert.Equal(t, resultMessage.Title, queriedMessage[0].Title)
@@ -452,7 +457,7 @@ func TestFindMessagesByQuery(t *testing.T) {
 	}
 
 	// Try to query both and check ordering
-	messages, err := r.FindMessages([]string{"cheeseboiger"}, 0)
+	messages, err := r.FindMessages([]string{"cheeseboiger"}, 0, "newestUpdated")
 	if assert.NoError(t, err) {
 		m := *messages
 		assert.Len(t, m, 2)
@@ -468,7 +473,7 @@ func TestFindMessagesByQuery(t *testing.T) {
 		)
 	}
 	// Query with limit
-	messages, err = r.FindMessages([]string{"cheeseboiger"}, 1)
+	messages, err = r.FindMessages([]string{"cheeseboiger"}, 1, "mostViews")
 	if assert.NoError(t, err) {
 		assert.Len(t, *messages, 1)
 	}
@@ -476,25 +481,28 @@ func TestFindMessagesByQuery(t *testing.T) {
 
 func TestFindMessages(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
-	_, err := r.FindMessages(nil, 0)
+	_, err := r.FindMessages(nil, 0, "")
 	assert.NoError(t, err)
 }
 
 func TestUpdateMessage(t *testing.T) {
 	r := PsqlForumRepository{databaseClient: testDBClient}
-	resultMessage, err := r.UpdateMessage(messageID, messageUpdated)
+
+	oldMessasge, err := r.FindMessageByID(messageID)
 	assert.NoError(t, err)
 
-	modifiedMessage := message
-	modifiedMessage.ID = &assetID
-	modifiedMessage.Title = &messsageTitleUpdated
-	modifiedMessage.CreatedAt = resultMessage.CreatedAt // Timestamps are created on DB
-	modifiedMessage.UpdatedAt = resultMessage.UpdatedAt
-	modifiedMessage.Upvotes = resultMessage.Upvotes
-	modifiedMessage.Downvotes = resultMessage.Downvotes
-	modifiedMessage.Views = resultMessage.Views
+	resultMessage, err := r.UpdateMessage(messageID, messageUpdated)
+	if assert.NoError(t, err) {
+		assert.Equal(t, oldMessasge.CreatedAt, resultMessage.CreatedAt)
+		assert.Equal(t, oldMessasge.Tags, resultMessage.Tags)
+		assert.Equal(t, oldMessasge.Rating, resultMessage.Rating)
+		assert.Equal(t, oldMessasge.Views, resultMessage.Views)
 
-	assert.Equal(t, modifiedMessage, *resultMessage)
+		assert.NotEqual(t, oldMessasge.UpdatedAt, resultMessage.UpdatedAt)
+
+		assert.NotEqual(t, oldMessasge.Title, resultMessage.Title)
+		assert.Equal(t, messageUpdated.Title, resultMessage.Title)
+	}
 }
 
 func TestDeleteMessage(t *testing.T) {

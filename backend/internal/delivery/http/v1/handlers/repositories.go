@@ -8,7 +8,7 @@ import (
 
 type AssetRepository interface {
 	CreateAsset(asset models.Asset) (*models.Asset, error)
-	FindAssets(query []string, limit uint64) (*[]models.Asset, error)
+	FindAssets(query []string, limit uint64, order string) (*[]models.Asset, error)
 	FindAssetByID(id int) (*models.Asset, error)
 	UpdateAsset(id int, asset models.Asset) (*models.Asset, error)
 	DeleteAsset(id int) error
@@ -18,7 +18,7 @@ type AssetRepository interface {
 
 type DemoRepository interface {
 	CreateDemo(demo models.Demo) (*models.Demo, error)
-	FindDemos(query []string, limit uint64) (*[]models.Demo, error)
+	FindDemos(query []string, limit uint64, order string) (*[]models.Demo, error)
 	FindDemoByID(id int) (*models.Demo, error)
 	UpdateDemo(id int, demo models.Demo) (*models.Demo, error)
 	DeleteDemo(id int) error
@@ -33,13 +33,13 @@ type ForumRepository interface {
 	DeleteTopic(id int) error
 
 	CreateThread(thread models.Thread) (*models.Thread, error)
-	FindThreads(query []string, limit uint64) (*[]models.Thread, error)
+	FindThreads(query []string, limit uint64, order string) (*[]models.Thread, error)
 	FindThreadByID(id int) (*models.Thread, error)
 	UpdateThread(id int, thread models.Thread) (*models.Thread, error)
 	DeleteThread(id int) error
 
 	CreateMessage(message models.Message) (*models.Message, error)
-	FindMessages(query []string, limit uint64) (*[]models.Message, error)
+	FindMessages(query []string, limit uint64, order string) (*[]models.Message, error)
 	FindMessagesByThreadID(threadID int) (*[]models.Message, error)
 	FindMessageByID(id int) (*models.Message, error)
 	UpdateMessage(id int, message models.Message) (*models.Message, error)

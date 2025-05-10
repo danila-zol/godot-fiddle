@@ -137,15 +137,19 @@ func (h *DemoHandler) GetDemoById(c echo.Context) error {
 // @Produce	application/json
 // @Param		q	query		[]string	false	"Keyword Query"
 // @Param		l	query		int	false	"Record number limit"
+// @Param		o	query		string	false	"Record ordering. Default newest updated" Enums(newestUpdated, highestRated, mostViews)
 // @Success	200	{object}	models.Demo
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
 // @Failure	500	{object}	HTTPError
 // @Router		/v1/demos [get]
 func (h *DemoHandler) GetDemos(c echo.Context) error {
-	var err error
-	var limit uint64
-	var demos *[]models.Demo
+	var (
+		err   error
+		limit uint64
+		order string
+		demos *[]models.Demo
+	)
 
 	l := c.Request().URL.Query()["l"]
 	if l != nil {
@@ -162,7 +166,23 @@ func (h *DemoHandler) GetDemos(c echo.Context) error {
 	}
 	tags := c.Request().URL.Query()["q"]
 
-	demos, err = h.repository.FindDemos(tags, limit)
+	o := c.Request().URL.Query()["o"]
+	if o != nil {
+		err = h.validator.Var(o[0], `oneof=newestUpdated highestRated mostViews`)
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetAssets repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		order = o[0]
+	} else {
+		order = "newestUpdated"
+	}
+
+	demos, err = h.repository.FindDemos(tags, limit, order)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
