@@ -1,0 +1,3 @@
+<template>
+    <NewGamesPanel></NewGamesPanel>
+</template>
