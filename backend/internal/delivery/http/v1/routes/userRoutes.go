@@ -31,9 +31,7 @@ func (r *UserRoutes) InitRoutes(e *echo.Echo) {
 	protectedRoleGroup := roleGroup.Group("")
 
 	protectedRoleGroup.POST("", r.handler.PostRole)
-	roleGroup.GET("/:id", r.handler.GetRoleById)
-	protectedRoleGroup.PATCH("/:id", r.handler.PatchRole)
-	protectedRoleGroup.DELETE("/:id", r.handler.DeleteRole)
+	protectedRoleGroup.DELETE("", r.handler.DeleteRole)
 
 	sessionGroup := e.Group("/game-hangar/v1")
 

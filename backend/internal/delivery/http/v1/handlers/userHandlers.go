@@ -243,28 +243,26 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 // @Tags		Roles
 // @Accept		application/json
 // @Produce	application/json
-// @Param		Role	body		models.Role	true	"Create Role"
-// @Success	201	{object}	models.Role
+// @Param		Role	header		string	true	"Create Role"
+// @Success	201	{string}	string
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
 // @Failure	422	{object}	HTTPError
 // @Failure	500	{object}	HTTPError
 // @Router		/v1/roles [post]
 func (h *UserHandler) PostRole(c echo.Context) error {
-	var role models.Role
 
-	err := c.Bind(&role)
-	if err != nil {
+	roleSlice, ok := c.Request().Header["Role"]
+	if !ok {
 		e := HTTPError{
 			Code:    http.StatusBadRequest,
-			Message: "Error in PostRole handler: " + err.Error(),
+			Message: "No role provided!",
 		}
 		h.logger.Print(&e)
 		return c.JSON(http.StatusBadRequest, &e)
 	}
-	role.Method = "POST"
 
-	err = h.validator.Struct(&role)
+	err := h.validator.Var(&roleSlice[0], "max=255")
 	if err != nil {
 		e := HTTPError{
 			Code:    http.StatusUnprocessableEntity,
@@ -274,7 +272,7 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	newRole, err := h.repository.CreateRole(role)
+	err = h.repository.CreateRole(roleSlice[0])
 	if err != nil {
 		e := HTTPError{
 			Code:    http.StatusInternalServerError,
@@ -284,126 +282,7 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	return c.JSON(http.StatusCreated, &newRole)
-}
-
-// @Summary	Fetches a role by its ID.
-// @Tags		Roles
-// @Accept		text/plain
-// @Produce	application/json
-// @Param		id	path		string	true	"Get Role of ID"
-// @Success	200	{object}	models.Role
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/roles/{id} [get]
-func (h *UserHandler) GetRoleById(c echo.Context) error {
-	id := c.Param("id")
-	err := h.validator.Var(id, "required,uuid4")
-	if err != nil {
-		e := HTTPError{
-			Code:    http.StatusUnprocessableEntity,
-			Message: "Error in GetRoleByID repository: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusUnprocessableEntity, &e)
-	}
-
-	roleID, _ := uuid.Parse(id)
-	role, err := h.repository.FindRoleByID(roleID)
-	if err != nil {
-		if err == h.repository.NotFoundErr() {
-			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusNotFound, &e)
-		}
-		e := HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: "Error in FindRoleByID repository: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusInternalServerError, &e)
-	}
-
-	return c.JSON(http.StatusOK, &role)
-}
-
-// @Summary	Updates a role.
-// @Tags		Roles
-// @Accept		application/json
-// @Produce	application/json
-// @Param		id		path		string		true	"Update Role of ID"
-// @Param		Role	body		models.Role	true	"Update Role"
-// @Success	200		{object}	models.Role
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	409	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/roles/{id} [patch]
-func (h *UserHandler) PatchRole(c echo.Context) error {
-	var role models.Role
-
-	id := c.Param("id")
-	err := h.validator.Var(id, "required,uuid4")
-	if err != nil {
-		e := HTTPError{
-			Code:    http.StatusUnprocessableEntity,
-			Message: "Error in PatchRole handler: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusUnprocessableEntity, &e)
-	}
-
-	err = c.Bind(&role)
-	if err != nil {
-		e := HTTPError{
-			Code:    http.StatusBadRequest,
-			Message: "Error in PatchRole handler: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusBadRequest, &e)
-	}
-	role.Method = "PATCH"
-
-	err = h.validator.Struct(&role)
-	if err != nil {
-		e := HTTPError{
-			Code:    http.StatusUnprocessableEntity,
-			Message: "Error in PatchRole handler: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusUnprocessableEntity, &e)
-	}
-
-	roleID, _ := uuid.Parse(id)
-	updRole, err := h.repository.UpdateRole(roleID, role)
-	if err != nil {
-		if err == h.repository.NotFoundErr() {
-			e := HTTPError{
-				Code:    http.StatusNotFound,
-				Message: "Not Found!",
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusNotFound, &e)
-		} else if err == h.repository.ConflictErr() {
-			e := HTTPError{
-				Code:    http.StatusConflict,
-				Message: "Error: unable to update the record due to an edit conflict, please try again!",
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusConflict, &e)
-		}
-		e := HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: "Error in UpdateRole repository: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusInternalServerError, &e)
-	}
-
-	return c.JSON(http.StatusOK, &updRole)
+	return c.String(http.StatusCreated, "Role successfully created!")
 }
 
 // @Summary	Deletes the specified role.
@@ -412,26 +291,34 @@ func (h *UserHandler) PatchRole(c echo.Context) error {
 // @Produce	text/plain
 // @Security ApiSessionCookie
 // @param sessionID header string true "Session ID"
-// @Param		id	path		string	true	"Delete Role of ID"
+// @Param		Role	header		string	true	"Delete Role"
 // @Success	200	{string}	string
 // @Failure	404	{object}	HTTPError
 // @Failure	422	{object}	HTTPError
 // @Failure	500	{object}	HTTPError
-// @Router		/v1/roles/{id} [delete]
+// @Router		/v1/roles [delete]
 func (h *UserHandler) DeleteRole(c echo.Context) error {
-	id := c.Param("id")
-	err := h.validator.Var(id, "required,uuid4")
+	roleSlice, ok := c.Request().Header["Role"]
+	if !ok {
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "No role provided!",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
+	}
+
+	err := h.validator.Var(&roleSlice[0], "max=255")
 	if err != nil {
 		e := HTTPError{
 			Code:    http.StatusUnprocessableEntity,
-			Message: "Error in DeleteRole handler: " + err.Error(),
+			Message: "Error in PostRole handler: " + err.Error(),
 		}
 		h.logger.Print(&e)
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	roleID, _ := uuid.Parse(id)
-	err = h.repository.DeleteRole(roleID)
+	err = h.repository.DeleteRole(roleSlice[0])
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{

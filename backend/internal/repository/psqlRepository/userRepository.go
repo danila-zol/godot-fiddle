@@ -13,13 +13,15 @@ import (
 
 type PsqlUserRepository struct {
 	databaseClient psqlDatabaseClient
+	enforcer       Enforcer
 	conflictErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlUserRepository(dbClient psqlDatabaseClient) *PsqlUserRepository {
+func NewPsqlUserRepository(dbClient psqlDatabaseClient, e Enforcer) *PsqlUserRepository {
 	return &PsqlUserRepository{
 		databaseClient: dbClient,
+		enforcer:       e,
 		conflictErr:    errors.New("Record conflict!"),
 	}
 }
@@ -37,12 +39,12 @@ func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) 
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO "user".users
-			(username, display_name, email, password, role_id) 
+			(username, display_name, email, password, role) 
 		VALUES
 			($1, $2, $3, $4, $5)
 		RETURNING
-			(id, username, display_name, email, password, verified, role_id, created_at, karma)`,
-		user.Username, user.DisplayName, user.Email, user.Password, user.RoleID,
+			(id, username, display_name, email, password, verified, role, created_at, karma)`,
+		user.Username, user.DisplayName, user.Email, user.Password, user.Role,
 	).Scan(&user) // Mind the field order!
 	if err != nil {
 		return nil, err
@@ -59,7 +61,7 @@ func (r *PsqlUserRepository) FindUserByID(id uuid.UUID) (*models.User, error) {
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma)
+		`SELECT (id, username, display_name, email, password, verified, role, created_at, karma)
 		FROM "user".users WHERE id = $1 LIMIT 1`,
 		id,
 	).Scan(&user)
@@ -78,7 +80,7 @@ func (r *PsqlUserRepository) FindUserByEmail(email string) (*models.User, error)
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma) 
+		`SELECT (id, username, display_name, email, password, verified, role, created_at, karma) 
 		FROM "user".users WHERE email = $1 LIMIT 1`,
 		email,
 	).Scan(&user)
@@ -97,7 +99,7 @@ func (r *PsqlUserRepository) FindUserByUsername(username string) (*models.User, 
 	defer conn.Release()
 
 	err = conn.QueryRow(context.Background(),
-		`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma)
+		`SELECT (id, username, display_name, email, password, verified, role, created_at, karma)
 		FROM "user".users WHERE username = $1 LIMIT 1`,
 		username,
 	).Scan(&user)
@@ -119,13 +121,13 @@ func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]mode
 	var rows pgx.Rows
 	if len(keywords) != 0 {
 		query :=
-			`SELECT (id, username, display_name, email, password, verified, role_id, created_at, karma) 
+			`SELECT (id, username, display_name, email, password, verified, role, created_at, karma) 
 				FROM
-					((SELECT id, username, display_name, email, password, verified, role_id, created_at, karma
+					((SELECT id, username, display_name, email, password, verified, role, created_at, karma
 					FROM "user".users
 					WHERE asset_ts @@ to_tsquery_multilang($1))
 				UNION
-					(SELECT id, username, display_name, email, password, verified, role_id, created_at, karma 
+					(SELECT id, username, display_name, email, password, verified, role, created_at, karma 
 					FROM "user".users
 					WHERE tags && ($2) COLLATE case_insensitive))
 			ORDER BY karma DESC`
@@ -140,7 +142,7 @@ func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]mode
 		}
 	} else {
 		query := `SELECT 
-			(id, username, display_name, email, password, verified, role_id, created_at, karma) 
+			(id, username, display_name, email, password, verified, role, created_at, karma) 
 			FROM "user".users
 			ORDER BY karma DESC`
 		if limit != 0 {
@@ -181,13 +183,13 @@ func (r *PsqlUserRepository) UpdateUser(id uuid.UUID, user models.User) (*models
 	err = conn.QueryRow(context.Background(),
 		`UPDATE "user".users SET 
 			username=COALESCE($1, username), display_name=COALESCE($2, display_name), email=COALESCE($3, email), 
-			password=COALESCE($4, password), verified=COALESCE($5, verified), role_id=COALESCE($6, role_id), 
+			password=COALESCE($4, password), verified=COALESCE($5, verified), role=COALESCE($6, role), 
 			karma=COALESCE($7, karma)
 		WHERE id = $8
 		RETURNING
-			(id, username, display_name, email, password, verified, role_id, created_at, karma)`,
+			(id, username, display_name, email, password, verified, role, created_at, karma)`,
 		user.Username, user.DisplayName, user.Email, user.Password,
-		user.Verified, user.RoleID, user.Karma, id,
+		user.Verified, user.Role, user.Karma, id,
 	).Scan(&user) // Mind the field order!
 	if err != nil {
 		return nil, err
@@ -212,91 +214,14 @@ func (r *PsqlUserRepository) DeleteUser(id uuid.UUID) error {
 	return nil
 }
 
-func (r *PsqlUserRepository) CreateRole(role models.Role) (*models.Role, error) {
-	conn, err := r.databaseClient.AcquireConn()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-
-	err = conn.QueryRow(context.Background(),
-		`INSERT INTO "user".roles
-		(name) 
-		VALUES
-		($1)
-		RETURNING
-		(id, name, version)`,
-		role.Name,
-	).Scan(&role)
-	if err != nil {
-		return nil, err
-	}
-	return &role, nil
+func (r *PsqlUserRepository) CreateRole(role string) error {
+	_, err := r.enforcer.AddPermissions(role)
+	return err
 }
 
-func (r *PsqlUserRepository) FindRoleByID(id uuid.UUID) (*models.Role, error) {
-	var role models.Role
-	conn, err := r.databaseClient.AcquireConn()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-
-	err = conn.QueryRow(context.Background(),
-		`SELECT (id, name, version) FROM "user".roles WHERE id = $1 LIMIT 1`,
-		id,
-	).Scan(&role)
-	if err != nil {
-		return nil, err
-	}
-	return &role, nil
-}
-
-func (r *PsqlUserRepository) UpdateRole(id uuid.UUID, role models.Role) (*models.Role, error) {
-	conn, err := r.databaseClient.AcquireConn()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-
-	err = conn.QueryRow(
-		context.Background(),
-		`SELECT (id) FROM "user".roles WHERE id=$1 AND version=$2`,
-		id, *role.Version,
-	).Scan(&id)
-	if err != nil {
-		return nil, r.ConflictErr()
-	}
-
-	err = conn.QueryRow(context.Background(),
-		`UPDATE "user".roles SET 
-		name=COALESCE($1, name)
-		WHERE id = $2
-		RETURNING
-		(id, name, version)`,
-		role.Name, id,
-	).Scan(&role)
-	if err != nil {
-		return nil, err
-	}
-	return &role, nil
-}
-
-func (r *PsqlUserRepository) DeleteRole(id uuid.UUID) error {
-	conn, err := r.databaseClient.AcquireConn()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".roles WHERE id=$1`, id)
-	if ct.RowsAffected() == 0 {
-		if err != nil {
-			return err
-		}
-		return r.databaseClient.ErrNoRows()
-	}
-	return nil
+func (r *PsqlUserRepository) DeleteRole(role string) error {
+	_, err := r.enforcer.RemovePermissions(role)
+	return err
 }
 
 func (r *PsqlUserRepository) CreateSession(session models.Session) (*models.Session, error) {

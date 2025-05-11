@@ -2,8 +2,10 @@ package services
 
 import (
 	"gamehangar/internal/domain/models"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -14,13 +16,19 @@ type UserAuthorizerRepository interface {
 	NotFoundErr() error
 }
 
-type UserAuthorizer struct {
-	repository UserAuthorizerRepository
+type Enforcer interface {
+	Enforce(...any) (bool, error)
 }
 
-func NewUserAuthorizer(r UserAuthorizerRepository) *UserAuthorizer {
+type UserAuthorizer struct {
+	repository UserAuthorizerRepository
+	enforcer   Enforcer
+}
+
+func NewUserAuthorizer(r UserAuthorizerRepository, e Enforcer) *UserAuthorizer {
 	return &UserAuthorizer{
 		repository: r,
+		enforcer:   e,
 	}
 }
 
@@ -59,4 +67,25 @@ func (a *UserAuthorizer) CheckPassword(password *string, userID uuid.UUID) error
 		return err
 	}
 	return bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(*password))
+}
+
+func (a *UserAuthorizer) CheckPermissions(c echo.Context, user string) (bool, error) {
+	var sub, obj, act string
+
+	cookie, err := c.Cookie("sessionID")
+	if err != nil {
+		sessionSlice, ok := c.Request().Header["Sessionid"]
+		if !ok {
+			return false, err
+		}
+		sub = sessionSlice[0]
+	} else {
+		sub = cookie.Value
+	}
+
+	obj = strings.TrimPrefix(c.Request().URL.Path, "/game-hangar/v1/")
+
+	act = c.Request().Method
+
+	return a.enforcer.Enforce(sub, obj, act)
 }
