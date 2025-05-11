@@ -243,6 +243,10 @@ func (r *PsqlUserRepository) CreateSession(session models.Session) (*models.Sess
 	if err != nil {
 		return nil, err
 	}
+	_, err = r.enforcer.AddPermissions(session.UserID.String(), "logout/"+session.ID.String(), "DELETE")
+	if err != nil {
+		return nil, err
+	}
 	return &session, nil
 }
 
@@ -271,6 +275,27 @@ func (r *PsqlUserRepository) DeleteAllUserSessions(userID uuid.UUID) error {
 	}
 	defer conn.Release()
 
+	rows, err := conn.Query(context.Background(),
+		`select (id) from "user".sessions where user_id = $1`,
+		userID,
+	)
+	defer rows.Close()
+	for rows.Next() {
+		var session models.Session
+		err = rows.Scan(&session)
+		if err != nil {
+			return err
+		}
+		_, err = r.enforcer.RemovePermissions(userID.String(), "logout/"+session.ID.String(), "DELETE")
+		if err != nil {
+			return err
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		return err
+	}
+
 	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".sessions WHERE user_id=$1`, userID)
 	if ct.RowsAffected() == 0 {
 		if err != nil {
@@ -282,11 +307,18 @@ func (r *PsqlUserRepository) DeleteAllUserSessions(userID uuid.UUID) error {
 }
 
 func (r *PsqlUserRepository) DeleteSession(id uuid.UUID) error {
+	var session models.Session
+
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return err
 	}
 	defer conn.Release()
+
+	err = conn.QueryRow(context.Background(),
+		`SELECT (id, user_id) FROM "user".sessions WHERE id = $1 LIMIT 1`,
+		id,
+	).Scan(&session)
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".sessions WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
@@ -294,6 +326,10 @@ func (r *PsqlUserRepository) DeleteSession(id uuid.UUID) error {
 			return err
 		}
 		return r.databaseClient.ErrNoRows()
+	}
+	_, err = r.enforcer.RemovePermissions(session.UserID.String(), "logout/"+session.ID.String(), "DELETE")
+	if err != nil {
+		return err
 	}
 	return nil
 }

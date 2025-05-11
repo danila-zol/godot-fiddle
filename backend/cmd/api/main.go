@@ -101,7 +101,7 @@ func main() {
 	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient, ce)
 	userAuthorizer := services.NewUserAuthorizer(userRepo, ce)
 	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, userAuthorizer)
-	routes.NewUserRoutes(userHandler).InitRoutes(app.echo)
+	routes.NewUserRoutes(userHandler, userAuthorizer).InitRoutes(app.echo)
 
 	assetRepo := psqlRepository.NewPsqlAssetRepository(databaseClient)
 	assetHandler := handlers.NewAssetHandler(e, assetRepo, app.validator)

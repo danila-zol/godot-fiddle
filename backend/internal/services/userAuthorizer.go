@@ -10,6 +10,7 @@ import (
 )
 
 type UserAuthorizerRepository interface {
+	FindSessionByID(id uuid.UUID) (*models.Session, error)
 	FindUserByID(id uuid.UUID) (*models.User, error)
 	FindUserByEmail(email string) (user *models.User, err error)
 	FindUserByUsername(username string) (user *models.User, err error)
@@ -70,7 +71,10 @@ func (a *UserAuthorizer) CheckPassword(password *string, userID uuid.UUID) error
 }
 
 func (a *UserAuthorizer) CheckPermissions(c echo.Context, user string) (bool, error) {
-	var sub, obj, act string
+	var (
+		obj, act  string
+		sessionID uuid.UUID
+	)
 
 	cookie, err := c.Cookie("sessionID")
 	if err != nil {
@@ -78,14 +82,26 @@ func (a *UserAuthorizer) CheckPermissions(c echo.Context, user string) (bool, er
 		if !ok {
 			return false, err
 		}
-		sub = sessionSlice[0]
+		sessionID, err = uuid.Parse(sessionSlice[0])
 	} else {
-		sub = cookie.Value
+		sessionID, err = uuid.Parse(cookie.Value)
+	}
+	if err != nil {
+		return false, err
+	}
+
+	session, err := a.repository.FindSessionByID(sessionID)
+	sub, err := a.repository.FindUserByID(*session.UserID)
+	if err != nil {
+		return false, err
 	}
 
 	obj = strings.TrimPrefix(c.Request().URL.Path, "/game-hangar/v1/")
 
 	act = c.Request().Method
 
-	return a.enforcer.Enforce(sub, obj, act)
+	eft1, err := a.enforcer.Enforce(sub.ID.String(), obj, act) // Check user permissions over the obj
+	eft2, err := a.enforcer.Enforce(*sub.Role, obj, act)       // Check user role permissions over the obj
+
+	return (eft1 || eft2), err
 }
