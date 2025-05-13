@@ -22,6 +22,8 @@ func (c CasbinConfig) NewCasbinClient(connstring, modelPath string) (*CasbinClie
 	ce.AddPolicies([][]string{
 		{"admin"},
 		{"freetier", "demos", "POST"},
+		{"freetier", "threads", "POST"},
+		{"freetier", "messages", "POST"},
 		{"paidtier", "demos", "POSTExtended"},
 		{"paidtier", "freetier"},
 	})
