@@ -18,7 +18,7 @@ type UserAuthorizerRepository interface {
 }
 
 type Enforcer interface {
-	Enforce(...any) (bool, error)
+	Enforce(sub, obj, act string) (bool, error)
 }
 
 type UserAuthorizer struct {

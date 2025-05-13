@@ -38,6 +38,6 @@ func (c *CasbinClient) RemovePermissions(params ...any) (bool, error) {
 	return c.enforcer.RemovePolicy(params...)
 }
 
-func (c *CasbinClient) Enforce(params ...any) (bool, error) {
-	return c.enforcer.Enforce(params...)
+func (c *CasbinClient) Enforce(sub, obj, act string) (bool, error) {
+	return c.enforcer.Enforce(sub, obj, act)
 }
