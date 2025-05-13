@@ -668,47 +668,13 @@ func (h *UserHandler) Login(c echo.Context) error {
 // @Failure	500	{object}	HTTPError
 // @Router		/v1/logout/{id} [delete]
 func (h *UserHandler) Logout(c echo.Context) error {
-	var s string
-
-	cookie, err := c.Cookie("sessionID")
-	if err != nil {
-		sessionSlice, ok := c.Request().Header["Sessionid"]
-		if !ok {
-			e := HTTPError{
-				Code:    http.StatusUnauthorized,
-				Message: "No session provided!",
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusUnauthorized, &e)
-		}
-		s = sessionSlice[0]
-	} else {
-		s = cookie.Value
-	}
-
-	sessionID, _ := uuid.Parse(s)
-	currentSession, err := h.repository.FindSessionByID(sessionID)
-	if err != nil {
-		if err == h.repository.NotFoundErr() {
-			e := HTTPError{Code: http.StatusUnauthorized, Message: "Not Found!"}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusUnauthorized, &e)
-		}
-		e := HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: "Error in FindSessionByID repository: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusInternalServerError, &e)
-	}
-
 	reqSessionID, _ := uuid.Parse(c.Param("id"))
 	requestedSession, err := h.repository.FindSessionByID(reqSessionID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
-			e := HTTPError{Code: http.StatusUnauthorized, Message: "Not Found!"}
+			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
 			h.logger.Print(&e)
-			return c.JSON(http.StatusUnauthorized, &e)
+			return c.JSON(http.StatusNotFound, &e)
 		}
 		e := HTTPError{
 			Code:    http.StatusInternalServerError,
@@ -716,14 +682,6 @@ func (h *UserHandler) Logout(c echo.Context) error {
 		}
 		h.logger.Print(&e)
 		return c.JSON(http.StatusInternalServerError, &e)
-	}
-	if *requestedSession.UserID != *currentSession.UserID { // TODO: Skip for admin privileges
-		e := HTTPError{
-			Code:    http.StatusForbidden,
-			Message: "Cannot log out other user!",
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusForbidden, &e)
 	}
 
 	err = h.repository.DeleteSession(*requestedSession.ID)
@@ -742,17 +700,6 @@ func (h *UserHandler) Logout(c echo.Context) error {
 		}
 		h.logger.Print(&e)
 		return c.JSON(http.StatusInternalServerError, &e)
-	}
-
-	// Invalidate cookie if the client invalidates the session they are logged in as
-	if *requestedSession.ID == *currentSession.ID {
-		c.SetCookie(&http.Cookie{
-			Name:     "sessionID",
-			Value:    "",
-			Expires:  time.Now().Add(-1),
-			HttpOnly: true,
-			SameSite: 3,
-		})
 	}
 
 	return c.String(http.StatusOK, "Session successfully deleted!")
