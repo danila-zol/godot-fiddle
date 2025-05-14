@@ -12,6 +12,13 @@ import (
 var (
 	testCasbinClient *CasbinClient
 	role             []string = []string{"Sharif", "Jet Fighters", "Call in"}
+
+	object       string     = "Cadillac Deville"
+	action       string     = "Fill with gas"
+	roleExtented [][]string = [][]string{
+		{"Sheikh", object, "Cruise"},
+		{"Sheikh", object, action},
+	}
 )
 
 func init() {
@@ -61,4 +68,21 @@ func TestEnforceFail(t *testing.T) {
 	pass, err := testCasbinClient.Enforce(role[0], role[1], role[2])
 	assert.NoError(t, err)
 	assert.False(t, pass)
+}
+
+func TestRemovePermissionsForObject(t *testing.T) {
+	_, err := testCasbinClient.AddPermissions(roleExtented[0])
+	assert.NoError(t, err)
+	_, err = testCasbinClient.AddPermissions(roleExtented[1])
+	assert.NoError(t, err)
+
+	_, err = testCasbinClient.RemovePermissionsForObject(object, action)
+	assert.NoError(t, err)
+
+	actions, err := testCasbinClient.enforcer.GetAllActions()
+	if assert.NoError(t, err) {
+		assert.False(t, slices.Contains(actions, action))
+		assert.True(t, slices.Contains(actions, "Cruise"))
+	}
+	_, err = testCasbinClient.RemovePermissionsForObject(object, roleExtented[0][2])
 }

@@ -290,7 +290,7 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 // @Accept		text/plain
 // @Produce	text/plain
 // @Security ApiSessionCookie
-// @param sessionID header string true "Session ID"
+// @param sessionID header string false "Session ID"
 // @Param		Role	header		string	true	"Delete Role"
 // @Success	200	{string}	string
 // @Failure	404	{object}	HTTPError

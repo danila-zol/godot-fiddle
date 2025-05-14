@@ -2,7 +2,6 @@ package psqlRepository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"gamehangar/internal/domain/models"
 	"strings"
@@ -14,7 +13,6 @@ import (
 type PsqlUserRepository struct {
 	databaseClient psqlDatabaseClient
 	enforcer       Enforcer
-	conflictErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
@@ -22,13 +20,9 @@ func NewPsqlUserRepository(dbClient psqlDatabaseClient, e Enforcer) *PsqlUserRep
 	return &PsqlUserRepository{
 		databaseClient: dbClient,
 		enforcer:       e,
-		conflictErr:    errors.New("Record conflict!"),
 	}
 }
 func (r *PsqlUserRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
-
-// Returns "Record conflict!" to specify conflicting record versions on update
-func (r *PsqlUserRepository) ConflictErr() error { return r.conflictErr }
 
 func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
 	conn, err := r.databaseClient.AcquireConn()
@@ -46,6 +40,14 @@ func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) 
 			(id, username, display_name, email, password, verified, role, created_at, karma)`,
 		user.Username, user.DisplayName, user.Email, user.Password, user.Role,
 	).Scan(&user) // Mind the field order!
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.enforcer.AddPermissions(user.ID.String(), "users/"+user.ID.String(), "PATCH")
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.enforcer.AddPermissions(user.ID.String(), "users/"+user.ID.String(), "DELETE")
 	if err != nil {
 		return nil, err
 	}
@@ -210,6 +212,14 @@ func (r *PsqlUserRepository) DeleteUser(id uuid.UUID) error {
 			return err
 		}
 		return r.databaseClient.ErrNoRows()
+	}
+	_, err = r.enforcer.RemovePermissions(id.String(), "users/"+id.String(), "PATCH")
+	if err != nil {
+		return err
+	}
+	_, err = r.enforcer.RemovePermissions(id.String(), "users/"+id.String(), "DELETE")
+	if err != nil {
+		return err
 	}
 	return nil
 }

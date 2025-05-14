@@ -10,4 +10,5 @@ type psqlDatabaseClient interface {
 type Enforcer interface {
 	AddPermissions(...any) (bool, error)
 	RemovePermissions(...any) (bool, error)
+	RemovePermissionsForObject(obj, act string) (bool, error)
 }

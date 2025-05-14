@@ -3,16 +3,19 @@ package routes
 import (
 	"gamehangar/internal/delivery/http/v1/handlers"
 
+	casbin_mw "github.com/labstack/echo-contrib/casbin"
 	"github.com/labstack/echo/v4"
 )
 
 type ForumRoutes struct {
-	handler *handlers.ForumHandler
+	handler    *handlers.ForumHandler
+	authorizer Authorizer
 }
 
-func NewForumRoutes(h *handlers.ForumHandler) *ForumRoutes {
+func NewForumRoutes(h *handlers.ForumHandler, a Authorizer) *ForumRoutes {
 	return &ForumRoutes{
-		handler: h,
+		handler:    h,
+		authorizer: a,
 	}
 }
 
@@ -20,6 +23,9 @@ func (r *ForumRoutes) InitRoutes(e *echo.Echo) {
 	topicGroup := e.Group("/game-hangar/v1/topics")
 
 	protectedTopicGroup := topicGroup.Group("")
+	protectedTopicGroup.Use(casbin_mw.MiddlewareWithConfig(casbin_mw.Config{
+		EnforceHandler: r.authorizer.CheckPermissions,
+	}))
 
 	protectedTopicGroup.POST("", r.handler.PostTopic)
 	topicGroup.GET("/:id", r.handler.GetTopicByID)
@@ -30,6 +36,9 @@ func (r *ForumRoutes) InitRoutes(e *echo.Echo) {
 	threadGroup := e.Group("/game-hangar/v1/threads")
 
 	protectedThreadGroup := threadGroup.Group("")
+	protectedThreadGroup.Use(casbin_mw.MiddlewareWithConfig(casbin_mw.Config{
+		EnforceHandler: r.authorizer.CheckPermissions,
+	}))
 
 	protectedThreadGroup.POST("", r.handler.PostThread)
 	threadGroup.GET("/:id", r.handler.GetThreadByID)
@@ -40,6 +49,9 @@ func (r *ForumRoutes) InitRoutes(e *echo.Echo) {
 	messageGroup := e.Group("/game-hangar/v1/messages")
 
 	protectedMessageGroup := messageGroup.Group("")
+	protectedMessageGroup.Use(casbin_mw.MiddlewareWithConfig(casbin_mw.Config{
+		EnforceHandler: r.authorizer.CheckPermissions,
+	}))
 
 	protectedMessageGroup.POST("", r.handler.PostMessage)
 	messageGroup.GET("/thread/:threadID", r.handler.GetMessagesByThreadID)

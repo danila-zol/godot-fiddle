@@ -19,7 +19,7 @@ func (c CasbinConfig) NewCasbinClient(connstring, modelPath string) (*CasbinClie
 		return nil, err
 	}
 
-	ce.AddPolicies([][]string{
+	_, err = ce.AddPolicies([][]string{
 		{"admin"},
 		{"freetier", "demos", "POST"},
 		{"freetier", "threads", "POST"},
@@ -27,6 +27,9 @@ func (c CasbinConfig) NewCasbinClient(connstring, modelPath string) (*CasbinClie
 		{"paidtier", "demos", "POSTExtended"},
 		{"paidtier", "freetier"},
 	})
+	if err != nil {
+		return nil, err
+	}
 	ce.LoadPolicy()
 
 	return &CasbinClient{enforcer: ce}, nil
@@ -38,6 +41,10 @@ func (c *CasbinClient) AddPermissions(params ...any) (bool, error) {
 
 func (c *CasbinClient) RemovePermissions(params ...any) (bool, error) {
 	return c.enforcer.RemovePolicy(params...)
+}
+
+func (c *CasbinClient) RemovePermissionsForObject(obj, act string) (bool, error) {
+	return c.enforcer.RemoveFilteredPolicy(0, "", obj, act)
 }
 
 func (c *CasbinClient) Enforce(sub, obj, act string) (bool, error) {

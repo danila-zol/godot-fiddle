@@ -6,6 +6,7 @@ import (
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -20,7 +21,7 @@ type mockUserAuthorizer struct {
 }
 
 type mockUserRepo struct {
-	roleData    map[string]models.Role
+	roleData    []string
 	sessionData map[string]models.Session
 	userData    map[string]models.User
 	notFoundErr error
@@ -30,7 +31,7 @@ type mockUserRepo struct {
 var (
 	// v = validator.New(validator.WithRequiredStructEnabled())
 	mu = mockUserRepo{
-		roleData:    make(map[string]models.Role, 1),
+		roleData:    make([]string, 1),
 		sessionData: make(map[string]models.Session, 1),
 		userData:    make(map[string]models.User, 1),
 		notFoundErr: errors.New("Not Found"),
@@ -51,19 +52,17 @@ var (
 	// queryTags             = `cheeseboiger`
 	// queryLimit uint64 = 1
 
-	roleJSON               = `{"name":"Cool role"}`
-	roleJSONExpected       = `{"id":"` + genericUUID.String() + `","name":"Cool role","version":1}` + "\n"
-	roleJSONUpdate         = `{"name":"Updated cool role","version":1}`
-	roleJSONUpdateInvalid  = `{"name":"Updated cool role"}`
-	roleJSONUpdateExpected = `{"id":"` + genericUUID.String() + `","name":"Updated cool role","version":2}` + "\n"
+	role               = `Sharif`
+	roleCreateResponse = `Role successfully created!`
+	roleDeleteResponse = `Role successfully deleted!`
 
-	userJSON                  = `{"username":"Cool user","email":"test@example.com","roleID":"` + genericUUID.String() + `"}`
-	userJSONExpected          = `{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}` + "\n"
-	userJSONExpectedMany      = `[{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}]` + "\n"
+	userJSON                  = `{"username":"Cool user","email":"test@example.com","role":"` + role + `"}`
+	userJSONExpected          = `{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"role":"` + role + `"}` + "\n"
+	userJSONExpectedMany      = `[{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"role":"` + role + `"}]` + "\n"
 	userJSONExpectedManyLimit = `[{"username":"cheeseboiger","email":"link.com"}]` + "\n"
 	userJSONUpdate            = `{"username":"Updated cool user"}`
-	userJSONUpdateExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":false,"roleID":"` + genericUUID.String() + `"}` + "\n"
-	userJSONVerifyExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":true,"roleID":"` + genericUUID.String() + `"}` + "\n"
+	userJSONUpdateExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":false,"role":"` + role + `"}` + "\n"
+	userJSONVerifyExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":true,"role":"` + role + `"}` + "\n"
 
 	userPassword      = "qwety123"
 	userPasswordReset = "aVeryStrongPassword123"
@@ -71,50 +70,16 @@ var (
 	userUsername      = "Cool user"
 )
 
-func (r *mockUserRepo) CreateRole(role models.Role) (*models.Role, error) {
-	id := genericUUID
-	role.ID = &id
-	version := 1
-	role.Version = &version
-	r.roleData[id.String()] = role
-	resultRole, ok := r.roleData[id.String()]
-	if !ok {
-		return nil, r.NotFoundErr()
-	}
-	return &resultRole, nil
+func (r *mockUserRepo) CreateRole(role string) error {
+	r.roleData = append(r.roleData, role)
+	return nil
 }
-func (r *mockUserRepo) FindRoleByID(id uuid.UUID) (*models.Role, error) {
-	role, ok := r.roleData[id.String()]
-	if !ok {
-		return nil, r.NotFoundErr()
-	}
-	return &role, nil
-}
-func (r *mockUserRepo) UpdateRole(id uuid.UUID, role models.Role) (*models.Role, error) {
-	var resultRole models.Role
-	_, ok := r.roleData[id.String()]
-	if !ok {
-		return nil, r.NotFoundErr()
-	}
-	resultRole = r.roleData[id.String()]
-	if *resultRole.Version != *role.Version {
-		return nil, r.ConflictErr()
-	}
-	if role.Name != nil {
-		resultRole.Name = role.Name
-		n := *role.Version + 1
-		resultRole.Version = &n
-		r.roleData[id.String()] = resultRole
-	}
-	resultRole = r.roleData[id.String()]
-	return &resultRole, nil
-}
-func (r *mockUserRepo) DeleteRole(id uuid.UUID) error {
-	_, ok := r.roleData[id.String()]
-	if !ok {
+func (r *mockUserRepo) DeleteRole(role string) error {
+	contains := slices.Contains(r.roleData, role)
+	if !contains {
 		return r.NotFoundErr()
 	}
-	delete(r.roleData, id.String())
+	r.roleData = r.roleData[:len(r.roleData)-1] // Simplified deletion for the sake of the test
 	return nil
 }
 
@@ -261,8 +226,9 @@ func (a *mockUserAuthorizer) CheckPassword(password *string, userID uuid.UUID) e
 func TestPostRole(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/game-hangar/v1/roles", strings.NewReader(roleJSON))
+	req := httptest.NewRequest(http.MethodPost, "/game-hangar/v1/roles", nil)
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("Role", role)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
@@ -270,118 +236,7 @@ func TestPostRole(t *testing.T) {
 	// Assertions
 	if assert.NoError(t, h.PostRole(c)) {
 		assert.Equal(t, http.StatusCreated, rec.Code)
-		assert.Equal(t, roleJSONExpected, rec.Body.String())
-	}
-}
-
-func TestGetRoleByID(t *testing.T) {
-	// Setup
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/roles", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/:id")
-	c.SetParamNames("id")
-	c.SetParamValues(genericUUID.String())
-	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
-
-	// Assertions
-	if assert.NoError(t, h.GetRoleById(c)) {
-		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, roleJSONExpected, rec.Body.String())
-	}
-}
-
-func TestGetRoleByIDNotFound(t *testing.T) {
-	// Setup
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/roles", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/:id")
-	c.SetParamNames("id")
-	c.SetParamValues("93ea2872-7da0-49ad-9ff6-a02a99bc3c90")
-	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
-
-	// Assertions
-	if assert.NoError(t, h.GetRoleById(c)) {
-		assert.Equal(t, http.StatusNotFound, rec.Code)
-		assert.Equal(t, notFoundResponse, rec.Body.String())
-	}
-}
-
-func TestPatchRole(t *testing.T) {
-	// Setup
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/roles", strings.NewReader(roleJSONUpdate))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/:id")
-	c.SetParamNames("id")
-	c.SetParamValues(genericUUID.String())
-	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
-
-	// Assertions
-	if assert.NoError(t, h.PatchRole(c)) {
-		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, roleJSONUpdateExpected, rec.Body.String())
-	}
-}
-
-func TestPatchRoleNotFound(t *testing.T) {
-	// Setup
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/roles", strings.NewReader(roleJSONUpdate))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/:id")
-	c.SetParamNames("id")
-	c.SetParamValues("93ea2872-7da0-49ad-9ff6-a02a99bc3c90")
-	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
-
-	// Assertions
-	if assert.NoError(t, h.PatchRole(c)) {
-		assert.Equal(t, http.StatusNotFound, rec.Code)
-		assert.Equal(t, notFoundResponse, rec.Body.String())
-	}
-}
-
-func TestPatchRoleUnprocessable(t *testing.T) {
-	// Setup
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/roles", strings.NewReader(roleJSONUpdateInvalid))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/:id")
-	c.SetParamNames("id")
-	c.SetParamValues(genericUUID.String())
-	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
-
-	// Assertions
-	if assert.NoError(t, h.PatchRole(c)) {
-		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
-	}
-}
-
-func TestPatchRoleConflict(t *testing.T) {
-	// Setup
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/roles", strings.NewReader(roleJSONUpdate))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/:id")
-	c.SetParamNames("id")
-	c.SetParamValues(genericUUID.String())
-	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
-
-	// Assertions
-	if assert.NoError(t, h.PatchRole(c)) {
-		assert.Equal(t, http.StatusConflict, rec.Code)
-		assert.Equal(t, conflictResponse, rec.Body.String())
+		assert.Equal(t, roleCreateResponse, rec.Body.String())
 	}
 }
 
@@ -390,32 +245,17 @@ func TestDeleteRole(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/game-hangar/v1/roles", nil)
 	rec := httptest.NewRecorder()
+	req.Header.Set("Role", role)
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
-	c.SetParamValues(genericUUID.String())
+	c.SetParamValues(role)
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
-	if assert.NoError(t, h.GetRoleById(c)) {
+	if assert.NoError(t, h.DeleteRole(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
-	}
-}
-
-func TestDeleteRoleUnprocesable(t *testing.T) {
-	// Setup
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodDelete, "/game-hangar/v1/roles", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/:id")
-	c.SetParamNames("id")
-	c.SetParamValues("9bc3c90")
-	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
-
-	// Assertions
-	if assert.NoError(t, h.GetRoleById(c)) {
-		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+		assert.Equal(t, roleDeleteResponse, rec.Body.String())
 	}
 }
 
@@ -424,14 +264,12 @@ func TestDeleteRoleNotFound(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/game-hangar/v1/roles", nil)
 	rec := httptest.NewRecorder()
+	req.Header.Set("Role", "Gibberish")
 	c := e.NewContext(req, rec)
-	c.SetPath("/:id")
-	c.SetParamNames("id")
-	c.SetParamValues("93ea2872-7da0-49ad-9ff6-a02a99bc3c90")
 	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
 
 	// Assertions
-	if assert.NoError(t, h.GetRoleById(c)) {
+	if assert.NoError(t, h.DeleteRole(c)) {
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	}
 }
@@ -555,7 +393,7 @@ func TestLoginUsername(t *testing.T) {
 func TestResetPassword(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/reset-password", strings.NewReader(roleJSONUpdate))
+	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/reset-password", nil)
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	req.Header.Set("password", userPasswordReset)
 	rec := httptest.NewRecorder()

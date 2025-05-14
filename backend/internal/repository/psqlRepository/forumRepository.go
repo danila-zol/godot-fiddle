@@ -12,13 +12,15 @@ import (
 
 type PsqlForumRepository struct {
 	databaseClient psqlDatabaseClient
+	enforcer       Enforcer
 	conflictErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlForumRepository(dbClient psqlDatabaseClient) *PsqlForumRepository {
+func NewPsqlForumRepository(dbClient psqlDatabaseClient, e Enforcer) *PsqlForumRepository {
 	return &PsqlForumRepository{
 		databaseClient: dbClient,
+		enforcer:       e,
 		conflictErr:    errors.New("Record conflict!"),
 	}
 }
@@ -138,6 +140,11 @@ func (r *PsqlForumRepository) DeleteTopic(id int) error {
 	}
 	defer conn.Release()
 
+	err = r.DeleteThreadsOfTopic(id)
+	if err != nil {
+		return err
+	}
+
 	ct, err := conn.Exec(context.Background(), `DELETE FROM forum.topics WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
 		if err != nil {
@@ -164,6 +171,15 @@ func (r *PsqlForumRepository) CreateThread(thread models.Thread) (*models.Thread
 			(id, title, user_id, topic_id, tags, created_at, updated_at, upvotes, downvotes, rating, views)`,
 		thread.Title, thread.UserID, thread.TopicID, thread.Tags,
 	).Scan(&thread)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = r.enforcer.AddPermissions(thread.UserID.String(), fmt.Sprintf("threads/%v", *thread.ID), "PATCH")
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.enforcer.AddPermissions(thread.UserID.String(), fmt.Sprintf("threads/%v", *thread.ID), "DELETE")
 	if err != nil {
 		return nil, err
 	}
@@ -313,6 +329,52 @@ func (r *PsqlForumRepository) DeleteThread(id int) error {
 		}
 		return r.databaseClient.ErrNoRows()
 	}
+	_, err = r.enforcer.RemovePermissionsForObject(fmt.Sprintf("threads/%v", id), "PATCH")
+	if err != nil {
+		return err
+	}
+	_, err = r.enforcer.RemovePermissionsForObject(fmt.Sprintf("threads/%v", id), "DELETE")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PsqlForumRepository) DeleteThreadsOfTopic(topicID int) error {
+	conn, err := r.databaseClient.AcquireConn()
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	rows, err := conn.Query(context.Background(), `SELECT id FROM forum.threads WHERE topic_id = $1`, topicID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var thread int
+		err = rows.Scan(&thread)
+		if err != nil {
+			return err
+		}
+		err = r.DeleteMessagesOfThread(thread)
+		if err != nil {
+			return err
+		}
+		_, err = r.enforcer.RemovePermissionsForObject(fmt.Sprintf("threads/%v", thread), "PATCH")
+		if err != nil {
+			return err
+		}
+		_, err = r.enforcer.RemovePermissionsForObject(fmt.Sprintf("threads/%v", thread), "DELETE")
+		if err != nil {
+			return err
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -332,6 +394,16 @@ func (r *PsqlForumRepository) CreateMessage(message models.Message) (*models.Mes
 		(id, thread_id, user_id, title, body, tags, created_at, updated_at, upvotes, downvotes, rating, views)`,
 		message.ThreadID, message.UserID, message.Title, message.Body, message.Tags,
 	).Scan(&message)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: When deleting a Forum it leaves the Thread and Message permissions intact
+	_, err = r.enforcer.AddPermissions(message.UserID.String(), fmt.Sprintf("messages/%v", *message.ID), "PATCH")
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.enforcer.AddPermissions(message.UserID.String(), fmt.Sprintf("messages/%v", *message.ID), "DELETE")
 	if err != nil {
 		return nil, err
 	}
@@ -524,6 +596,48 @@ func (r *PsqlForumRepository) DeleteMessage(id int) error {
 			return err
 		}
 		return r.databaseClient.ErrNoRows()
+	}
+	_, err = r.enforcer.RemovePermissionsForObject(fmt.Sprintf("messages/%v", id), "PATCH")
+	if err != nil {
+		return err
+	}
+	_, err = r.enforcer.RemovePermissionsForObject(fmt.Sprintf("messages/%v", id), "DELETE")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PsqlForumRepository) DeleteMessagesOfThread(threadID int) error {
+	conn, err := r.databaseClient.AcquireConn()
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	rows, err := conn.Query(context.Background(), `SELECT id FROM forum.messages WHERE thread_id = $1`, threadID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var message int
+		err = rows.Scan(&message)
+		if err != nil {
+			return err
+		}
+		_, err = r.enforcer.RemovePermissionsForObject(fmt.Sprintf("messages/%v", message), "PATCH")
+		if err != nil {
+			return err
+		}
+		_, err = r.enforcer.RemovePermissionsForObject(fmt.Sprintf("messages/%v", message), "DELETE")
+		if err != nil {
+			return err
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		return err
 	}
 	return nil
 }

@@ -65,5 +65,4 @@ type UserRepository interface {
 	DeleteAllUserSessions(userid uuid.UUID) error
 
 	NotFoundErr() error
-	ConflictErr() error
 }

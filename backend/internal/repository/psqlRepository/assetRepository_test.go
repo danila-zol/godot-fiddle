@@ -6,6 +6,7 @@ import (
 	"gamehangar/internal/config/psqlDatabseConfig"
 	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
+	"gamehangar/internal/enforcer/psqlCasbinClient"
 	"gamehangar/pkg/ternMigrate"
 	"os"
 	"testing"
@@ -72,13 +73,6 @@ func ResetDB() {
 		CREATE SCHEMA IF NOT EXISTS "user";
 		CREATE SCHEMA IF NOT EXISTS asset;
 
-		CREATE TABLE "user".roles (
-		"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-		"name" VARCHAR(255) NOT NULL,
-		-- "permissions" VARCHAR(64)[]
-		"version" INTEGER NOT NULL DEFAULT 1
-		);
-
 		CREATE TABLE "user".users (
 		"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
 		"username" VARCHAR(255) NOT NULL UNIQUE,
@@ -86,7 +80,7 @@ func ResetDB() {
 		"email" VARCHAR(255) NOT NULL UNIQUE,
 		"password" VARCHAR(255) NOT NULL,
 		"verified" BOOLEAN NOT NULL DEFAULT false,
-		"role_id" UUID NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
+		"role" VARCHAR(255) NOT NULL,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"karma" INTEGER NOT NULL DEFAULT 0
 		);
@@ -185,11 +179,6 @@ func ResetDB() {
 		FOR EACH ROW
 		EXECUTE FUNCTION increment_version();
 
-		CREATE TRIGGER increment_role_version_on_update
-		BEFORE UPDATE ON "user".roles
-		FOR EACH ROW
-		EXECUTE FUNCTION increment_version();
-
 		CREATE COLLATION IF NOT EXISTS case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
 
 		CREATE OR REPLACE FUNCTION to_tsvector_multilang(text) RETURNS tsvector AS $$
@@ -243,18 +232,11 @@ func ResetDB() {
 	}
 	err = c.QueryRow(
 		context.Background(),
-		`INSERT INTO "user".roles (name) VALUES ($1) RETURNING (id)`,
-		"admin").Scan(&roleID)
-	if err != nil {
-		panic("Error resetting demo schema" + err.Error())
-	}
-	err = c.QueryRow(
-		context.Background(),
 		`INSERT INTO "user".users
-		(username, display_name, email, password, role_id)
+		(username, display_name, email, password, role)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING (id)`,
-		"mike-pech", "Mike", "test@email.com", "TestPassword", roleID).Scan(&userID)
+		"mike-pech", "Mike", "test@email.com", "TestPassword", "admin").Scan(&userID)
 	if err != nil {
 		panic("Error resetting demo schema" + err.Error())
 	}
@@ -268,6 +250,13 @@ func ResetDB() {
 		(id)`,
 		"TestDemo", userID, topicID,
 	).Scan(&threadID)
+	testEnforcer, err = psqlCasbinClient.CasbinConfig{}.NewCasbinClient(
+		os.Getenv("PSQL_CONNSTRING"),
+		wd+"/../../enforcer/psqlCasbinClient/rbac_model.conf",
+	)
+	if err != nil {
+		panic("Error creating Casbin enforcer: " + err.Error())
+	}
 }
 
 func init() {

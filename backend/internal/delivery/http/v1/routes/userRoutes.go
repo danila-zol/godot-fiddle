@@ -23,6 +23,9 @@ func (r *UserRoutes) InitRoutes(e *echo.Echo) {
 	userGroup := e.Group("/game-hangar/v1/users")
 
 	protectedUserGroup := userGroup.Group("")
+	protectedUserGroup.Use(casbin_mw.MiddlewareWithConfig(casbin_mw.Config{
+		EnforceHandler: r.authorizer.CheckPermissions,
+	}))
 
 	userGroup.GET("/:id", r.handler.GetUserById)
 	userGroup.GET("", r.handler.GetUsers)
