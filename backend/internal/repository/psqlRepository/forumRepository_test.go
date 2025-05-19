@@ -18,6 +18,7 @@ import (
 var (
 	// independent	bool = false
 	// testDBClient     *psqlDatabase.PsqlDatabaseClient
+	// testEnforcer *psqlCasbinClient.CasbinClient
 
 	// roleID          uuid.UUID
 	// userID          uuid.UUID
@@ -52,19 +53,19 @@ func init() {
 }
 
 func TestCreateTopic(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer, conflictErr: errors.New("Record conflict!")}
 	_, err := r.CreateTopic(topic)
 	assert.NoError(t, err)
 }
 
 func TestFindTopicByID(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer, conflictErr: errors.New("Record conflict!")}
 	_, err := r.FindTopicByID(topicID)
 	assert.NoError(t, err)
 }
 
 func TestFindTopicByIDNoRows(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer, conflictErr: errors.New("Record conflict!")}
 	_, err := r.FindTopicByID(9000)
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
@@ -72,13 +73,13 @@ func TestFindTopicByIDNoRows(t *testing.T) {
 }
 
 func TestFindTopics(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer, conflictErr: errors.New("Record conflict!")}
 	_, err := r.FindTopics()
 	assert.NoError(t, err)
 }
 
 func TestUpdateTopic(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer, conflictErr: errors.New("Record conflict!")}
 	topicID = 1
 	resultTopic, err := r.UpdateTopic(topicID, topicUpdated)
 	assert.NoError(t, err)
@@ -93,7 +94,7 @@ func TestUpdateTopic(t *testing.T) {
 }
 
 func TestUpdateTopicMultiple(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer, conflictErr: errors.New("Record conflict!")}
 	topicID = 1
 
 	modifiedTopic := topic // Manual update
@@ -117,7 +118,7 @@ func TestUpdateTopicMultiple(t *testing.T) {
 }
 
 func TestUpdateTopicConflict(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer, conflictErr: errors.New("Record conflict!")}
 	topicID = 1
 	_, err := r.UpdateTopic(topicID, topicUpdated)
 	if assert.Error(t, err) {
@@ -126,13 +127,13 @@ func TestUpdateTopicConflict(t *testing.T) {
 }
 
 func TestDeleteTopic(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer, conflictErr: errors.New("Record conflict!")}
 	err := r.DeleteTopic(topicID)
 	assert.NoError(t, err)
 }
 
 func TestCreateThread(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	topic, err := r.CreateTopic(topic)
 	topicID = *topic.ID
 	th, err := r.CreateThread(thread)
@@ -141,7 +142,7 @@ func TestCreateThread(t *testing.T) {
 }
 
 func TestFindThreadByID(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	thread, err := r.FindThreadByID(threadID)
 	if assert.NoError(t, err) { // Test view incrementation
 		assert.Equal(t, uint(1), *thread.Views)
@@ -149,7 +150,7 @@ func TestFindThreadByID(t *testing.T) {
 }
 
 func TestFindThreadByIDNoRows(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	_, err := r.FindThreadByID(9000)
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
@@ -157,7 +158,7 @@ func TestFindThreadByIDNoRows(t *testing.T) {
 }
 
 func TestFindThreads(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	_, err := r.FindThreads(nil, 0, "")
 	assert.NoError(t, err)
 }
@@ -183,7 +184,7 @@ func TestFindThreadsByQuery(t *testing.T) {
 		}
 	)
 
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 
 	for q, th := range map[string]models.Thread{"The Magnificent Seven": threadAlt, "стук": threadAltRu} {
 		resultThread, err := r.CreateThread(th)
@@ -221,7 +222,7 @@ func TestFindThreadsByQuery(t *testing.T) {
 }
 
 func TestUpdateThread(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 
 	oldThread, err := r.FindThreadByID(threadID)
 	assert.NoError(t, err)
@@ -241,13 +242,13 @@ func TestUpdateThread(t *testing.T) {
 }
 
 func TestDeleteThread(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	err := r.DeleteThread(threadID)
 	assert.NoError(t, err)
 }
 
 func TestCreateMessage(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	thread, err := r.CreateThread(thread)
 	threadID = *thread.ID
 	_, err = r.CreateMessage(message)
@@ -255,7 +256,7 @@ func TestCreateMessage(t *testing.T) {
 }
 
 func TestFindMessageByID(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	message, err := r.FindMessageByID(messageID)
 	if assert.NoError(t, err) { // Test view incrementation
 		assert.Equal(t, uint(1), *message.Views)
@@ -263,7 +264,7 @@ func TestFindMessageByID(t *testing.T) {
 }
 
 func TestFindMessageByIDNoRows(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	_, err := r.FindMessageByID(9000)
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
@@ -271,13 +272,13 @@ func TestFindMessageByIDNoRows(t *testing.T) {
 }
 
 func TestFindMessageByThreadID(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	_, err := r.FindMessagesByThreadID(threadID)
 	assert.NoError(t, err)
 }
 
 func TestFindMessageByThreadIDNoRows(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	_, err := r.FindMessagesByThreadID(9000)
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
@@ -296,7 +297,7 @@ func TestFindMessagesByQuery(t *testing.T) {
 		messageAltRu      models.Message = models.Message{Title: &messageTitleAltRu, Body: &messageBodyAltRu, ThreadID: &threadID, UserID: &userID}
 	)
 
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 
 	for q, m := range map[string]models.Message{"seven": messageAlt, "стук": messageAltRu} {
 		resultMessage, err := r.CreateMessage(m)
@@ -333,13 +334,13 @@ func TestFindMessagesByQuery(t *testing.T) {
 }
 
 func TestFindMessages(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	_, err := r.FindMessages(nil, 0, "")
 	assert.NoError(t, err)
 }
 
 func TestUpdateMessage(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 
 	oldMessasge, err := r.FindMessageByID(messageID)
 	assert.NoError(t, err)
@@ -359,7 +360,7 @@ func TestUpdateMessage(t *testing.T) {
 }
 
 func TestDeleteMessage(t *testing.T) {
-	r := PsqlForumRepository{databaseClient: testDBClient}
+	r := PsqlForumRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	err := r.DeleteMessage(messageID)
 	if assert.NoError(t, err) {
 		teardownForum(&r)

@@ -1,12 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE SCHEMA IF NOT EXISTS "user";
 
-CREATE TABLE "user".roles (
-	"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-	"name" VARCHAR(255) NOT NULL
-	-- "permissions" VARCHAR(64)[]
-);
-
 CREATE TABLE "user".users (
 	"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
 	"username" VARCHAR(255) NOT NULL UNIQUE,
@@ -14,7 +8,7 @@ CREATE TABLE "user".users (
 	"email" VARCHAR(255) NOT NULL UNIQUE,
 	"password" VARCHAR(255) NOT NULL,
 	"verified" BOOLEAN NOT NULL DEFAULT false,
-	"role_id" UUID NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
+	"role" VARCHAR(255) NOT NULL,
 	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 	"karma" INTEGER NOT NULL DEFAULT 0
 );

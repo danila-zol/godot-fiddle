@@ -56,10 +56,8 @@ type UserRepository interface {
 	UpdateUser(id uuid.UUID, user models.User) (*models.User, error)
 	DeleteUser(id uuid.UUID) error
 
-	CreateRole(role models.Role) (*models.Role, error)
-	FindRoleByID(id uuid.UUID) (*models.Role, error)
-	UpdateRole(id uuid.UUID, role models.Role) (*models.Role, error)
-	DeleteRole(id uuid.UUID) error
+	CreateRole(role string) error
+	DeleteRole(role string) error
 
 	CreateSession(session models.Session) (*models.Session, error)
 	FindSessionByID(id uuid.UUID) (*models.Session, error)
@@ -67,5 +65,4 @@ type UserRepository interface {
 	DeleteAllUserSessions(userid uuid.UUID) error
 
 	NotFoundErr() error
-	ConflictErr() error
 }

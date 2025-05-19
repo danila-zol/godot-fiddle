@@ -7,6 +7,7 @@ import (
 	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/delivery/http/v1/handlers"
 	"gamehangar/internal/delivery/http/v1/routes"
+	"gamehangar/internal/enforcer/psqlCasbinClient"
 	"gamehangar/internal/repository/psqlRepository"
 	"gamehangar/internal/services"
 	"gamehangar/pkg/ternMigrate"
@@ -88,23 +89,32 @@ func main() {
 	}
 	app.logger.Info("Database setup successful!")
 
+	wd, _ := os.Getwd()
+	ce, err := psqlCasbinClient.CasbinConfig{}.NewCasbinClient(
+		os.Getenv("PSQL_CONNSTRING"),
+		wd+"/internal/enforcer/psqlCasbinClient/rbac_model.conf",
+	)
+	if err != nil {
+		app.logger.Fatalf("Error setting up enforcer: %v", err)
+	}
+
+	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient, ce)
+	userAuthorizer := services.NewUserAuthorizer(userRepo, ce)
+	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, userAuthorizer)
+	routes.NewUserRoutes(userHandler, userAuthorizer).InitRoutes(app.echo)
+
 	assetRepo := psqlRepository.NewPsqlAssetRepository(databaseClient)
 	assetHandler := handlers.NewAssetHandler(e, assetRepo, app.validator)
-	routes.NewAssetRoutes(assetHandler).InitRoutes(app.echo)
+	routes.NewAssetRoutes(assetHandler, userAuthorizer).InitRoutes(app.echo)
 
-	forumRepo := psqlRepository.NewPsqlForumRepository(databaseClient)
+	forumRepo := psqlRepository.NewPsqlForumRepository(databaseClient, ce)
 	forumHandler := handlers.NewForumHandler(e, forumRepo, app.validator)
-	routes.NewForumRoutes(forumHandler).InitRoutes(app.echo)
+	routes.NewForumRoutes(forumHandler, userAuthorizer).InitRoutes(app.echo)
 
-	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient)
+	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient, ce)
 	demoThreadSyncer := services.NewThreadSyncer(forumRepo, demoRepo, 1)
 	demoHandler := handlers.NewDemoHandler(e, demoRepo, app.validator, demoThreadSyncer)
-	routes.NewDemoRoutes(demoHandler).InitRoutes(app.echo)
-
-	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient)
-	userAuthorizer := services.NewUserAuthorizer(userRepo)
-	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, userAuthorizer)
-	routes.NewUserRoutes(userHandler).InitRoutes(app.echo)
+	routes.NewDemoRoutes(demoHandler, userAuthorizer).InitRoutes(app.echo)
 
 	app.appRouter = app.routes(app.echo)
 

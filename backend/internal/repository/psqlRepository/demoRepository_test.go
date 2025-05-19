@@ -18,6 +18,7 @@ import (
 var (
 	// independent bool = false
 	// testDBClient     *psqlDatabase.PsqlDatabaseClient
+	// testEnforcer *psqlCasbinClient.CasbinClient
 
 	demoID int = 1
 	// topicID          int
@@ -42,13 +43,13 @@ func init() {
 }
 
 func TestCreateDemo(t *testing.T) {
-	r := PsqlDemoRepository{databaseClient: testDBClient}
+	r := PsqlDemoRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	_, err := r.CreateDemo(demo)
 	assert.NoError(t, err)
 }
 
 func TestFindDemoByID(t *testing.T) {
-	r := PsqlDemoRepository{databaseClient: testDBClient}
+	r := PsqlDemoRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	demo, err := r.FindDemoByID(demoID)
 	if assert.NoError(t, err) { // Test view incrementation
 		assert.Equal(t, uint(1), *demo.Views)
@@ -56,7 +57,7 @@ func TestFindDemoByID(t *testing.T) {
 }
 
 func TestFindDemoByIDNoRows(t *testing.T) {
-	r := PsqlDemoRepository{databaseClient: testDBClient}
+	r := PsqlDemoRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	_, err := r.FindDemoByID(9000)
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
@@ -75,7 +76,7 @@ func TestFindDemosByQuery(t *testing.T) {
 		demoAltRu            models.Demo = models.Demo{Title: &demoTitleAltRu, Description: &demoDescriptionAltRu, Link: &demoLink, ThreadID: &threadID, Tags: &demoTagsAlt, UserID: &userID}
 	)
 
-	r := PsqlDemoRepository{databaseClient: testDBClient}
+	r := PsqlDemoRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	demoAlt.UserID = &userID
 	demoAlt.ThreadID = &threadID
 
@@ -116,13 +117,13 @@ func TestFindDemosByQuery(t *testing.T) {
 }
 
 func TestFindDemos(t *testing.T) {
-	r := PsqlDemoRepository{databaseClient: testDBClient}
+	r := PsqlDemoRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	_, err := r.FindDemos(nil, 0, "")
 	assert.NoError(t, err)
 }
 
 func TestUpdateDemo(t *testing.T) {
-	r := PsqlDemoRepository{databaseClient: testDBClient}
+	r := PsqlDemoRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 
 	oldDemo, err := r.FindDemoByID(demoID)
 	assert.NoError(t, err)
@@ -142,7 +143,7 @@ func TestUpdateDemo(t *testing.T) {
 }
 
 func TestDeleteDemo(t *testing.T) {
-	r := PsqlDemoRepository{databaseClient: testDBClient}
+	r := PsqlDemoRepository{databaseClient: testDBClient, enforcer: testEnforcer}
 	err := r.DeleteDemo(demoID)
 	if assert.NoError(t, err) {
 		teardownDemo(&r)

@@ -2,6 +2,7 @@ package psqlRepository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,12 +13,14 @@ import (
 
 type PsqlDemoRepository struct {
 	databaseClient psqlDatabaseClient
+	enforcer       Enforcer
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlDemoRepository(dbClient psqlDatabaseClient) *PsqlDemoRepository {
+func NewPsqlDemoRepository(dbClient psqlDatabaseClient, e Enforcer) *PsqlDemoRepository {
 	return &PsqlDemoRepository{
 		databaseClient: dbClient,
+		enforcer:       e,
 	}
 }
 
@@ -39,6 +42,14 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo) (*models.Demo, error) 
 		(id, title, description, link, tags, user_id, thread_id, created_at, updated_at, upvotes, downvotes, rating, views)`,
 		demo.Title, demo.Description, demo.Link, demo.Tags, demo.UserID, demo.ThreadID,
 	).Scan(&demo)
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.enforcer.AddPermissions(demo.UserID.String(), fmt.Sprintf("demos/%v", *demo.ID), "PATCH")
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.enforcer.AddPermissions(demo.UserID.String(), fmt.Sprintf("demos/%v", *demo.ID), "DELETE")
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +196,14 @@ func (r *PsqlDemoRepository) DeleteDemo(id int) error {
 			return err
 		}
 		return r.databaseClient.ErrNoRows()
+	}
+	changed, err := r.enforcer.RemovePermissionsForObject(fmt.Sprintf("demos/%v", id), "PATCH")
+	if err != nil || !changed {
+		return errors.New("Somehow did not changed anything WTF?")
+	}
+	changed, err = r.enforcer.RemovePermissionsForObject(fmt.Sprintf("demos/%v", id), "DELETE")
+	if err != nil || !changed {
+		return err
 	}
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"gamehangar/internal/config/psqlDatabseConfig"
 	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
+	"gamehangar/internal/enforcer/psqlCasbinClient"
 	"gamehangar/internal/repository/psqlRepository"
 	"gamehangar/pkg/ternMigrate"
 	"os"
@@ -36,8 +37,8 @@ var (
 
 func init() {
 	var err error
+	wd, _ := os.Getwd()
 	if independent || 1 == 1 { // HACK!
-		wd, _ := os.Getwd()
 		err := godotenv.Load(wd + "/../../.env")
 		if err != nil {
 			panic("Error loading .env file:" + err.Error() + ": " + wd)
@@ -156,25 +157,25 @@ func init() {
 	if independent {
 		err = c.QueryRow(
 			context.Background(),
-			`INSERT INTO "user".roles (name) VALUES ($1) RETURNING (id)`,
-			"admin").Scan(&roleID)
-		if err != nil {
-			panic("Error resetting demo schema" + err.Error())
-		}
-		err = c.QueryRow(
-			context.Background(),
 			`INSERT INTO "user".users
 			(username, display_name, email, password, role_id)
 			VALUES ($1, $2, $3, $4, $5)
 			RETURNING (id)`,
-			"mike-pech", "Mike", "test@email.com", "TestPassword", roleID).Scan(&userID)
+			"mike-pech", "Mike", "test@email.com", "TestPassword", "admin").Scan(&userID)
 		if err != nil {
 			panic("Error resetting demo schema" + err.Error())
 		}
 	}
+	testEnforcer, err = psqlCasbinClient.CasbinConfig{}.NewCasbinClient(
+		os.Getenv("PSQL_CONNSTRING"),
+		wd+"/../enforcer/psqlCasbinClient/rbac_model.conf",
+	)
+	if err != nil {
+		panic("Error creating Casbin enforcer: " + err.Error())
+	}
 	demo.UserID = &userID
-	forumRepository = psqlRepository.NewPsqlForumRepository(testDBClient)
-	demoRepository = psqlRepository.NewPsqlDemoRepository(testDBClient)
+	forumRepository = psqlRepository.NewPsqlForumRepository(testDBClient, testEnforcer)
+	demoRepository = psqlRepository.NewPsqlDemoRepository(testDBClient, testEnforcer)
 	threadSyncer = NewThreadSyncer(
 		forumRepository,
 		demoRepository,
