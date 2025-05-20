@@ -398,7 +398,6 @@ func (r *PsqlForumRepository) CreateMessage(message models.Message) (*models.Mes
 		return nil, err
 	}
 
-	// TODO: When deleting a Forum it leaves the Thread and Message permissions intact
 	_, err = r.enforcer.AddPermissions(message.UserID.String(), fmt.Sprintf("messages/%v", *message.ID), "PATCH")
 	if err != nil {
 		return nil, err

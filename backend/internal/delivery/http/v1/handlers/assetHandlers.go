@@ -25,17 +25,17 @@ func NewAssetHandler(e *echo.Echo, repo AssetRepository, v *validator.Validate) 
 	}
 }
 
-// @Summary	Creates a new asset.
-// @Tags		Assets
-// @Accept		application/json
-// @Produce	application/json
-// @Param		Asset	body		models.Asset	true	"Create Asset"
-// @Success	201	{object}	models.Asset
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/assets [post]
+//	@Summary	Creates a new asset.
+//	@Tags		Assets
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		Asset	body		models.Asset	true	"Create Asset"
+//	@Success	201		{object}	models.Asset
+//	@Failure	400		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
+//	@Router		/v1/assets [post]
 func (h *AssetHandler) PostAsset(c echo.Context) error {
 	var asset models.Asset
 
@@ -75,17 +75,17 @@ func (h *AssetHandler) PostAsset(c echo.Context) error {
 	return c.JSON(http.StatusCreated, &newAsset)
 }
 
-// @Summary	Fetches a asset by its ID.
-// @Tags		Assets
-// @Accept		text/plain
-// @Produce	application/json
-// @Param		id	path		int	true	"Get Asset of ID"
-// @Success	200	{object}	models.Asset
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/assets/{id} [get]
+//	@Summary	Fetches a asset by its ID.
+//	@Tags		Assets
+//	@Accept		text/plain
+//	@Produce	application/json
+//	@Param		id	path		int	true	"Get Asset of ID"
+//	@Success	200	{object}	models.Asset
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/assets/{id} [get]
 func (h *AssetHandler) GetAssetById(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
@@ -117,17 +117,17 @@ func (h *AssetHandler) GetAssetById(c echo.Context) error {
 	return c.JSON(http.StatusOK, &asset)
 }
 
-// @Summary	Fetches all assets.
-// @Tags		Assets
-// @Produce	application/json
-// @Param		q	query		[]string	false	"Keyword Query"
-// @Param		l	query		int	false	"Record number limit"
-// @Param		o	query		string	false	"Record ordering. Default newest updated" Enums(newest-updated, highest-rated, most-views)
-// @Success	200	{object}	models.Asset
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/assets [get]
+//	@Summary	Fetches all assets.
+//	@Tags		Assets
+//	@Produce	application/json
+//	@Param		q	query		[]string	false	"Keyword Query"
+//	@Param		l	query		int			false	"Record number limit"
+//	@Param		o	query		string		false	"Record ordering. Default newest updated"	Enums(newest-updated, highest-rated, most-views)
+//	@Success	200	{object}	models.Asset
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/assets [get]
 func (h *AssetHandler) GetAssets(c echo.Context) error {
 	var (
 		err    error
@@ -185,19 +185,19 @@ func (h *AssetHandler) GetAssets(c echo.Context) error {
 	return c.JSON(http.StatusOK, &assets)
 }
 
-// @Summary	Updates an asset.
-// @Tags		Assets
-// @Accept		application/json
-// @Produce	application/json
-// @Param		id		path		string			true	"Update Asset of ID"
-// @Param		Asset	body		models.Asset	true	"Update Asset"
-// @Success	200		{object}	models.Asset
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	409	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/assets/{id} [patch]
+//	@Summary	Updates an asset.
+//	@Tags		Assets
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		id		path		string			true	"Update Asset of ID"
+//	@Param		Asset	body		models.Asset	true	"Update Asset"
+//	@Success	200		{object}	models.Asset
+//	@Failure	400		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	409		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
+//	@Router		/v1/assets/{id} [patch]
 func (h *AssetHandler) PatchAsset(c echo.Context) error {
 	var asset models.Asset
 	p := c.Param("id")
@@ -261,16 +261,16 @@ func (h *AssetHandler) PatchAsset(c echo.Context) error {
 	return c.JSON(http.StatusOK, &updAsset)
 }
 
-// @Summary	Deletes the specified asset.
-// @Tags		Assets
-// @Accept		text/plain
-// @Produce	text/plain
-// @Param		id	path		string	true	"Delete Asset of ID"
-// @Success	200	{string}	string
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/assets/{id} [delete]
+//	@Summary	Deletes the specified asset.
+//	@Tags		Assets
+//	@Accept		text/plain
+//	@Produce	text/plain
+//	@Param		id	path		string	true	"Delete Asset of ID"
+//	@Success	200	{string}	string
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/assets/{id} [delete]
 func (h *AssetHandler) DeleteAsset(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")

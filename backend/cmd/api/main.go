@@ -49,15 +49,15 @@ func getEnv() {
 	}
 }
 
-// @title			Game Hangar
-// @version		1.0
-// @description	A backend for Game Hangar game prototyping web service
-// @contact.name	Mikhail Pecherkin
-// @contact.email	m.pecherkin.sas@gmail.com
-// @BasePath		/game-hangar
-// @securityDefinitions.apikey ApiSessionCookie
-// @in header
-// @name sessionID
+//	@title						Game Hangar
+//	@version					1.0
+//	@description				A backend for Game Hangar game prototyping web service
+//	@contact.name				Mikhail Pecherkin
+//	@contact.email				m.pecherkin.sas@gmail.com
+//	@BasePath					/game-hangar
+//	@securityDefinitions.apikey	ApiSessionCookie
+//	@in							header
+//	@name						sessionID
 func main() {
 	e := echo.New()
 	v := validator.New(validator.WithRequiredStructEnabled())
@@ -98,9 +98,14 @@ func main() {
 		app.logger.Fatalf("Error setting up enforcer: %v", err)
 	}
 
+	ou, err := services.NewObjectUploader()
+	if err != nil {
+		app.logger.Fatalf("Error setting object uploader: %v", err)
+	}
+
 	userRepo := psqlRepository.NewPsqlUserRepository(databaseClient, ce)
 	userAuthorizer := services.NewUserAuthorizer(userRepo, ce)
-	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, userAuthorizer)
+	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, ou, userAuthorizer)
 	routes.NewUserRoutes(userHandler, userAuthorizer).InitRoutes(app.echo)
 
 	assetRepo := psqlRepository.NewPsqlAssetRepository(databaseClient)

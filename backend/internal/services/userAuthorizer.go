@@ -95,6 +95,7 @@ func (a *UserAuthorizer) CheckPermissions(c echo.Context, user string) (bool, er
 	if err != nil {
 		return false, err
 	}
+	c.Set("userTier", *sub.Role)
 
 	obj = strings.TrimPrefix(c.Request().URL.Path, "/game-hangar/v1/")
 

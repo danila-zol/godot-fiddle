@@ -23,14 +23,16 @@ type UserHandler struct {
 	logger         echo.Logger
 	repository     UserRepository
 	validator      *validator.Validate
+	objectUploader ObjectUploader
 	userAuthorizer UserAuthorizer
 }
 
-func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, a UserAuthorizer) *UserHandler {
+func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, o ObjectUploader, a UserAuthorizer) *UserHandler {
 	return &UserHandler{
 		logger:         e.Logger,
 		repository:     repo,
 		validator:      v,
+		objectUploader: o,
 		userAuthorizer: a,
 	}
 }
@@ -81,7 +83,7 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 // @Tags		Users
 // @Produce	application/json
 // @Param		q	query		[]string	false	"Keyword Query"
-// @Param		l	query		int	false	"Record number limit"
+// @Param		l	query		int			false	"Record number limit"
 // @Success	200	{object}	models.User
 // @Failure	400	{object}	HTTPError
 // @Failure	404	{object}	HTTPError
@@ -134,10 +136,10 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 // @Param		id		path		string		true	"Update User of ID"
 // @Param		User	body		models.User	true	"Update User"
 // @Success	200		{object}	models.User
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
+// @Failure	400		{object}	HTTPError
+// @Failure	404		{object}	HTTPError
+// @Failure	422		{object}	HTTPError
+// @Failure	500		{object}	HTTPError
 // @Router		/v1/users/{id} [patch]
 func (h *UserHandler) PatchUser(c echo.Context) error {
 	var user models.User
@@ -244,11 +246,11 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 // @Accept		application/json
 // @Produce	application/json
 // @Param		Role	header		string	true	"Create Role"
-// @Success	201	{string}	string
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
+// @Success	201		{string}	string
+// @Failure	400		{object}	HTTPError
+// @Failure	404		{object}	HTTPError
+// @Failure	422		{object}	HTTPError
+// @Failure	500		{object}	HTTPError
 // @Router		/v1/roles [post]
 func (h *UserHandler) PostRole(c echo.Context) error {
 
@@ -289,13 +291,13 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 // @Tags		Roles
 // @Accept		text/plain
 // @Produce	text/plain
-// @Security ApiSessionCookie
-// @param sessionID header string false "Session ID"
-// @Param		Role	header		string	true	"Delete Role"
-// @Success	200	{string}	string
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
+// @Security	ApiSessionCookie
+// @param		sessionID	header		string	false	"Session ID"
+// @Param		Role		header		string	true	"Delete Role"
+// @Success	200			{string}	string
+// @Failure	404			{object}	HTTPError
+// @Failure	422			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
 // @Router		/v1/roles [delete]
 func (h *UserHandler) DeleteRole(c echo.Context) error {
 	roleSlice, ok := c.Request().Header["Role"]
@@ -341,15 +343,16 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 
 // @Summary	Registers a new user and creates a session.
 // @Tags		Login
-// @Accept		application/json
+// @Accept		multipart/form-data
 // @Produce	application/json
-// @Param		User	body		models.User	true	"Create User"
-// @param password header string true "Password"
-// @Success	201	{object}	models.User
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
+// @Param		User		formData	models.User	true	"Create User"
+// @param		password	header		string		true	"Password"
+// @param		file		formData	file		false	"Profile picture"
+// @Success	201			{object}	models.User
+// @Failure	400			{object}	HTTPError
+// @Failure	404			{object}	HTTPError
+// @Failure	422			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
 // @Router		/v1/register [post]
 func (h *UserHandler) Register(c echo.Context) error {
 	var user models.User
@@ -396,6 +399,46 @@ func (h *UserHandler) Register(c echo.Context) error {
 	}
 	user.Password, err = h.userAuthorizer.CreatePasswordHash(password)
 
+	formFile, err := c.FormFile("file")
+	multipartFile, err := formFile.Open()
+	if err != nil {
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error uploading file! Please try again",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
+	}
+	defer multipartFile.Close()
+	if !ok {
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error uploading file! Please try again",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
+	}
+	err = h.objectUploader.CheckFileSize(formFile.Size, "picture")
+
+	link, err := h.objectUploader.PutObject(*user.Username, multipartFile)
+	if err != nil {
+		if err == h.objectUploader.ObjectTooLargeErr() {
+			e := HTTPError{
+				Code:    http.StatusRequestEntityTooLarge,
+				Message: "Error in Register handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusRequestEntityTooLarge, &e)
+		}
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in Register handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
+	}
+	h.logger.Print(link)
+
 	newUser, err := h.repository.CreateUser(user)
 	if err != nil {
 		e := HTTPError{
@@ -431,11 +474,11 @@ func (h *UserHandler) Register(c echo.Context) error {
 // @Tags		Login
 // @Accept		text/plain
 // @Produce	text/plain
-// @Security ApiSessionCookie
-// @param sessionID header string false "Session ID"
-// @Success	200	{string}	string
-// @Failure	401	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
+// @Security	ApiSessionCookie
+// @param		sessionID	header		string	false	"Session ID"
+// @Success	200			{string}	string
+// @Failure	401			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
 // @Router		/v1/verify [get]
 func (h *UserHandler) Verify(c echo.Context) error {
 	var s string
@@ -490,13 +533,13 @@ func (h *UserHandler) Verify(c echo.Context) error {
 // @Tags		Login
 // @Accept		text/plain
 // @Produce	text/plain
-// @Security ApiSessionCookie
-// @param password header string true "New Password"
-// @param id path string true "User ID"
-// @Success	200	{string}	string
-// @Failure	400	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
+// @Security	ApiSessionCookie
+// @param		password	header		string	true	"New Password"
+// @param		id			path		string	true	"User ID"
+// @Success	200			{string}	string
+// @Failure	400			{object}	HTTPError
+// @Failure	422			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
 // @Router		/v1/reset-password/{id} [patch]
 func (h *UserHandler) ResetPassword(c echo.Context) error {
 	passwordSlice, ok := c.Request().Header["Password"]
@@ -558,12 +601,12 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 // @Tags		Login
 // @Accept		application/json
 // @Produce	text/plain
-// @param email header string false "Email"
-// @param username header string false "Username"
-// @param password header string true "Password"
-// @Success	200		{string}	string
-// @Failure	400		{object}	HTTPError
-// @Failure	500		{object}	HTTPError
+// @param		email		header		string	false	"Email"
+// @param		username	header		string	false	"Username"
+// @param		password	header		string	true	"Password"
+// @Success	200			{string}	string
+// @Failure	400			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
 // @Router		/v1/login [post]
 func (h *UserHandler) Login(c echo.Context) error {
 	var username, email, password string
@@ -657,15 +700,15 @@ func (h *UserHandler) Login(c echo.Context) error {
 // @Tags		Login
 // @Accept		text/plain
 // @Produce	text/plain
-// @Security ApiSessionCookie
-// @param sessionID header string false "Session ID"
-// @Param		id		path		string		true	"Session to invalidate"
-// @Success	200	{string}	string
-// @Failure	400	{object}	HTTPError
-// @Failure	401	{object}	HTTPError
-// @Failure	403	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
+// @Security	ApiSessionCookie
+// @param		sessionID	header		string	false	"Session ID"
+// @Param		id			path		string	true	"Session to invalidate"
+// @Success	200			{string}	string
+// @Failure	400			{object}	HTTPError
+// @Failure	401			{object}	HTTPError
+// @Failure	403			{object}	HTTPError
+// @Failure	404			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
 // @Router		/v1/logout/{id} [delete]
 func (h *UserHandler) Logout(c echo.Context) error {
 	reqSessionID, _ := uuid.Parse(c.Param("id"))

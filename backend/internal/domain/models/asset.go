@@ -3,16 +3,16 @@ package models
 import "time"
 
 type Asset struct {
-	ID          *int       `json:"id,omitempty"`
-	Name        *string    `json:"name,omitempty" validate:"required_if=Method POST,omitnil,max=90"`
-	Description *string    `json:"description,omitempty"`
-	Link        *string    `json:"link,omitempty" validate:"required_if=Method POST,omitnil,url"` // Links to an S3 bucket
-	Tags        *[]string  `json:"tags,omitempty" validate:"omitnil,unique,max=40"`
+	ID          *int       `form:"id" json:"id,omitempty"`
+	Name        *string    `form:"name" json:"name,omitempty" validate:"required_if=Method POST,omitnil,max=90"`
+	Description *string    `form:"description" json:"description,omitempty"`
+	Link        *string    `form:"link" json:"link" validate:"omitnil,url"` // Links to an S3 bucket
+	Tags        *[]string  `form:"tags" json:"tags,omitempty" validate:"omitnil,unique,max=40"`
 	CreatedAt   *time.Time `json:"createdAt,omitempty"`
 	UpdatedAt   *time.Time `json:"updatedAt,omitzero"`
-	Version     *int       `json:"version,omitempty" validate:"required_if=Method PATCH,omitnil,number,gt=0"`
-	Upvotes     *uint      `json:"upvotes,omitzero" validate:"omitnil,number,min=0"`
-	Downvotes   *uint      `json:"downvotes,omitzero" validate:"omitnil,number,min=0"`
+	Version     *int       `form:"version" json:"version,omitempty" validate:"required_if=Method PATCH,omitnil,number,gt=0"`
+	Upvotes     *uint      `form:"upvotes" json:"upvotes,omitzero" validate:"omitnil,number,min=0"`
+	Downvotes   *uint      `form:"downvotes" json:"downvotes,omitzero" validate:"omitnil,number,min=0"`
 	Rating      *float64   `json:"rating,omitzero" validate:"omitnil,excluded_if=Method GET"`
 	Views       *uint      `json:"views,omitzero" validate:"omitnil,number,min=0"`
 	Method      string     `json:"-"`
