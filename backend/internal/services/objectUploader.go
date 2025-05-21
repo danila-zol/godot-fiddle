@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
@@ -25,11 +26,16 @@ type ObjectUploader struct {
 // Creates a new Object Uploader with default config using credentials from .env
 // and creates a named bucket from .env if it does not exist
 func NewObjectUploader() (*ObjectUploader, error) {
+	dc, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return nil, err
+	}
 	ou := ObjectUploader{
 		s3Client: s3.NewFromConfig(
 			aws.Config{
 				Region:       *aws.String(os.Getenv("AWS_BUCKET_REGION")),
 				BaseEndpoint: aws.String(os.Getenv("AWS_BUCKET_ENDPOINT")),
+				Credentials:  dc.Credentials,
 			},
 		),
 		bucketName:        os.Getenv("AWS_BUCKET_NAME"),
@@ -115,6 +121,7 @@ func (u *ObjectUploader) PutObject(objectKey string, file io.Reader) (string, er
 	if err != nil {
 		return "", u.errObjectNotFound
 	}
+	// TODO: Get a link for the object
 	return link, nil
 }
 
