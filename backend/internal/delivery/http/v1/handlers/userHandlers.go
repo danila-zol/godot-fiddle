@@ -400,44 +400,46 @@ func (h *UserHandler) Register(c echo.Context) error {
 	user.Password, err = h.userAuthorizer.CreatePasswordHash(password)
 
 	formFile, err := c.FormFile("file")
-	multipartFile, err := formFile.Open()
-	if err != nil {
-		e := HTTPError{
-			Code:    http.StatusBadRequest,
-			Message: "Error uploading file! Please try again",
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusBadRequest, &e)
-	}
-	defer multipartFile.Close()
-	if !ok {
-		e := HTTPError{
-			Code:    http.StatusBadRequest,
-			Message: "Error uploading file! Please try again",
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusBadRequest, &e)
-	}
-	err = h.objectUploader.CheckFileSize(formFile.Size, "picture")
-
-	link, err := h.objectUploader.PutObject(*user.Username, multipartFile)
-	if err != nil {
-		if err == h.objectUploader.ObjectTooLargeErr() {
+	if formFile != nil {
+		multipartFile, err := formFile.Open()
+		if err != nil {
 			e := HTTPError{
-				Code:    http.StatusRequestEntityTooLarge,
+				Code:    http.StatusBadRequest,
+				Message: "Error uploading file! Please try again",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusBadRequest, &e)
+		}
+		defer multipartFile.Close()
+		if !ok {
+			e := HTTPError{
+				Code:    http.StatusBadRequest,
+				Message: "Error uploading file! Please try again",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusBadRequest, &e)
+		}
+		err = h.objectUploader.CheckFileSize(formFile.Size, "picture")
+
+		link, err := h.objectUploader.PutObject(*user.Username, multipartFile)
+		if err != nil {
+			if err == h.objectUploader.ObjectTooLargeErr() {
+				e := HTTPError{
+					Code:    http.StatusRequestEntityTooLarge,
+					Message: "Error in Register handler: " + err.Error(),
+				}
+				h.logger.Print(&e)
+				return c.JSON(http.StatusRequestEntityTooLarge, &e)
+			}
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
 				Message: "Error in Register handler: " + err.Error(),
 			}
 			h.logger.Print(&e)
-			return c.JSON(http.StatusRequestEntityTooLarge, &e)
+			return c.JSON(http.StatusInternalServerError, &e)
 		}
-		e := HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: "Error in Register handler: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusInternalServerError, &e)
+		h.logger.Print(link)
 	}
-	h.logger.Print(link)
 
 	newUser, err := h.repository.CreateUser(user)
 	if err != nil {
