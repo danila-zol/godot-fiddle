@@ -21,6 +21,6 @@ type User struct {
 	Role        *string    `form:"role" json:"role,omitempty" validate:"required_if=Method POST,omitnil,max=255"`
 	CreatedAt   *time.Time `json:"createdAt,omitzero"`
 	Karma       *int       `json:"karma,omitempty" validate:"omitnil,number"`
-	ProfilePic  *string    `json:"profilePic"`
+	ProfilePic  string     `json:"profilePic"`
 	Method      string     `json:"-"`
 }

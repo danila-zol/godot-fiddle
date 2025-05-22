@@ -54,7 +54,7 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 	if err != nil {
 		e := HTTPError{
 			Code:    http.StatusUnprocessableEntity,
-			Message: "Error in GetUserByID repository: " + err.Error(),
+			Message: "Error in GetUserByID handler: " + err.Error(),
 		}
 		h.logger.Print(&e)
 		return c.JSON(http.StatusUnprocessableEntity, &e)
@@ -74,6 +74,20 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 		}
 		h.logger.Print(&e)
 		return c.JSON(http.StatusInternalServerError, &e)
+	}
+
+	user.ProfilePic, err = h.objectUploader.GetObjectLink(*user.Username)
+	if err != nil {
+		if err != h.objectUploader.ObjectNotFoundErr() {
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: "Error in GetUserByID handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusInternalServerError, &e)
+		}
+		e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
+		h.logger.Print(&e)
 	}
 
 	return c.JSON(http.StatusOK, &user)
@@ -131,10 +145,11 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 
 // @Summary	Updates a user.
 // @Tags		Users
-// @Accept		application/json
+// @Accept		multipart/form-data
 // @Produce	application/json
 // @Param		id		path		string		true	"Update User of ID"
-// @Param		User	body		models.User	true	"Update User"
+// @Param		User	formData		models.User	true	"Update User"
+// @Param		file		formData	file		false	"Profile picture"
 // @Success	200		{object}	models.User
 // @Failure	400		{object}	HTTPError
 // @Failure	404		{object}	HTTPError
@@ -194,6 +209,57 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
+	formFile, err := c.FormFile("file")
+	if formFile != nil {
+		multipartFile, err := formFile.Open()
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusBadRequest,
+				Message: "Error uploading file! Please try again",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusBadRequest, &e)
+		}
+		defer multipartFile.Close()
+
+		err = h.objectUploader.CheckFileSize(formFile.Size, "picture")
+		if err != nil {
+			if err == h.objectUploader.ObjectTooLargeErr() {
+				e := HTTPError{
+					Code:    http.StatusRequestEntityTooLarge,
+					Message: "Error in PatchUser handler: " + err.Error(),
+				}
+				h.logger.Print(&e)
+				return c.JSON(http.StatusRequestEntityTooLarge, &e)
+			}
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: "Error in PatchUser handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusInternalServerError, &e)
+		}
+
+		err = h.objectUploader.PutObject(*updUser.Username, multipartFile)
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: "Error in PatchUser handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusInternalServerError, &e)
+		}
+		updUser.ProfilePic, err = h.objectUploader.GetObjectLink(*updUser.Username)
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: "Error in PatchUser handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusInternalServerError, &e)
+		}
+	}
+
 	return c.JSON(http.StatusOK, &updUser)
 }
 
@@ -220,7 +286,7 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	}
 
 	userID, _ := uuid.Parse(id)
-	err = h.repository.DeleteUser(userID)
+	user, err := h.repository.FindUserByID(userID)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -230,6 +296,27 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 			h.logger.Print(&e)
 			return c.JSON(http.StatusNotFound, &e)
 		}
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in DeleteUser repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
+	}
+
+	err = h.objectUploader.DeleteObject(*user.Username)
+	if err != nil { // User may not have a profile pic
+		if err == h.objectUploader.ObjectNotFoundErr() {
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Attachment not found: " + err.Error(),
+			}
+			h.logger.Print(&e)
+		}
+	}
+
+	err = h.repository.DeleteUser(userID)
+	if err != nil {
 		e := HTTPError{
 			Code:    http.StatusInternalServerError,
 			Message: "Error in DeleteUser repository: " + err.Error(),
@@ -411,17 +498,8 @@ func (h *UserHandler) Register(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, &e)
 		}
 		defer multipartFile.Close()
-		if !ok {
-			e := HTTPError{
-				Code:    http.StatusBadRequest,
-				Message: "Error uploading file! Please try again",
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusBadRequest, &e)
-		}
-		err = h.objectUploader.CheckFileSize(formFile.Size, "picture")
 
-		link, err := h.objectUploader.PutObject(*user.Username, multipartFile)
+		err = h.objectUploader.CheckFileSize(formFile.Size, "picture")
 		if err != nil {
 			if err == h.objectUploader.ObjectTooLargeErr() {
 				e := HTTPError{
@@ -438,7 +516,25 @@ func (h *UserHandler) Register(c echo.Context) error {
 			h.logger.Print(&e)
 			return c.JSON(http.StatusInternalServerError, &e)
 		}
-		h.logger.Print(link)
+
+		err = h.objectUploader.PutObject(*user.Username, multipartFile)
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: "Error in Register handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusInternalServerError, &e)
+		}
+		user.ProfilePic, err = h.objectUploader.GetObjectLink(*user.Username)
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: "Error in Register handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusInternalServerError, &e)
+		}
 	}
 
 	newUser, err := h.repository.CreateUser(user)

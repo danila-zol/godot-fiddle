@@ -17,6 +17,7 @@ import (
 
 type ObjectUploader struct {
 	s3Client          *s3.Client
+	presignClient     *s3.PresignClient
 	bucketName        string
 	bucketRegion      string
 	errObjectTooLarge error
@@ -43,6 +44,7 @@ func NewObjectUploader() (*ObjectUploader, error) {
 		errObjectTooLarge: errors.New("The object for upload is too large!"),
 		errObjectNotFound: errors.New("Specified object does not exist or was not created"),
 	}
+	ou.presignClient = s3.NewPresignClient(ou.s3Client)
 
 	exists, err := ou.checkExists(ou.bucketName)
 	if err != nil {
@@ -105,24 +107,22 @@ func (u *ObjectUploader) createBucket() error {
 	return nil
 }
 
-func (u *ObjectUploader) PutObject(objectKey string, file io.Reader) (string, error) {
-	var link string
-
+func (u *ObjectUploader) PutObject(objectKey string, file io.Reader) error {
 	_, err := u.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket: aws.String(u.bucketName),
 		Key:    aws.String(objectKey),
 		Body:   file,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
 	err = s3.NewObjectExistsWaiter(u.s3Client).Wait(
 		context.Background(), &s3.HeadObjectInput{Bucket: aws.String(u.bucketName), Key: aws.String(objectKey)}, time.Minute)
 	if err != nil {
-		return "", u.errObjectNotFound
+		return u.errObjectNotFound
 	}
-	// TODO: Get a link for the object
-	return link, nil
+
+	return nil
 }
 
 // Checks the provided file size compared to the max quota for the user tier
@@ -135,13 +135,34 @@ func (u *ObjectUploader) CheckFileSize(size int64, userTier string) error {
 	case "paidtier":
 		sizeCap = 150 * 1024 * 1024 // 150M
 	case "picture":
-		sizeCap = 12 * 1024 * 1024 // 12M
+		sizeCap = 5 * 1024 * 1024 // 5M
 	}
 
 	if size > sizeCap {
 		return u.errObjectTooLarge
 	}
 	return nil
+}
+
+func (u *ObjectUploader) GetObjectLink(objectKey string) (string, error) {
+	err := s3.NewObjectExistsWaiter(u.s3Client).Wait(
+		context.Background(), &s3.HeadObjectInput{Bucket: aws.String(u.bucketName), Key: aws.String(objectKey)}, time.Second*5)
+	if err != nil {
+		return "", u.errObjectNotFound
+	}
+
+	url, err := u.presignClient.PresignGetObject(context.Background(),
+		&s3.GetObjectInput{
+			Bucket: aws.String(u.bucketName),
+			Key:    aws.String(objectKey),
+		}, func(po *s3.PresignOptions) {
+			s3.WithPresignExpires(time.Hour * 168) // Max expire time
+		})
+	if err != nil {
+		return "", err
+	}
+
+	return url.URL, err
 }
 
 func (u *ObjectUploader) DeleteObject(objectKey string) error {
