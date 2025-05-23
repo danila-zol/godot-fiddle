@@ -14,7 +14,6 @@ type ObjectUploader interface {
 	CheckFileSize(size int64, userTier string) error
 
 	PutObject(objectKey string, file io.Reader) error
-	// GetObject(ctx context.Context, objectKey string, fileName string) (*[]byte, error)
 	GetObjectLink(objectKey string) (string, error)
 	DeleteObject(objectKey string) error
 

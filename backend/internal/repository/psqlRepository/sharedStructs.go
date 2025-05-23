@@ -12,3 +12,7 @@ type Enforcer interface {
 	RemovePermissions(...any) (bool, error)
 	RemovePermissionsForObject(obj, act string) (bool, error)
 }
+
+type ObjectUploader interface {
+	GetObjectLink(objectKey string) (string, error)
+}

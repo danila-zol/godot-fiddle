@@ -76,7 +76,7 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	user.ProfilePic, err = h.objectUploader.GetObjectLink(*user.Username)
+	link, err := h.objectUploader.GetObjectLink(*user.Username)
 	if err != nil {
 		if err != h.objectUploader.ObjectNotFoundErr() {
 			e := HTTPError{
@@ -89,6 +89,7 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 		e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
 		h.logger.Print(&e)
 	}
+	user.ProfilePic = &link
 
 	return c.JSON(http.StatusOK, &user)
 }
@@ -190,7 +191,47 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
+	// Check duplicate username/email
+	_, err = h.userAuthorizer.IdentifyUser(user.Email, user.Username)
+	if err == nil {
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Duplicate username and/or email",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
+	}
+
 	userID, _ := uuid.Parse(id)
+	oldUser, err := h.repository.FindUserByID(userID)
+	if err != nil {
+		if err == h.repository.NotFoundErr() {
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Not Found!",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusNotFound, &e)
+		}
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in DeleteUser repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
+	}
+
+	err = h.objectUploader.DeleteObject(*oldUser.Username)
+	if err != nil { // User may not have a profile pic
+		if err == h.objectUploader.ObjectNotFoundErr() {
+			e := HTTPError{
+				Code:    http.StatusNotFound,
+				Message: "Attachment not found: " + err.Error(),
+			}
+			h.logger.Print(&e)
+		}
+	}
+
 	updUser, err := h.repository.UpdateUser(userID, user)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
@@ -249,16 +290,18 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 			h.logger.Print(&e)
 			return c.JSON(http.StatusInternalServerError, &e)
 		}
-		updUser.ProfilePic, err = h.objectUploader.GetObjectLink(*updUser.Username)
-		if err != nil {
-			e := HTTPError{
-				Code:    http.StatusInternalServerError,
-				Message: "Error in PatchUser handler: " + err.Error(),
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusInternalServerError, &e)
-		}
 	}
+
+	key, err := h.objectUploader.GetObjectLink(*updUser.Username)
+	if err != nil {
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in PatchUser handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
+	}
+	updUser.ProfilePic = &key
 
 	return c.JSON(http.StatusOK, &updUser)
 }
@@ -465,6 +508,17 @@ func (h *UserHandler) Register(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
+	// Check duplicate username/email
+	_, err = h.userAuthorizer.IdentifyUser(user.Email, user.Username)
+	if err == nil {
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Duplicate username and/or email",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
+	}
+
 	passwordSlice, ok := c.Request().Header["Password"]
 	if !ok {
 		e := HTTPError{
@@ -486,6 +540,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 	}
 	user.Password, err = h.userAuthorizer.CreatePasswordHash(password)
 
+	var key string
 	formFile, err := c.FormFile("file")
 	if formFile != nil {
 		multipartFile, err := formFile.Open()
@@ -526,7 +581,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 			h.logger.Print(&e)
 			return c.JSON(http.StatusInternalServerError, &e)
 		}
-		user.ProfilePic, err = h.objectUploader.GetObjectLink(*user.Username)
+		key, err = h.objectUploader.GetObjectLink(*user.Username)
 		if err != nil {
 			e := HTTPError{
 				Code:    http.StatusInternalServerError,
@@ -546,6 +601,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 		h.logger.Print(&e)
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
+	newUser.ProfilePic = &key
 
 	session, err := h.repository.CreateSession(models.Session{UserID: newUser.ID})
 	if err != nil {

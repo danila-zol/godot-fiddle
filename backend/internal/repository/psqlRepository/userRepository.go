@@ -13,17 +13,20 @@ import (
 type PsqlUserRepository struct {
 	databaseClient psqlDatabaseClient
 	enforcer       Enforcer
+	objectUploader ObjectUploader
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlUserRepository(dbClient psqlDatabaseClient, e Enforcer) *PsqlUserRepository {
+func NewPsqlUserRepository(dbClient psqlDatabaseClient, e Enforcer, o ObjectUploader) *PsqlUserRepository {
 	return &PsqlUserRepository{
 		databaseClient: dbClient,
 		enforcer:       e,
+		objectUploader: o,
 	}
 }
 func (r *PsqlUserRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
 
+// TODO: Try offloading the uploading calls to the repo
 func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
@@ -163,6 +166,8 @@ func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]mode
 		if err != nil {
 			return nil, err
 		}
+		l, _ := r.objectUploader.GetObjectLink(*user.Username)
+		user.ProfilePic = &l
 		users = append(users, user)
 	}
 	err = rows.Err()
