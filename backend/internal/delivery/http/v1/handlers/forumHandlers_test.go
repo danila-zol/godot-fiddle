@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	// "github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,14 +34,14 @@ var (
 		conflictErr: errors.New("Record conflict!"),
 	}
 
-	// genericUUID uuid.UUID = uuid.New()
+	genericUUID uuid.UUID = uuid.New()
 
-	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
-	// conflictResponse = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
+	notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
+	conflictResponse = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
 
-	// queryTags             = `cheeseboiger`
-	// queryLimit uint64 = 1
-	// queryOrder                  = `newest-updated`
+	queryTags         = `cheeseboiger`
+	queryLimit uint64 = 1
+	queryOrder        = `newest-updated`
 
 	topicJSON               = `{"name":"Cool topic"}`
 	topicJSONExpected       = `{"id":1,"name":"Cool topic","version":1}` + "\n"

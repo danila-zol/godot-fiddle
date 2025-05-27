@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"gamehangar/internal/domain/models"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -39,10 +42,10 @@ var (
 	}
 	au = mockUserAuthorizer{&mu}
 
-	genericUUID uuid.UUID = uuid.New()
+	// genericUUID uuid.UUID = uuid.New()
 
-	notFoundResponse          = `{"code":404,"message":"Not Found!"}` + "\n"
-	conflictResponse          = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
+	// notFoundResponse          = `{"code":404,"message":"Not Found!"}` + "\n"
+	// conflictResponse          = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
 	verifiedResponse          = `User verified`
 	loginResponse             = `Login successful`
 	logoutResponse            = `Session successfully deleted!`
@@ -57,12 +60,12 @@ var (
 	roleDeleteResponse = `Role successfully deleted!`
 
 	userJSON                  = `{"username":"Cool user","email":"test@example.com","role":"` + role + `"}`
-	userJSONExpected          = `{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"role":"` + role + `"}` + "\n"
-	userJSONExpectedMany      = `[{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"role":"` + role + `"}]` + "\n"
-	userJSONExpectedManyLimit = `[{"username":"cheeseboiger","email":"link.com"}]` + "\n"
+	userJSONExpected          = `{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"role":"` + role + `","profilePic":null}` + "\n"
+	userJSONExpectedMany      = `[{"id":"` + genericUUID.String() + `","username":"Cool user","email":"test@example.com","verified":false,"role":"` + role + `","profilePic":null}]` + "\n"
+	userJSONExpectedManyLimit = `[{"username":"cheeseboiger","email":"link.com","profilePic":null}]` + "\n"
 	userJSONUpdate            = `{"username":"Updated cool user"}`
-	userJSONUpdateExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":false,"role":"` + role + `"}` + "\n"
-	userJSONVerifyExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":true,"role":"` + role + `"}` + "\n"
+	userJSONUpdateExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":false,"role":"` + role + `","profilePic":null}` + "\n"
+	userJSONVerifyExpected    = `{"id":"` + genericUUID.String() + `","username":"Updated cool user","email":"test@example.com","verified":true,"role":"` + role + `","profilePic":null}` + "\n"
 
 	userPassword      = "qwety123"
 	userPasswordReset = "aVeryStrongPassword123"
@@ -117,7 +120,7 @@ func (r *mockUserRepo) DeleteAllUserSessions(userID uuid.UUID) error {
 	return nil
 }
 
-func (r *mockUserRepo) CreateUser(user models.User) (*models.User, error) {
+func (r *mockUserRepo) CreateUser(user models.User, profilePic io.Reader) (*models.User, error) {
 	id := genericUUID
 	f := false
 	user.ID = &id
@@ -162,7 +165,7 @@ func (r *mockUserRepo) FindUserByID(id uuid.UUID) (*models.User, error) {
 	}
 	return &user, nil
 }
-func (r *mockUserRepo) UpdateUser(id uuid.UUID, user models.User) (*models.User, error) {
+func (r *mockUserRepo) UpdateUser(id uuid.UUID, user models.User, profilePic io.Reader) (*models.User, error) {
 	var resultUser models.User
 	_, ok := r.userData[id.String()]
 	if !ok {
@@ -277,12 +280,24 @@ func TestDeleteRoleNotFound(t *testing.T) {
 func TestRegister(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/game-hangar/v1/register", strings.NewReader(userJSON))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	bodyBuffer := new(bytes.Buffer)
+	mw := multipart.NewWriter(bodyBuffer) // see https://pkg.go.dev/mime/multipart
+	mw.WriteField("Username", userUsername)
+	mw.WriteField("Email", userEmail)
+	mw.WriteField("Role", "Sharif")
+	picPart, err := mw.CreateFormFile("profilePic", mockFileInfo.Name())
+	if err != nil {
+		panic(err)
+	}
+	picPart.Write(mockFileContents)
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/game-hangar/v1/register", bodyBuffer)
+	req.Header.Set(echo.HeaderContentType, mw.FormDataContentType())
 	req.Header.Set("password", userPassword)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
+	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au, objectUploader: &mockFileUploader}
 
 	// Assertions
 	if assert.NoError(t, h.Register(c)) {
@@ -497,14 +512,19 @@ func TestGetUserByIDNotFound(t *testing.T) {
 func TestPatchUser(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/users", strings.NewReader(userJSONUpdate))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	bodyBuffer := new(bytes.Buffer)
+	mw := multipart.NewWriter(bodyBuffer) // see https://pkg.go.dev/mime/multipart
+	mw.WriteField("Username", "Updated cool user")
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/users", bodyBuffer)
+	req.Header.Set(echo.HeaderContentType, mw.FormDataContentType())
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
 	c.SetParamValues(genericUUID.String())
-	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au}
+	h := &UserHandler{logger: e.Logger, validator: v, repository: &mu, userAuthorizer: &au, objectUploader: &mockFileUploader}
 
 	// Assertions
 	if assert.NoError(t, h.PatchUser(c)) {

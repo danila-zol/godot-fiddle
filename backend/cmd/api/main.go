@@ -108,17 +108,17 @@ func main() {
 	userHandler := handlers.NewUserHandler(e, userRepo, app.validator, ou, userAuthorizer)
 	routes.NewUserRoutes(userHandler, userAuthorizer).InitRoutes(app.echo)
 
-	assetRepo := psqlRepository.NewPsqlAssetRepository(databaseClient)
-	assetHandler := handlers.NewAssetHandler(e, assetRepo, app.validator)
+	assetRepo := psqlRepository.NewPsqlAssetRepository(databaseClient, ou)
+	assetHandler := handlers.NewAssetHandler(e, assetRepo, app.validator, ou)
 	routes.NewAssetRoutes(assetHandler, userAuthorizer).InitRoutes(app.echo)
 
 	forumRepo := psqlRepository.NewPsqlForumRepository(databaseClient, ce)
 	forumHandler := handlers.NewForumHandler(e, forumRepo, app.validator)
 	routes.NewForumRoutes(forumHandler, userAuthorizer).InitRoutes(app.echo)
 
-	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient, ce)
+	demoRepo := psqlRepository.NewPsqlDemoRepository(databaseClient, ou, ce)
 	demoThreadSyncer := services.NewThreadSyncer(forumRepo, demoRepo, 1)
-	demoHandler := handlers.NewDemoHandler(e, demoRepo, app.validator, demoThreadSyncer)
+	demoHandler := handlers.NewDemoHandler(e, demoRepo, app.validator, demoThreadSyncer, ou)
 	routes.NewDemoRoutes(demoHandler, userAuthorizer).InitRoutes(app.echo)
 
 	app.appRouter = app.routes(app.echo)

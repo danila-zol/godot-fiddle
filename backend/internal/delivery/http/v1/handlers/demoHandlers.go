@@ -35,20 +35,20 @@ func NewDemoHandler(e *echo.Echo, repo DemoRepository, v *validator.Validate, s 
 	}
 }
 
-//	@Summary	Creates a new demo.
-//	@Tags		Demos
-//	@Accept		multipart/form-data
-//	@Produce	application/json
-//	@Param		Demo			formData	models.Demo	true	"Create Demo"
-//	@param		demoFile		formData	file		true	"Demo project file"
-//	@param		demoThumbnail	formData	file		true	"Demo thumbnail"
-//	@Success	201				{object}	models.Demo
-//	@Failure	400				{object}	HTTPError
-//	@Failure	403				{object}	HTTPError
-//	@Failure	413				{object}	HTTPError
-//	@Failure	422				{object}	HTTPError
-//	@Failure	500				{object}	HTTPError
-//	@Router		/v1/demos [post]
+// @Summary	Creates a new demo.
+// @Tags		Demos
+// @Accept		multipart/form-data
+// @Produce	application/json
+// @Param		Demo			formData	models.Demo	true	"Create Demo"
+// @param		demoFile		formData	file		true	"Demo project file"
+// @param		demoThumbnail	formData	file		true	"Demo thumbnail"
+// @Success	201				{object}	models.Demo
+// @Failure	400				{object}	HTTPError
+// @Failure	403				{object}	HTTPError
+// @Failure	413				{object}	HTTPError
+// @Failure	422				{object}	HTTPError
+// @Failure	500				{object}	HTTPError
+// @Router		/v1/demos [post]
 func (h *DemoHandler) PostDemo(c echo.Context) error {
 	var demo models.Demo
 
@@ -148,16 +148,6 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	newDemo, err := h.repository.CreateDemo(demo, demoMultipartFile, thumbnailMultipartFile)
-	if err != nil {
-		e := HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: "Error in CreateDemo repository: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusInternalServerError, &e)
-	}
-
 	demo.ThreadID, err = h.syncer.PostThread(demo)
 	if err != nil {
 		e := HTTPError{
@@ -168,20 +158,30 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
+	newDemo, err := h.repository.CreateDemo(demo, demoMultipartFile, thumbnailMultipartFile)
+	if err != nil {
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in CreateDemo repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
+	}
+
 	return c.JSON(http.StatusCreated, &newDemo)
 }
 
-//	@Summary	Fetches a demo by its ID.
-//	@Tags		Demos
-//	@Accept		text/plain
-//	@Produce	application/json
-//	@Param		id	path		int	true	"Get Demo of ID"
-//	@Success	200	{object}	models.Demo
-//	@Failure	400	{object}	HTTPError
-//	@Failure	404	{object}	HTTPError
-//	@Failure	422	{object}	HTTPError
-//	@Failure	500	{object}	HTTPError
-//	@Router		/v1/demos/{id} [get]
+// @Summary	Fetches a demo by its ID.
+// @Tags		Demos
+// @Accept		text/plain
+// @Produce	application/json
+// @Param		id	path		int	true	"Get Demo of ID"
+// @Success	200	{object}	models.Demo
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
+// @Router		/v1/demos/{id} [get]
 func (h *DemoHandler) GetDemoById(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
@@ -213,17 +213,17 @@ func (h *DemoHandler) GetDemoById(c echo.Context) error {
 	return c.JSON(http.StatusOK, &demo)
 }
 
-//	@Summary	Fetches all demos.
-//	@Tags		Demos
-//	@Produce	application/json
-//	@Param		q	query		[]string	false	"Keyword Query"
-//	@Param		l	query		int			false	"Record number limit"
-//	@Param		o	query		string		false	"Record ordering. Default newest updated"	Enums(newest-updated, highest-rated, most-views)
-//	@Success	200	{object}	models.Demo
-//	@Failure	400	{object}	HTTPError
-//	@Failure	404	{object}	HTTPError
-//	@Failure	500	{object}	HTTPError
-//	@Router		/v1/demos [get]
+// @Summary	Fetches all demos.
+// @Tags		Demos
+// @Produce	application/json
+// @Param		q	query		[]string	false	"Keyword Query"
+// @Param		l	query		int			false	"Record number limit"
+// @Param		o	query		string		false	"Record ordering. Default newest updated"	Enums(newest-updated, highest-rated, most-views)
+// @Success	200	{object}	models.Demo
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
+// @Router		/v1/demos [get]
 func (h *DemoHandler) GetDemos(c echo.Context) error {
 	var (
 		err   error
@@ -281,22 +281,22 @@ func (h *DemoHandler) GetDemos(c echo.Context) error {
 	return c.JSON(http.StatusOK, &demos)
 }
 
-//	@Summary	Updates a demo.
-//	@Tags		Demos
-//	@Accept		multipart/form-data
-//	@Produce	application/json
-//	@Param		id				path		int			true	"Update Demo of ID"
-//	@Param		Demo			formData	models.Demo	true	"Update Demo"
-//	@param		demoFile		formData	file		false	"Demo project file"
-//	@param		demoThumbnail	formData	file		false	"Demo thumbnail"
-//	@Success	200				{object}	models.Demo
-//	@Failure	400				{object}	HTTPError
-//	@Failure	403				{object}	HTTPError
-//	@Failure	404				{object}	HTTPError
-//	@Failure	413				{object}	HTTPError
-//	@Failure	422				{object}	HTTPError
-//	@Failure	500				{object}	HTTPError
-//	@Router		/v1/demos/{id} [patch]
+// @Summary	Updates a demo.
+// @Tags		Demos
+// @Accept		multipart/form-data
+// @Produce	application/json
+// @Param		id				path		int			true	"Update Demo of ID"
+// @Param		Demo			formData	models.Demo	true	"Update Demo"
+// @param		demoFile		formData	file		false	"Demo project file"
+// @param		demoThumbnail	formData	file		false	"Demo thumbnail"
+// @Success	200				{object}	models.Demo
+// @Failure	400				{object}	HTTPError
+// @Failure	403				{object}	HTTPError
+// @Failure	404				{object}	HTTPError
+// @Failure	413				{object}	HTTPError
+// @Failure	422				{object}	HTTPError
+// @Failure	500				{object}	HTTPError
+// @Router		/v1/demos/{id} [patch]
 func (h *DemoHandler) PatchDemo(c echo.Context) error {
 	var demo models.Demo
 
@@ -437,17 +437,17 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 	return c.JSON(http.StatusOK, &updDemo)
 }
 
-//	@Summary	Deletes the specified demo.
-//	@Tags		Demos
-//	@Accept		text/plain
-//	@Produce	text/plain
-//	@Param		id	path		int	true	"Delete Demo of ID"
-//	@Success	200	{string}	string
-//	@Failure	403	{object}	HTTPError
-//	@Failure	404	{object}	HTTPError
-//	@Failure	422	{object}	HTTPError
-//	@Failure	500	{object}	HTTPError
-//	@Router		/v1/demos/{id} [delete]
+// @Summary	Deletes the specified demo.
+// @Tags		Demos
+// @Accept		text/plain
+// @Produce	text/plain
+// @Param		id	path		int	true	"Delete Demo of ID"
+// @Success	200	{string}	string
+// @Failure	403	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
+// @Router		/v1/demos/{id} [delete]
 func (h *DemoHandler) DeleteDemo(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
