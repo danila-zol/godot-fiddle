@@ -32,6 +32,7 @@ func NewForumHandler(e *echo.Echo, repo ForumRepository, v *validator.Validate) 
 //	@Param		Topic	body		models.Topic	true	"Create Topic"
 //	@Success	201		{object}	models.Topic
 //	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
 //	@Failure	404		{object}	HTTPError
 //	@Failure	422		{object}	HTTPError
 //	@Failure	500		{object}	HTTPError
@@ -149,6 +150,7 @@ func (h *ForumHandler) GetTopics(c echo.Context) error {
 //	@Param		Topic	body		models.Topic	true	"Update Topic"
 //	@Success	200		{object}	models.Topic
 //	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
 //	@Failure	404		{object}	HTTPError
 //	@Failure	409		{object}	HTTPError
 //	@Failure	422		{object}	HTTPError
@@ -223,6 +225,7 @@ func (h *ForumHandler) PatchTopic(c echo.Context) error {
 //	@Produce	text/plain
 //	@Param		id	path		int	true	"Delete Topic of ID"
 //	@Success	200	{string}	string
+//	@Failure	403	{object}	HTTPError
 //	@Failure	404	{object}	HTTPError
 //	@Failure	422	{object}	HTTPError
 //	@Failure	500	{object}	HTTPError
@@ -268,6 +271,7 @@ func (h *ForumHandler) DeleteTopic(c echo.Context) error {
 //	@Param		Thread	body		models.Thread	true	"Create Thread"
 //	@Success	201		{object}	models.Thread
 //	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
 //	@Failure	404		{object}	HTTPError
 //	@Failure	422		{object}	HTTPError
 //	@Failure	500		{object}	HTTPError
@@ -427,6 +431,7 @@ func (h *ForumHandler) GetThreads(c echo.Context) error {
 //	@Param		Thread	body		models.Thread	true	"Update Thread"
 //	@Success	200		{object}	models.Thread
 //	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
 //	@Failure	404		{object}	HTTPError
 //	@Failure	422		{object}	HTTPError
 //	@Failure	500		{object}	HTTPError
@@ -492,6 +497,7 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 //	@Produce	text/plain
 //	@Param		id	path		int	true	"Delete Thread of ID"
 //	@Success	200	{string}	string
+//	@Failure	403	{object}	HTTPError
 //	@Failure	404	{object}	HTTPError
 //	@Failure	422	{object}	HTTPError
 //	@Failure	500	{object}	HTTPError
@@ -537,6 +543,7 @@ func (h *ForumHandler) DeleteThread(c echo.Context) error {
 //	@Param		Message	body		models.Message	true	"Create Message"
 //	@Success	201		{object}	models.Message
 //	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
 //	@Failure	404		{object}	HTTPError
 //	@Failure	422		{object}	HTTPError
 //	@Failure	500		{object}	HTTPError
@@ -737,6 +744,7 @@ func (h *ForumHandler) GetMessagesByThreadID(c echo.Context) error {
 //	@Param		Message	body		models.Message	true	"Update Message"
 //	@Success	200		{object}	models.Message
 //	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
 //	@Failure	404		{object}	HTTPError
 //	@Failure	422		{object}	HTTPError
 //	@Failure	500		{object}	HTTPError
@@ -802,6 +810,7 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 //	@Produce	text/plain
 //	@Param		id	path		int	true	"Delete Message of ID"
 //	@Success	200	{string}	string
+//	@Failure	403	{object}	HTTPError
 //	@Failure	404	{object}	HTTPError
 //	@Failure	422	{object}	HTTPError
 //	@Failure	500	{object}	HTTPError

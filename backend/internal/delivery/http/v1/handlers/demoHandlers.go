@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"gamehangar/internal/domain/models"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
@@ -12,10 +13,11 @@ import (
 )
 
 type DemoHandler struct {
-	logger     echo.Logger
-	repository DemoRepository
-	validator  *validator.Validate
-	syncer     ThreadSyncer
+	logger         echo.Logger
+	repository     DemoRepository
+	validator      *validator.Validate
+	objectUploader ObjectUploader
+	syncer         ThreadSyncer
 }
 
 type ThreadSyncer interface {
@@ -23,25 +25,29 @@ type ThreadSyncer interface {
 	PatchThread(demoID int, demo models.Demo) error
 }
 
-func NewDemoHandler(e *echo.Echo, repo DemoRepository, v *validator.Validate, s ThreadSyncer) *DemoHandler {
+func NewDemoHandler(e *echo.Echo, repo DemoRepository, v *validator.Validate, s ThreadSyncer, o ObjectUploader) *DemoHandler {
 	return &DemoHandler{
-		logger:     e.Logger,
-		repository: repo,
-		validator:  v,
-		syncer:     s,
+		logger:         e.Logger,
+		repository:     repo,
+		validator:      v,
+		objectUploader: o,
+		syncer:         s,
 	}
 }
 
 //	@Summary	Creates a new demo.
 //	@Tags		Demos
-//	@Accept		application/json
+//	@Accept		multipart/form-data
 //	@Produce	application/json
-//	@Param		Demo	body		models.Demo	true	"Create Demo"
-//	@Success	201		{object}	models.Demo
-//	@Failure	400		{object}	HTTPError
-//	@Failure	404		{object}	HTTPError
-//	@Failure	422		{object}	HTTPError
-//	@Failure	500		{object}	HTTPError
+//	@Param		Demo			formData	models.Demo	true	"Create Demo"
+//	@param		demoFile		formData	file		true	"Demo project file"
+//	@param		demoThumbnail	formData	file		true	"Demo thumbnail"
+//	@Success	201				{object}	models.Demo
+//	@Failure	400				{object}	HTTPError
+//	@Failure	403				{object}	HTTPError
+//	@Failure	413				{object}	HTTPError
+//	@Failure	422				{object}	HTTPError
+//	@Failure	500				{object}	HTTPError
 //	@Router		/v1/demos [post]
 func (h *DemoHandler) PostDemo(c echo.Context) error {
 	var demo models.Demo
@@ -67,6 +73,91 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
+	demoFormFile, err := c.FormFile("demoFile")
+	if demoFormFile == nil {
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Missing demo project file: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
+	}
+	demoMultipartFile, err := demoFormFile.Open()
+	if err != nil {
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error uploading file! Please try again",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
+	}
+	defer demoMultipartFile.Close()
+	err = h.objectUploader.CheckFileSize(demoFormFile.Size, c.Get("userTier").(string))
+	if err != nil {
+		if err == h.objectUploader.ObjectTooLargeErr() {
+			e := HTTPError{
+				Code:    http.StatusRequestEntityTooLarge,
+				Message: "Error in PostDemo handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusRequestEntityTooLarge, &e)
+		}
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in PostDemo handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
+	}
+
+	thumbnailFormFile, err := c.FormFile("demoThumbnail")
+	if thumbnailFormFile == nil {
+		e := HTTPError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Missing demo thumnail file: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusUnprocessableEntity, &e)
+	}
+	thumbnailMultipartFile, err := thumbnailFormFile.Open()
+	if err != nil {
+		e := HTTPError{
+			Code:    http.StatusBadRequest,
+			Message: "Error uploading file! Please try again",
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusBadRequest, &e)
+	}
+	defer thumbnailMultipartFile.Close()
+
+	err = h.objectUploader.CheckFileSize(thumbnailFormFile.Size, "picture")
+	if err != nil {
+		if err == h.objectUploader.ObjectTooLargeErr() {
+			e := HTTPError{
+				Code:    http.StatusRequestEntityTooLarge,
+				Message: "Error in PostDemo handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusRequestEntityTooLarge, &e)
+		}
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in PostDemo handler: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
+	}
+
+	newDemo, err := h.repository.CreateDemo(demo, demoMultipartFile, thumbnailMultipartFile)
+	if err != nil {
+		e := HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: "Error in CreateDemo repository: " + err.Error(),
+		}
+		h.logger.Print(&e)
+		return c.JSON(http.StatusInternalServerError, &e)
+	}
+
 	demo.ThreadID, err = h.syncer.PostThread(demo)
 	if err != nil {
 		e := HTTPError{
@@ -75,16 +166,6 @@ func (h *DemoHandler) PostDemo(c echo.Context) error {
 		}
 		h.logger.Print(&e)
 		return c.JSON(http.StatusUnprocessableEntity, &e)
-	}
-
-	newDemo, err := h.repository.CreateDemo(demo)
-	if err != nil {
-		e := HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: "Error in CreateDemo repository: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
 	return c.JSON(http.StatusCreated, &newDemo)
@@ -202,15 +283,19 @@ func (h *DemoHandler) GetDemos(c echo.Context) error {
 
 //	@Summary	Updates a demo.
 //	@Tags		Demos
-//	@Accept		application/json
+//	@Accept		multipart/form-data
 //	@Produce	application/json
-//	@Param		id		path		int			true	"Update Demo of ID"
-//	@Param		Demo	body		models.Demo	true	"Update Demo"
-//	@Success	200		{object}	models.Demo
-//	@Failure	400		{object}	HTTPError
-//	@Failure	404		{object}	HTTPError
-//	@Failure	422		{object}	HTTPError
-//	@Failure	500		{object}	HTTPError
+//	@Param		id				path		int			true	"Update Demo of ID"
+//	@Param		Demo			formData	models.Demo	true	"Update Demo"
+//	@param		demoFile		formData	file		false	"Demo project file"
+//	@param		demoThumbnail	formData	file		false	"Demo thumbnail"
+//	@Success	200				{object}	models.Demo
+//	@Failure	400				{object}	HTTPError
+//	@Failure	403				{object}	HTTPError
+//	@Failure	404				{object}	HTTPError
+//	@Failure	413				{object}	HTTPError
+//	@Failure	422				{object}	HTTPError
+//	@Failure	500				{object}	HTTPError
 //	@Router		/v1/demos/{id} [patch]
 func (h *DemoHandler) PatchDemo(c echo.Context) error {
 	var demo models.Demo
@@ -248,7 +333,72 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, &e)
 	}
 
-	err = h.syncer.PatchThread(int(id), demo)
+	var demoMultipartFile, thumbnailMultipartFile multipart.File
+	demoFormFile, err := c.FormFile("demoFile")
+	if demoFormFile != nil {
+		demoMultipartFile, err = demoFormFile.Open()
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusBadRequest,
+				Message: "Error uploading file! Please try again",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusBadRequest, &e)
+		}
+		defer demoMultipartFile.Close()
+
+		err = h.objectUploader.CheckFileSize(demoFormFile.Size, c.Get("userTier").(string))
+		if err != nil {
+			if err == h.objectUploader.ObjectTooLargeErr() {
+				e := HTTPError{
+					Code:    http.StatusRequestEntityTooLarge,
+					Message: "Error in PatchDemo handler: " + err.Error(),
+				}
+				h.logger.Print(&e)
+				return c.JSON(http.StatusRequestEntityTooLarge, &e)
+			}
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: "Error in PatchDemo handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusInternalServerError, &e)
+		}
+	}
+
+	thumbnailFormFile, err := c.FormFile("demoThumbnail")
+	if thumbnailFormFile != nil {
+		thumbnailMultipartFile, err = thumbnailFormFile.Open()
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusBadRequest,
+				Message: "Error uploading file! Please try again",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusBadRequest, &e)
+		}
+		defer thumbnailMultipartFile.Close()
+
+		err = h.objectUploader.CheckFileSize(thumbnailFormFile.Size, "picture")
+		if err != nil {
+			if err == h.objectUploader.ObjectTooLargeErr() {
+				e := HTTPError{
+					Code:    http.StatusRequestEntityTooLarge,
+					Message: "Error in PatchDemo handler: " + err.Error(),
+				}
+				h.logger.Print(&e)
+				return c.JSON(http.StatusRequestEntityTooLarge, &e)
+			}
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: "Error in PatchDemo handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusInternalServerError, &e)
+		}
+	}
+
+	updDemo, err := h.repository.UpdateDemo(int(id), demo, demoMultipartFile, thumbnailMultipartFile)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -266,7 +416,7 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	updDemo, err := h.repository.UpdateDemo(int(id), demo)
+	err = h.syncer.PatchThread(int(id), demo)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -293,6 +443,7 @@ func (h *DemoHandler) PatchDemo(c echo.Context) error {
 //	@Produce	text/plain
 //	@Param		id	path		int	true	"Delete Demo of ID"
 //	@Success	200	{string}	string
+//	@Failure	403	{object}	HTTPError
 //	@Failure	404	{object}	HTTPError
 //	@Failure	422	{object}	HTTPError
 //	@Failure	500	{object}	HTTPError

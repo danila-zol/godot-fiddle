@@ -1,6 +1,10 @@
 package psqlRepository
 
-import "github.com/jackc/pgx/v5/pgxpool"
+import (
+	"io"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
 
 type psqlDatabaseClient interface {
 	AcquireConn() (*pgxpool.Conn, error)
@@ -14,5 +18,7 @@ type Enforcer interface {
 }
 
 type ObjectUploader interface {
-	GetObjectLink(objectKey string) (string, error)
+	PutObject(objectKey string, file io.Reader) error
+	GetObjectLink(objectKey string) (*string, error)
+	DeleteObject(objectKey string) error
 }

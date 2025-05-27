@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gamehangar/internal/domain/models"
+	"io"
 	"strings"
 
 	"github.com/google/uuid"
@@ -26,8 +27,7 @@ func NewPsqlUserRepository(dbClient psqlDatabaseClient, e Enforcer, o ObjectUplo
 }
 func (r *PsqlUserRepository) NotFoundErr() error { return r.databaseClient.ErrNoRows() }
 
-// TODO: Try offloading the uploading calls to the repo
-func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) {
+func (r *PsqlUserRepository) CreateUser(user models.User, profilePic io.Reader) (*models.User, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -46,6 +46,18 @@ func (r *PsqlUserRepository) CreateUser(user models.User) (*models.User, error) 
 	if err != nil {
 		return nil, err
 	}
+
+	if profilePic != nil {
+		err = r.objectUploader.PutObject(*user.Username, profilePic)
+		if err != nil {
+			return nil, err
+		}
+		user.ProfilePic, err = r.objectUploader.GetObjectLink(*user.Username)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	_, err = r.enforcer.AddPermissions(user.ID.String(), "users/"+user.ID.String(), "PATCH")
 	if err != nil {
 		return nil, err
@@ -73,6 +85,9 @@ func (r *PsqlUserRepository) FindUserByID(id uuid.UUID) (*models.User, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	user.ProfilePic, _ = r.objectUploader.GetObjectLink(*user.Username)
+
 	return &user, nil
 }
 
@@ -166,8 +181,7 @@ func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]mode
 		if err != nil {
 			return nil, err
 		}
-		l, _ := r.objectUploader.GetObjectLink(*user.Username)
-		user.ProfilePic = &l
+		user.ProfilePic, _ = r.objectUploader.GetObjectLink(*user.Username)
 		users = append(users, user)
 	}
 	err = rows.Err()
@@ -180,7 +194,7 @@ func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]mode
 	return &users, nil
 }
 
-func (r *PsqlUserRepository) UpdateUser(id uuid.UUID, user models.User) (*models.User, error) {
+func (r *PsqlUserRepository) UpdateUser(id uuid.UUID, user models.User, profilePic io.Reader) (*models.User, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -201,6 +215,15 @@ func (r *PsqlUserRepository) UpdateUser(id uuid.UUID, user models.User) (*models
 	if err != nil {
 		return nil, err
 	}
+
+	if profilePic != nil {
+		err = r.objectUploader.PutObject(*user.Username, profilePic)
+		if err != nil {
+			return nil, err
+		}
+	}
+	user.ProfilePic, _ = r.objectUploader.GetObjectLink(*user.Username)
+
 	return &user, nil
 }
 
@@ -211,6 +234,17 @@ func (r *PsqlUserRepository) DeleteUser(id uuid.UUID) error {
 	}
 	defer conn.Release()
 
+	var username string
+	err = conn.QueryRow(context.Background(),
+		`SELECT username FROM "user".users WHERE id=$1`, id).Scan(&username)
+	if err != nil {
+		return err
+	}
+	err = r.objectUploader.DeleteObject(username)
+	if err != nil {
+		return err
+	}
+
 	ct, err := conn.Exec(context.Background(), `DELETE FROM "user".users WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
 		if err != nil {
@@ -218,6 +252,7 @@ func (r *PsqlUserRepository) DeleteUser(id uuid.UUID) error {
 		}
 		return r.databaseClient.ErrNoRows()
 	}
+
 	_, err = r.enforcer.RemovePermissions(id.String(), "users/"+id.String(), "PATCH")
 	if err != nil {
 		return err

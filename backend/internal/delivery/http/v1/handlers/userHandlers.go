@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"gamehangar/internal/domain/models"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"time"
@@ -37,17 +38,17 @@ func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, o 
 	}
 }
 
-// @Summary	Fetches a user by its ID.
-// @Tags		Users
-// @Accept		text/plain
-// @Produce	application/json
-// @Param		id	path		string	true	"Get User of ID"
-// @Success	200	{object}	models.User
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/users/{id} [get]
+//	@Summary	Fetches a user by its ID.
+//	@Tags		Users
+//	@Accept		text/plain
+//	@Produce	application/json
+//	@Param		id	path		string	true	"Get User of ID"
+//	@Success	200	{object}	models.User
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/users/{id} [get]
 func (h *UserHandler) GetUserById(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
@@ -76,34 +77,19 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	link, err := h.objectUploader.GetObjectLink(*user.Username)
-	if err != nil {
-		if err != h.objectUploader.ObjectNotFoundErr() {
-			e := HTTPError{
-				Code:    http.StatusInternalServerError,
-				Message: "Error in GetUserByID handler: " + err.Error(),
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusInternalServerError, &e)
-		}
-		e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
-		h.logger.Print(&e)
-	}
-	user.ProfilePic = &link
-
 	return c.JSON(http.StatusOK, &user)
 }
 
-// @Summary	Fetches all users.
-// @Tags		Users
-// @Produce	application/json
-// @Param		q	query		[]string	false	"Keyword Query"
-// @Param		l	query		int			false	"Record number limit"
-// @Success	200	{object}	models.User
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/users [get]
+//	@Summary	Fetches all users.
+//	@Tags		Users
+//	@Produce	application/json
+//	@Param		q	query		[]string	false	"Keyword Query"
+//	@Param		l	query		int			false	"Record number limit"
+//	@Success	200	{object}	models.User
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/users [get]
 func (h *UserHandler) GetUsers(c echo.Context) error {
 	var (
 		err   error
@@ -144,19 +130,21 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 	return c.JSON(http.StatusOK, &users)
 }
 
-// @Summary	Updates a user.
-// @Tags		Users
-// @Accept		multipart/form-data
-// @Produce	application/json
-// @Param		id		path		string		true	"Update User of ID"
-// @Param		User	formData		models.User	true	"Update User"
-// @Param		file		formData	file		false	"Profile picture"
-// @Success	200		{object}	models.User
-// @Failure	400		{object}	HTTPError
-// @Failure	404		{object}	HTTPError
-// @Failure	422		{object}	HTTPError
-// @Failure	500		{object}	HTTPError
-// @Router		/v1/users/{id} [patch]
+//	@Summary	Updates a user.
+//	@Tags		Users
+//	@Accept		multipart/form-data
+//	@Produce	application/json
+//	@Param		id			path		string		true	"Update User of ID"
+//	@Param		User		formData	models.User	true	"Update User"
+//	@Param		profilePic	formData	file		false	"Profile picture"
+//	@Success	200			{object}	models.User
+//	@Failure	400			{object}	HTTPError
+//	@Failure	403			{object}	HTTPError
+//	@Failure	404			{object}	HTTPError
+//	@Failure	413			{object}	HTTPError
+//	@Failure	422			{object}	HTTPError
+//	@Failure	500			{object}	HTTPError
+//	@Router		/v1/users/{id} [patch]
 func (h *UserHandler) PatchUser(c echo.Context) error {
 	var user models.User
 
@@ -202,37 +190,41 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, &e)
 	}
 
+	var profilePicMultipartFile multipart.File
+	profilePicFormFile, err := c.FormFile("profilePic")
+	if profilePicFormFile != nil {
+		profilePicMultipartFile, err = profilePicFormFile.Open()
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusBadRequest,
+				Message: "Error uploading file! Please try again",
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusBadRequest, &e)
+		}
+		defer profilePicMultipartFile.Close()
+
+		err = h.objectUploader.CheckFileSize(profilePicFormFile.Size, "picture")
+		if err != nil {
+			if err == h.objectUploader.ObjectTooLargeErr() {
+				e := HTTPError{
+					Code:    http.StatusRequestEntityTooLarge,
+					Message: "Error in PatchUser handler: " + err.Error(),
+				}
+				h.logger.Print(&e)
+				return c.JSON(http.StatusRequestEntityTooLarge, &e)
+			}
+			e := HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: "Error in PatchUser handler: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusInternalServerError, &e)
+		}
+	}
+
 	userID, _ := uuid.Parse(id)
-	oldUser, err := h.repository.FindUserByID(userID)
-	if err != nil {
-		if err == h.repository.NotFoundErr() {
-			e := HTTPError{
-				Code:    http.StatusNotFound,
-				Message: "Not Found!",
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusNotFound, &e)
-		}
-		e := HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: "Error in DeleteUser repository: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusInternalServerError, &e)
-	}
-
-	err = h.objectUploader.DeleteObject(*oldUser.Username)
-	if err != nil { // User may not have a profile pic
-		if err == h.objectUploader.ObjectNotFoundErr() {
-			e := HTTPError{
-				Code:    http.StatusNotFound,
-				Message: "Attachment not found: " + err.Error(),
-			}
-			h.logger.Print(&e)
-		}
-	}
-
-	updUser, err := h.repository.UpdateUser(userID, user)
+	updUser, err := h.repository.UpdateUser(userID, user, profilePicMultipartFile)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -250,72 +242,20 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
 
-	formFile, err := c.FormFile("file")
-	if formFile != nil {
-		multipartFile, err := formFile.Open()
-		if err != nil {
-			e := HTTPError{
-				Code:    http.StatusBadRequest,
-				Message: "Error uploading file! Please try again",
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusBadRequest, &e)
-		}
-		defer multipartFile.Close()
-
-		err = h.objectUploader.CheckFileSize(formFile.Size, "picture")
-		if err != nil {
-			if err == h.objectUploader.ObjectTooLargeErr() {
-				e := HTTPError{
-					Code:    http.StatusRequestEntityTooLarge,
-					Message: "Error in PatchUser handler: " + err.Error(),
-				}
-				h.logger.Print(&e)
-				return c.JSON(http.StatusRequestEntityTooLarge, &e)
-			}
-			e := HTTPError{
-				Code:    http.StatusInternalServerError,
-				Message: "Error in PatchUser handler: " + err.Error(),
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusInternalServerError, &e)
-		}
-
-		err = h.objectUploader.PutObject(*updUser.Username, multipartFile)
-		if err != nil {
-			e := HTTPError{
-				Code:    http.StatusInternalServerError,
-				Message: "Error in PatchUser handler: " + err.Error(),
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusInternalServerError, &e)
-		}
-	}
-
-	key, err := h.objectUploader.GetObjectLink(*updUser.Username)
-	if err != nil {
-		e := HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: "Error in PatchUser handler: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusInternalServerError, &e)
-	}
-	updUser.ProfilePic = &key
-
 	return c.JSON(http.StatusOK, &updUser)
 }
 
-// @Summary	Deletes the specified user.
-// @Tags		Users
-// @Accept		text/plain
-// @Produce	text/plain
-// @Param		id	path		string	true	"Delete User of ID"
-// @Success	200	{string}	string
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/users/{id} [delete]
+//	@Summary	Deletes the specified user.
+//	@Tags		Users
+//	@Accept		text/plain
+//	@Produce	text/plain
+//	@Param		id	path		string	true	"Delete User of ID"
+//	@Success	200	{string}	string
+//	@Failure	403	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
@@ -329,35 +269,6 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	}
 
 	userID, _ := uuid.Parse(id)
-	user, err := h.repository.FindUserByID(userID)
-	if err != nil {
-		if err == h.repository.NotFoundErr() {
-			e := HTTPError{
-				Code:    http.StatusNotFound,
-				Message: "Not Found!",
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusNotFound, &e)
-		}
-		e := HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: "Error in DeleteUser repository: " + err.Error(),
-		}
-		h.logger.Print(&e)
-		return c.JSON(http.StatusInternalServerError, &e)
-	}
-
-	err = h.objectUploader.DeleteObject(*user.Username)
-	if err != nil { // User may not have a profile pic
-		if err == h.objectUploader.ObjectNotFoundErr() {
-			e := HTTPError{
-				Code:    http.StatusNotFound,
-				Message: "Attachment not found: " + err.Error(),
-			}
-			h.logger.Print(&e)
-		}
-	}
-
 	err = h.repository.DeleteUser(userID)
 	if err != nil {
 		e := HTTPError{
@@ -371,17 +282,18 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	return c.String(http.StatusOK, "User successfully deleted!")
 }
 
-// @Summary	Creates a new role.
-// @Tags		Roles
-// @Accept		application/json
-// @Produce	application/json
-// @Param		Role	header		string	true	"Create Role"
-// @Success	201		{string}	string
-// @Failure	400		{object}	HTTPError
-// @Failure	404		{object}	HTTPError
-// @Failure	422		{object}	HTTPError
-// @Failure	500		{object}	HTTPError
-// @Router		/v1/roles [post]
+//	@Summary	Creates a new role.
+//	@Tags		Roles
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		Role	header		string	true	"Create Role"
+//	@Success	201		{string}	string
+//	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
+//	@Router		/v1/roles [post]
 func (h *UserHandler) PostRole(c echo.Context) error {
 
 	roleSlice, ok := c.Request().Header["Role"]
@@ -417,18 +329,19 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 	return c.String(http.StatusCreated, "Role successfully created!")
 }
 
-// @Summary	Deletes the specified role.
-// @Tags		Roles
-// @Accept		text/plain
-// @Produce	text/plain
-// @Security	ApiSessionCookie
-// @param		sessionID	header		string	false	"Session ID"
-// @Param		Role		header		string	true	"Delete Role"
-// @Success	200			{string}	string
-// @Failure	404			{object}	HTTPError
-// @Failure	422			{object}	HTTPError
-// @Failure	500			{object}	HTTPError
-// @Router		/v1/roles [delete]
+//	@Summary	Deletes the specified role.
+//	@Tags		Roles
+//	@Accept		text/plain
+//	@Produce	text/plain
+//	@Security	ApiSessionCookie
+//	@param		sessionID	header		string	false	"Session ID"
+//	@Param		Role		header		string	true	"Delete Role"
+//	@Success	200			{string}	string
+//	@Failure	403			{object}	HTTPError
+//	@Failure	404			{object}	HTTPError
+//	@Failure	422			{object}	HTTPError
+//	@Failure	500			{object}	HTTPError
+//	@Router		/v1/roles [delete]
 func (h *UserHandler) DeleteRole(c echo.Context) error {
 	roleSlice, ok := c.Request().Header["Role"]
 	if !ok {
@@ -471,19 +384,20 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 	return c.String(http.StatusOK, "Role successfully deleted!")
 }
 
-// @Summary	Registers a new user and creates a session.
-// @Tags		Login
-// @Accept		multipart/form-data
-// @Produce	application/json
-// @Param		User		formData	models.User	true	"Create User"
-// @param		password	header		string		true	"Password"
-// @param		file		formData	file		false	"Profile picture"
-// @Success	201			{object}	models.User
-// @Failure	400			{object}	HTTPError
-// @Failure	404			{object}	HTTPError
-// @Failure	422			{object}	HTTPError
-// @Failure	500			{object}	HTTPError
-// @Router		/v1/register [post]
+//	@Summary	Registers a new user and creates a session.
+//	@Tags		Login
+//	@Accept		multipart/form-data
+//	@Produce	application/json
+//	@Param		User		formData	models.User	true	"Create User"
+//	@param		password	header		string		true	"Password"
+//	@param		file		formData	file		false	"Profile picture"
+//	@Success	201			{object}	models.User
+//	@Failure	400			{object}	HTTPError
+//	@Failure	404			{object}	HTTPError
+//	@Failure	413			{object}	HTTPError
+//	@Failure	422			{object}	HTTPError
+//	@Failure	500			{object}	HTTPError
+//	@Router		/v1/register [post]
 func (h *UserHandler) Register(c echo.Context) error {
 	var user models.User
 
@@ -540,10 +454,10 @@ func (h *UserHandler) Register(c echo.Context) error {
 	}
 	user.Password, err = h.userAuthorizer.CreatePasswordHash(password)
 
-	var key string
+	var profilePicMultipartFile multipart.File
 	formFile, err := c.FormFile("file")
 	if formFile != nil {
-		multipartFile, err := formFile.Open()
+		profilePicMultipartFile, err = formFile.Open()
 		if err != nil {
 			e := HTTPError{
 				Code:    http.StatusBadRequest,
@@ -552,7 +466,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 			h.logger.Print(&e)
 			return c.JSON(http.StatusBadRequest, &e)
 		}
-		defer multipartFile.Close()
+		defer profilePicMultipartFile.Close()
 
 		err = h.objectUploader.CheckFileSize(formFile.Size, "picture")
 		if err != nil {
@@ -571,28 +485,9 @@ func (h *UserHandler) Register(c echo.Context) error {
 			h.logger.Print(&e)
 			return c.JSON(http.StatusInternalServerError, &e)
 		}
-
-		err = h.objectUploader.PutObject(*user.Username, multipartFile)
-		if err != nil {
-			e := HTTPError{
-				Code:    http.StatusInternalServerError,
-				Message: "Error in Register handler: " + err.Error(),
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusInternalServerError, &e)
-		}
-		key, err = h.objectUploader.GetObjectLink(*user.Username)
-		if err != nil {
-			e := HTTPError{
-				Code:    http.StatusInternalServerError,
-				Message: "Error in Register handler: " + err.Error(),
-			}
-			h.logger.Print(&e)
-			return c.JSON(http.StatusInternalServerError, &e)
-		}
 	}
 
-	newUser, err := h.repository.CreateUser(user)
+	newUser, err := h.repository.CreateUser(user, profilePicMultipartFile)
 	if err != nil {
 		e := HTTPError{
 			Code:    http.StatusInternalServerError,
@@ -601,7 +496,6 @@ func (h *UserHandler) Register(c echo.Context) error {
 		h.logger.Print(&e)
 		return c.JSON(http.StatusInternalServerError, &e)
 	}
-	newUser.ProfilePic = &key
 
 	session, err := h.repository.CreateSession(models.Session{UserID: newUser.ID})
 	if err != nil {
@@ -624,16 +518,16 @@ func (h *UserHandler) Register(c echo.Context) error {
 	return c.JSON(http.StatusCreated, &newUser)
 }
 
-// @Summary	Verifies the authenticated User.
-// @Tags		Login
-// @Accept		text/plain
-// @Produce	text/plain
-// @Security	ApiSessionCookie
-// @param		sessionID	header		string	false	"Session ID"
-// @Success	200			{string}	string
-// @Failure	401			{object}	HTTPError
-// @Failure	500			{object}	HTTPError
-// @Router		/v1/verify [get]
+//	@Summary	Verifies the authenticated User.
+//	@Tags		Login
+//	@Accept		text/plain
+//	@Produce	text/plain
+//	@Security	ApiSessionCookie
+//	@param		sessionID	header		string	false	"Session ID"
+//	@Success	200			{string}	string
+//	@Failure	401			{object}	HTTPError
+//	@Failure	500			{object}	HTTPError
+//	@Router		/v1/verify [get]
 func (h *UserHandler) Verify(c echo.Context) error {
 	var s string
 
@@ -670,7 +564,7 @@ func (h *UserHandler) Verify(c echo.Context) error {
 	}
 
 	t := true
-	_, err = h.repository.UpdateUser(*session.UserID, models.User{Verified: &t})
+	_, err = h.repository.UpdateUser(*session.UserID, models.User{Verified: &t}, nil)
 	if err != nil {
 		e := HTTPError{
 			Code:    http.StatusInternalServerError,
@@ -683,18 +577,18 @@ func (h *UserHandler) Verify(c echo.Context) error {
 	return c.String(http.StatusOK, "User verified")
 }
 
-// @Summary	Resets User password and deletes all their Sessions
-// @Tags		Login
-// @Accept		text/plain
-// @Produce	text/plain
-// @Security	ApiSessionCookie
-// @param		password	header		string	true	"New Password"
-// @param		id			path		string	true	"User ID"
-// @Success	200			{string}	string
-// @Failure	400			{object}	HTTPError
-// @Failure	422			{object}	HTTPError
-// @Failure	500			{object}	HTTPError
-// @Router		/v1/reset-password/{id} [patch]
+//	@Summary	Resets User password and deletes all their Sessions
+//	@Tags		Login
+//	@Accept		text/plain
+//	@Produce	text/plain
+//	@Security	ApiSessionCookie
+//	@param		password	header		string	true	"New Password"
+//	@param		id			path		string	true	"User ID"
+//	@Success	200			{string}	string
+//	@Failure	400			{object}	HTTPError
+//	@Failure	422			{object}	HTTPError
+//	@Failure	500			{object}	HTTPError
+//	@Router		/v1/reset-password/{id} [patch]
 func (h *UserHandler) ResetPassword(c echo.Context) error {
 	passwordSlice, ok := c.Request().Header["Password"]
 	if !ok {
@@ -720,7 +614,7 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 	password, err = h.userAuthorizer.CreatePasswordHash(password)
 
 	sessionID, _ := uuid.Parse(c.Param("id"))
-	user, err := h.repository.UpdateUser(sessionID, models.User{Password: password})
+	user, err := h.repository.UpdateUser(sessionID, models.User{Password: password}, nil)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{
@@ -751,17 +645,18 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 	return c.String(http.StatusOK, "User password reset!")
 }
 
-// @Summary	Logs the User in and creates a new Session.
-// @Tags		Login
-// @Accept		application/json
-// @Produce	text/plain
-// @param		email		header		string	false	"Email"
-// @param		username	header		string	false	"Username"
-// @param		password	header		string	true	"Password"
-// @Success	200			{string}	string
-// @Failure	400			{object}	HTTPError
-// @Failure	500			{object}	HTTPError
-// @Router		/v1/login [post]
+//	@Summary	Logs the User in and creates a new Session.
+//	@Tags		Login
+//	@Accept		application/json
+//	@Produce	text/plain
+//	@param		email		header		string	false	"Email"
+//	@param		username	header		string	false	"Username"
+//	@param		password	header		string	true	"Password"
+//	@Success	200			{string}	string
+//	@Failure	400			{object}	HTTPError
+//	@Failure	422			{object}	HTTPError
+//	@Failure	500			{object}	HTTPError
+//	@Router		/v1/login [post]
 func (h *UserHandler) Login(c echo.Context) error {
 	var username, email, password string
 
@@ -850,20 +745,20 @@ func (h *UserHandler) Login(c echo.Context) error {
 	return c.String(http.StatusOK, "Login successful")
 }
 
-// @Summary	Invalidates and deletes the specified session.
-// @Tags		Login
-// @Accept		text/plain
-// @Produce	text/plain
-// @Security	ApiSessionCookie
-// @param		sessionID	header		string	false	"Session ID"
-// @Param		id			path		string	true	"Session to invalidate"
-// @Success	200			{string}	string
-// @Failure	400			{object}	HTTPError
-// @Failure	401			{object}	HTTPError
-// @Failure	403			{object}	HTTPError
-// @Failure	404			{object}	HTTPError
-// @Failure	500			{object}	HTTPError
-// @Router		/v1/logout/{id} [delete]
+//	@Summary	Invalidates and deletes the specified session.
+//	@Tags		Login
+//	@Accept		text/plain
+//	@Produce	text/plain
+//	@Security	ApiSessionCookie
+//	@param		sessionID	header		string	false	"Session ID"
+//	@Param		id			path		string	true	"Session to invalidate"
+//	@Success	200			{string}	string
+//	@Failure	400			{object}	HTTPError
+//	@Failure	401			{object}	HTTPError
+//	@Failure	403			{object}	HTTPError
+//	@Failure	404			{object}	HTTPError
+//	@Failure	500			{object}	HTTPError
+//	@Router		/v1/logout/{id} [delete]
 func (h *UserHandler) Logout(c echo.Context) error {
 	reqSessionID, _ := uuid.Parse(c.Param("id"))
 	requestedSession, err := h.repository.FindSessionByID(reqSessionID)

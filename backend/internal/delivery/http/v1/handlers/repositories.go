@@ -2,25 +2,26 @@ package handlers
 
 import (
 	"gamehangar/internal/domain/models"
+	"io"
 
 	"github.com/google/uuid"
 )
 
 type AssetRepository interface {
-	CreateAsset(asset models.Asset) (*models.Asset, error)
+	CreateAsset(asset models.Asset, assetFile, assetThumbnail io.Reader) (*models.Asset, error)
 	FindAssets(query []string, limit uint64, order string) (*[]models.Asset, error)
 	FindAssetByID(id int) (*models.Asset, error)
-	UpdateAsset(id int, asset models.Asset) (*models.Asset, error)
+	UpdateAsset(id int, asset models.Asset, assetFile, assetThumbnail io.Reader) (*models.Asset, error)
 	DeleteAsset(id int) error
 	NotFoundErr() error
 	ConflictErr() error
 }
 
 type DemoRepository interface {
-	CreateDemo(demo models.Demo) (*models.Demo, error)
+	CreateDemo(demo models.Demo, demoFile, demoThumbnail io.Reader) (*models.Demo, error)
 	FindDemos(query []string, limit uint64, order string) (*[]models.Demo, error)
 	FindDemoByID(id int) (*models.Demo, error)
-	UpdateDemo(id int, demo models.Demo) (*models.Demo, error)
+	UpdateDemo(id int, demo models.Demo, demoFile, demoThumbnail io.Reader) (*models.Demo, error)
 	DeleteDemo(id int) error
 	NotFoundErr() error
 }
@@ -50,10 +51,10 @@ type ForumRepository interface {
 }
 
 type UserRepository interface {
-	CreateUser(user models.User) (*models.User, error)
+	CreateUser(user models.User, profilePic io.Reader) (*models.User, error)
 	FindUsers(query []string, limit uint64) (*[]models.User, error)
 	FindUserByID(id uuid.UUID) (*models.User, error)
-	UpdateUser(id uuid.UUID, user models.User) (*models.User, error)
+	UpdateUser(id uuid.UUID, user models.User, profilePic io.Reader) (*models.User, error)
 	DeleteUser(id uuid.UUID) error
 
 	CreateRole(role string) error

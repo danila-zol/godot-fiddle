@@ -134,6 +134,8 @@ func (u *ObjectUploader) CheckFileSize(size int64, userTier string) error {
 		sizeCap = 50 * 1024 * 1024 // 50M
 	case "paidtier":
 		sizeCap = 150 * 1024 * 1024 // 150M
+	case "admin":
+		sizeCap = 150 * 1024 * 1024 // 150M
 	case "picture":
 		sizeCap = 5 * 1024 * 1024 // 5M
 	}
@@ -144,11 +146,11 @@ func (u *ObjectUploader) CheckFileSize(size int64, userTier string) error {
 	return nil
 }
 
-func (u *ObjectUploader) GetObjectLink(objectKey string) (string, error) {
+func (u *ObjectUploader) GetObjectLink(objectKey string) (*string, error) {
 	err := s3.NewObjectExistsWaiter(u.s3Client).Wait(
 		context.Background(), &s3.HeadObjectInput{Bucket: aws.String(u.bucketName), Key: aws.String(objectKey)}, time.Second*5)
 	if err != nil {
-		return "", u.errObjectNotFound
+		return nil, u.errObjectNotFound
 	}
 
 	url, err := u.presignClient.PresignGetObject(context.Background(),
@@ -159,10 +161,10 @@ func (u *ObjectUploader) GetObjectLink(objectKey string) (string, error) {
 			s3.WithPresignExpires(time.Hour * 168) // Max expire time
 		})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return url.URL, err
+	return &url.URL, err
 }
 
 func (u *ObjectUploader) DeleteObject(objectKey string) error {

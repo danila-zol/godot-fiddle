@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"gamehangar/internal/domain/models"
@@ -12,15 +13,19 @@ import (
 )
 
 type PsqlAssetRepository struct {
-	databaseClient psqlDatabaseClient
-	conflictErr    error
+	databaseClient       psqlDatabaseClient
+	objectUploader       ObjectUploader
+	attachmentMissingErr error
+	conflictErr          error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
-func NewPsqlAssetRepository(dbClient psqlDatabaseClient) *PsqlAssetRepository {
+func NewPsqlAssetRepository(dbClient psqlDatabaseClient, o ObjectUploader) *PsqlAssetRepository {
 	return &PsqlAssetRepository{
-		databaseClient: dbClient,
-		conflictErr:    errors.New("Record conflict!"),
+		databaseClient:       dbClient,
+		attachmentMissingErr: errors.New("Missing attachment!"),
+		conflictErr:          errors.New("Record conflict!"),
+		objectUploader:       o,
 	}
 }
 
@@ -29,7 +34,7 @@ func (r *PsqlAssetRepository) NotFoundErr() error { return r.databaseClient.ErrN
 // Returns "Record conflict!" to specify conflicting record versions on update
 func (r *PsqlAssetRepository) ConflictErr() error { return r.conflictErr }
 
-func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, error) {
+func (r *PsqlAssetRepository) CreateAsset(asset models.Asset, assetFile, assetThumbnail io.Reader) (*models.Asset, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -38,13 +43,37 @@ func (r *PsqlAssetRepository) CreateAsset(asset models.Asset) (*models.Asset, er
 
 	err = conn.QueryRow(context.Background(),
 		`INSERT INTO asset.assets
-		(name, description, link, tags) 
+		(name, description, tags) 
 		VALUES
-		($1, $2, $3, $4)
+		($1, $2, $3)
 		RETURNING
-		(id, name, description, link, tags, created_at, updated_at, version, upvotes, downvotes, rating, views)`,
-		asset.Name, asset.Description, asset.Link, asset.Tags,
+		(id, name, description, tags, created_at, updated_at, version, upvotes, downvotes, rating, views, object_key, thumbnail_key)`,
+		asset.Name, asset.Description, asset.Tags,
 	).Scan(&asset)
+	if err != nil {
+		return nil, err
+	}
+
+	if assetFile == nil {
+		return nil, r.attachmentMissingErr
+	}
+	err = r.objectUploader.PutObject(*asset.Key, assetFile)
+	if err != nil {
+		return nil, err
+	}
+	asset.Key, err = r.objectUploader.GetObjectLink(*asset.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	if assetThumbnail == nil {
+		return nil, r.attachmentMissingErr
+	}
+	err = r.objectUploader.PutObject(*asset.ThumbnailKey, assetThumbnail)
+	if err != nil {
+		return nil, err
+	}
+	asset.ThumbnailKey, err = r.objectUploader.GetObjectLink(*asset.ThumbnailKey)
 	if err != nil {
 		return nil, err
 	}
@@ -65,12 +94,22 @@ func (r *PsqlAssetRepository) FindAssetByID(id int) (*models.Asset, error) {
 		views=views+1
 		WHERE id = $1
 		RETURNING
-		(id, name, description, link, tags, created_at, updated_at, version, upvotes, downvotes, rating, views)`,
+		(id, name, description, tags, created_at, updated_at, version, upvotes, downvotes, rating, views, object_key, thumbnail_key)`,
 		id,
 	).Scan(&asset)
 	if err != nil {
 		return nil, err
 	}
+
+	asset.Key, err = r.objectUploader.GetObjectLink(*asset.Key)
+	if err != nil {
+		return nil, err
+	}
+	asset.ThumbnailKey, err = r.objectUploader.GetObjectLink(*asset.ThumbnailKey)
+	if err != nil {
+		return nil, err
+	}
+
 	return &asset, nil
 }
 
@@ -86,13 +125,13 @@ func (r *PsqlAssetRepository) FindAssets(keywords []string, limit uint64, order 
 	var rows pgx.Rows
 	if len(keywords) != 0 {
 		query :=
-			`SELECT (id, name, description, link, tags, created_at, updated_at, version, upvotes, downvotes, rating, views) 
+			`SELECT (id, name, description, tags, created_at, updated_at, version, upvotes, downvotes, rating, views, object_key, thumbnail_key) 
 				FROM
-				((SELECT id, name, description, link, tags, created_at, updated_at, version, upvotes, downvotes, rating, views
+				((SELECT id, name, description, tags, created_at, updated_at, version, upvotes, downvotes, rating, views, object_key, thumbnail_key
 				FROM asset.assets
 				WHERE asset_ts @@ to_tsquery_multilang($1))
 			UNION
-				(SELECT id, name, description, link, tags, created_at, updated_at, version, upvotes, downvotes, rating, views 
+				(SELECT id, name, description, tags, created_at, updated_at, version, upvotes, downvotes, rating, views, object_key, thumbnail_key 
 				FROM asset.assets
 				WHERE tags && ($2) COLLATE case_insensitive))`
 
@@ -117,7 +156,7 @@ func (r *PsqlAssetRepository) FindAssets(keywords []string, limit uint64, order 
 		}
 	} else {
 		query := `SELECT 
-			(id, name, description, link, tags, created_at, updated_at, version, rating, views) 
+			(id, name, description, tags, created_at, updated_at, version, upvotes, downvotes, rating, views, object_key, thumbnail_key) 
 			FROM asset.assets`
 
 		switch order {
@@ -145,6 +184,8 @@ func (r *PsqlAssetRepository) FindAssets(keywords []string, limit uint64, order 
 		if err != nil {
 			return nil, err
 		}
+		asset.Key, _ = r.objectUploader.GetObjectLink(*asset.Key)
+		asset.ThumbnailKey, _ = r.objectUploader.GetObjectLink(*asset.ThumbnailKey)
 		assets = append(assets, asset)
 	}
 	err = rows.Err()
@@ -154,10 +195,11 @@ func (r *PsqlAssetRepository) FindAssets(keywords []string, limit uint64, order 
 	if len(assets) == 0 {
 		return nil, r.NotFoundErr()
 	}
+
 	return &assets, nil
 }
 
-func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.Asset, error) {
+func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset, assetFile, assetThumbnail io.Reader) (*models.Asset, error) {
 	conn, err := r.databaseClient.AcquireConn()
 	if err != nil {
 		return nil, err
@@ -171,16 +213,34 @@ func (r *PsqlAssetRepository) UpdateAsset(id int, asset models.Asset) (*models.A
 
 	err = conn.QueryRow(context.Background(),
 		`UPDATE asset.assets SET 
-		name=COALESCE($1, name), description=COALESCE($2, description), link=COALESCE($3, link), tags=COALESCE($4, tags), updated_at=NOW(), upvotes=COALESCE($5, upvotes), downvotes=COALESCE($6, downvotes)
-			WHERE id = $7
+		name=COALESCE($1, name), description=COALESCE($2, description), tags=COALESCE($3, tags), updated_at=NOW(), upvotes=COALESCE($4, upvotes), downvotes=COALESCE($5, downvotes)
+			WHERE id = $6
 		RETURNING
-			(id, name, description, link, tags, created_at, updated_at, version, upvotes, downvotes, rating, views)`,
-		asset.Name, asset.Description, asset.Link, asset.Tags, asset.Upvotes, asset.Downvotes,
+			(id, name, description, tags, created_at, updated_at, version, upvotes, downvotes, rating, views, object_key, thumbnail_key)`,
+		asset.Name, asset.Description, asset.Tags, asset.Upvotes, asset.Downvotes,
 		id,
 	).Scan(&asset)
 	if err != nil {
 		return nil, err
 	}
+
+	if assetFile != nil {
+		err = r.objectUploader.PutObject(*asset.Key, assetFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if assetThumbnail != nil {
+		err = r.objectUploader.PutObject(*asset.ThumbnailKey, assetThumbnail)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	asset.Key, _ = r.objectUploader.GetObjectLink(*asset.Key)
+	asset.ThumbnailKey, _ = r.objectUploader.GetObjectLink(*asset.ThumbnailKey)
+
 	return &asset, nil
 }
 
@@ -190,6 +250,15 @@ func (r *PsqlAssetRepository) DeleteAsset(id int) error {
 		return err
 	}
 	defer conn.Release()
+
+	err = r.objectUploader.DeleteObject(fmt.Sprintf("asset-%v", id))
+	if err != nil {
+		return err
+	}
+	err = r.objectUploader.DeleteObject(fmt.Sprintf("asset-thumbnail-%v", id))
+	if err != nil {
+		return err
+	}
 
 	ct, err := conn.Exec(context.Background(), `DELETE FROM asset.assets WHERE id=$1`, id)
 	if ct.RowsAffected() == 0 {
