@@ -17,6 +17,7 @@ import (
 
 var (
 	// testDBClient     *psqlDatabase.PsqlDatabaseClient
+	// testS3Client *MockS3
 	testEnforcer *psqlCasbinClient.CasbinClient
 
 	role string = "Sharif"
@@ -41,40 +42,40 @@ func init() {
 }
 
 func TestCreateRole(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	err := r.CreateRole(role)
 	assert.NoError(t, err)
 }
 func TestDeleteRole(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	err := r.DeleteRole(role)
 	assert.NoError(t, err)
 }
 
 func TestCreateUser(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	err := r.CreateRole(role)
 	user.Role = &role
 
-	resultUser, err := r.CreateUser(user)
+	resultUser, err := r.CreateUser(user, nil)
 	assert.NoError(t, err)
 	user = *resultUser
 }
 
 func TestFindUserByID(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	_, err := r.FindUserByID(*user.ID)
 	assert.NoError(t, err)
 }
 
 func TestFindUserByEmail(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	_, err := r.FindUserByEmail(*user.Email)
 	assert.NoError(t, err)
 }
 
 func TestFindUserByUsername(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	_, err := r.FindUserByUsername(*user.Username)
 	assert.NoError(t, err)
 }
@@ -88,8 +89,8 @@ func TestFindUserByIDNoRows(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
-	resultUser, err := r.UpdateUser(*user.ID, userUpdated)
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
+	resultUser, err := r.UpdateUser(*user.ID, userUpdated, nil)
 	assert.NoError(t, err)
 
 	modifiedUser := user
@@ -97,18 +98,21 @@ func TestUpdateUser(t *testing.T) {
 	modifiedUser.DisplayName = &userDisplayName
 	modifiedUser.Karma = &userKarmaUpdated
 
+	l := "https://example.com"
+	modifiedUser.ProfilePic = &l
+
 	assert.Equal(t, modifiedUser, *resultUser)
 }
 
 func TestDeleteUser(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	err := r.DeleteUser(*user.ID)
 	assert.NoError(t, err)
 }
 
 func TestCreateSession(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
-	user, err := r.CreateUser(user)
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
+	user, err := r.CreateUser(user, nil)
 	userID = *user.ID
 	session.UserID = user.ID
 
@@ -118,13 +122,13 @@ func TestCreateSession(t *testing.T) {
 }
 
 func TestFindSessionByID(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	_, err := r.FindSessionByID(*session.ID)
 	assert.NoError(t, err)
 }
 
 func TestFindSessionByIDNoRows(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	_, err := r.FindSessionByID(uuid.New()) // (near) impossible to match
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
@@ -132,7 +136,7 @@ func TestFindSessionByIDNoRows(t *testing.T) {
 }
 
 func TestDeleteSession(t *testing.T) {
-	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer}
+	r := PsqlUserRepository{databaseClient: testDBClient, enforcer: testEnforcer, objectUploader: testS3Client}
 	err := r.DeleteSession(*session.ID)
 	if assert.NoError(t, err) {
 		teardownUser(&r)

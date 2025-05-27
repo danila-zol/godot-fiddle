@@ -13,19 +13,17 @@ import (
 )
 
 type PsqlDemoRepository struct {
-	databaseClient       psqlDatabaseClient
-	objectUploader       ObjectUploader
-	enforcer             Enforcer
-	attachmentMissingErr error
+	databaseClient psqlDatabaseClient
+	objectUploader ObjectUploader
+	enforcer       Enforcer
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
 func NewPsqlDemoRepository(dbClient psqlDatabaseClient, o ObjectUploader, e Enforcer) *PsqlDemoRepository {
 	return &PsqlDemoRepository{
-		databaseClient:       dbClient,
-		attachmentMissingErr: errors.New("Missing attachment!"),
-		objectUploader:       o,
-		enforcer:             e,
+		databaseClient: dbClient,
+		objectUploader: o,
+		enforcer:       e,
 	}
 }
 
@@ -59,29 +57,21 @@ func (r *PsqlDemoRepository) CreateDemo(demo models.Demo, demoFile, demoThumbnai
 		return nil, err
 	}
 
-	if demoFile == nil {
-		return nil, r.attachmentMissingErr
-	}
-	err = r.objectUploader.PutObject(*demo.Key, demoFile)
-	if err != nil {
-		return nil, err
-	}
-	demo.Key, err = r.objectUploader.GetObjectLink(*demo.Key)
-	if err != nil {
-		return nil, err
+	if demoFile != nil {
+		err = r.objectUploader.PutObject(*demo.Key, demoFile)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if demoThumbnail == nil {
-		return nil, r.attachmentMissingErr
+	if demoThumbnail != nil {
+		err = r.objectUploader.PutObject(*demo.ThumbnailKey, demoThumbnail)
+		if err != nil {
+			return nil, err
+		}
 	}
-	err = r.objectUploader.PutObject(*demo.ThumbnailKey, demoThumbnail)
-	if err != nil {
-		return nil, err
-	}
-	demo.ThumbnailKey, err = r.objectUploader.GetObjectLink(*demo.ThumbnailKey)
-	if err != nil {
-		return nil, err
-	}
+	demo.Key, _ = r.objectUploader.GetObjectLink(*demo.Key)
+	demo.ThumbnailKey, _ = r.objectUploader.GetObjectLink(*demo.ThumbnailKey)
 
 	return &demo, nil
 }

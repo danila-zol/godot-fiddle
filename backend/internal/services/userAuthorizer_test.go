@@ -18,6 +18,7 @@ import (
 
 var (
 	// independent bool = false
+	testUploader *ObjectUploader
 	testDBClient *psqlDatabase.PsqlDatabaseClient
 	testEnforcer *psqlCasbinClient.CasbinClient
 
@@ -97,7 +98,7 @@ func init() {
 	if err != nil {
 		panic("Error creating Casbin enforcer: " + err.Error())
 	}
-	userRepository = psqlRepository.NewPsqlUserRepository(testDBClient, testEnforcer)
+	userRepository = psqlRepository.NewPsqlUserRepository(testDBClient, testEnforcer, testS3Client)
 	userAuthorizer = NewUserAuthorizer(userRepository, testEnforcer)
 }
 
@@ -126,7 +127,7 @@ func TestPasswordHashCreateCheck(t *testing.T) {
 	hash, err := userAuthorizer.CreatePasswordHash(&testPassword)
 	assert.NoError(t, err)
 
-	_, err = userRepository.UpdateUser(userID, models.User{Password: hash})
+	_, err = userRepository.UpdateUser(userID, models.User{Password: hash}, nil)
 	assert.NoError(t, err)
 
 	err = userAuthorizer.CheckPassword(&testPassword, userID)

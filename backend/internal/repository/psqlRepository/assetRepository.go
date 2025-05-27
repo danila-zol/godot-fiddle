@@ -13,19 +13,17 @@ import (
 )
 
 type PsqlAssetRepository struct {
-	databaseClient       psqlDatabaseClient
-	objectUploader       ObjectUploader
-	attachmentMissingErr error
-	conflictErr          error
+	databaseClient psqlDatabaseClient
+	objectUploader ObjectUploader
+	conflictErr    error
 }
 
 // Requires PsqlDatabaseClient since it implements PostgeSQL-specific query logic
 func NewPsqlAssetRepository(dbClient psqlDatabaseClient, o ObjectUploader) *PsqlAssetRepository {
 	return &PsqlAssetRepository{
-		databaseClient:       dbClient,
-		attachmentMissingErr: errors.New("Missing attachment!"),
-		conflictErr:          errors.New("Record conflict!"),
-		objectUploader:       o,
+		databaseClient: dbClient,
+		conflictErr:    errors.New("Record conflict!"),
+		objectUploader: o,
 	}
 }
 
@@ -54,29 +52,22 @@ func (r *PsqlAssetRepository) CreateAsset(asset models.Asset, assetFile, assetTh
 		return nil, err
 	}
 
-	if assetFile == nil {
-		return nil, r.attachmentMissingErr
-	}
-	err = r.objectUploader.PutObject(*asset.Key, assetFile)
-	if err != nil {
-		return nil, err
-	}
-	asset.Key, err = r.objectUploader.GetObjectLink(*asset.Key)
-	if err != nil {
-		return nil, err
+	if assetFile != nil {
+		err = r.objectUploader.PutObject(*asset.Key, assetFile)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if assetThumbnail == nil {
-		return nil, r.attachmentMissingErr
+	if assetThumbnail != nil {
+		err = r.objectUploader.PutObject(*asset.ThumbnailKey, assetThumbnail)
+		if err != nil {
+			return nil, err
+		}
 	}
-	err = r.objectUploader.PutObject(*asset.ThumbnailKey, assetThumbnail)
-	if err != nil {
-		return nil, err
-	}
-	asset.ThumbnailKey, err = r.objectUploader.GetObjectLink(*asset.ThumbnailKey)
-	if err != nil {
-		return nil, err
-	}
+
+	asset.Key, _ = r.objectUploader.GetObjectLink(*asset.Key)
+	asset.ThumbnailKey, _ = r.objectUploader.GetObjectLink(*asset.ThumbnailKey)
 
 	return &asset, nil
 }

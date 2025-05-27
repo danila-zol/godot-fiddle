@@ -8,6 +8,7 @@ import (
 	"gamehangar/internal/enforcer/psqlCasbinClient"
 	"gamehangar/internal/repository/psqlRepository"
 	"gamehangar/pkg/ternMigrate"
+	"io"
 	"os"
 	"testing"
 
@@ -15,12 +16,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type MockS3 struct{}
+
+func (s *MockS3) PutObject(objectKey string, file io.Reader) error { return nil }
+func (s *MockS3) GetObjectLink(objectKey string) (*string, error) {
+	l := "https://example.com"
+	return &l, nil
+}
+func (s *MockS3) DeleteObject(objectKey string) error { return nil }
+
 var (
 	independent bool = false
 
 	threadSyncer    *ThreadSyncer
 	forumRepository *psqlRepository.PsqlForumRepository
 	demoRepository  *psqlRepository.PsqlDemoRepository
+	testS3Client    *MockS3
 
 	topicID int
 	// roleID string
@@ -29,9 +40,8 @@ var (
 	demoTitle        string      = "Test Demo"
 	demoTitleUpdated string      = "Test UPDATE Demo"
 	demoDescription  string      = "An demo for integration testing for PSQL Repo"
-	demoLink         string      = "https://example.com"
 	demoTags         []string    = []string{"TEST", "test"}
-	demo             models.Demo = models.Demo{Title: &demoTitle, Description: &demoDescription, Link: &demoLink, Tags: &demoTags}
+	demo             models.Demo = models.Demo{Title: &demoTitle, Description: &demoDescription, Tags: &demoTags}
 	demoUpdated      models.Demo = models.Demo{Title: &demoTitleUpdated}
 )
 
@@ -109,7 +119,6 @@ func init() {
 		"title" TEXT NOT NULL,
 		"description" TEXT,
 		"tags" TEXT[],
-		"link" VARCHAR(255) NOT NULL,
 		"user_id" UUID NOT NULL,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -117,7 +126,9 @@ func init() {
 		"downvotes" INTEGER NOT NULL DEFAULT 1,
 		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
 		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
-		"views" INTEGER NOT NULL DEFAULT 0
+		"views" INTEGER NOT NULL DEFAULT 0,
+		"object_key" VARCHAR(255) GENERATED ALWAYS AS ('demo-' || demo.demos.id) STORED,
+		"thumbnail_key" VARCHAR(255) GENERATED ALWAYS AS ('demo-thumbnail-' || demo.demos.id) STORED
 		);
 
 		CREATE COLLATION IF NOT EXISTS case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
@@ -175,7 +186,7 @@ func init() {
 	}
 	demo.UserID = &userID
 	forumRepository = psqlRepository.NewPsqlForumRepository(testDBClient, testEnforcer)
-	demoRepository = psqlRepository.NewPsqlDemoRepository(testDBClient, testEnforcer)
+	demoRepository = psqlRepository.NewPsqlDemoRepository(testDBClient, testS3Client, testEnforcer)
 	threadSyncer = NewThreadSyncer(
 		forumRepository,
 		demoRepository,
@@ -192,7 +203,7 @@ func TestPostThread(t *testing.T) {
 	thread, err := forumRepository.FindThreadByID(*demo.ThreadID)
 	assert.NoError(t, err)
 
-	demoCreated, err := demoRepository.CreateDemo(demo)
+	demoCreated, err := demoRepository.CreateDemo(demo, nil, nil)
 	if assert.NoError(t, err) {
 		assert.Equal(t, demoCreated.ThreadID, thread.ID)
 		assert.Equal(t, demoCreated.Title, thread.Title)
@@ -210,7 +221,7 @@ func TestPatchThread(t *testing.T) {
 	err = threadSyncer.PatchThread(*demoUpdated.ID, demoUpdated)
 	assert.NoError(t, err)
 
-	demoCreated, err := demoRepository.UpdateDemo(*demoUpdated.ID, demoUpdated)
+	demoCreated, err := demoRepository.UpdateDemo(*demoUpdated.ID, demoUpdated, nil, nil)
 	assert.NoError(t, err)
 
 	thread, err := forumRepository.FindThreadByID(*demoCreated.ThreadID)

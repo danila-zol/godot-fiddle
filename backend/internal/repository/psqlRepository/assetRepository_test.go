@@ -8,6 +8,7 @@ import (
 	"gamehangar/internal/domain/models"
 	"gamehangar/internal/enforcer/psqlCasbinClient"
 	"gamehangar/pkg/ternMigrate"
+	"io"
 	"os"
 	"testing"
 	"time"
@@ -16,9 +17,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type MockS3 struct{}
+
+func (s *MockS3) PutObject(objectKey string, file io.Reader) error { return nil }
+func (s *MockS3) GetObjectLink(objectKey string) (*string, error) {
+	l := "https://example.com"
+	return &l, nil
+}
+func (s *MockS3) DeleteObject(objectKey string) error { return nil }
+
 var (
 	independent  bool = false
 	testDBClient *psqlDatabase.PsqlDatabaseClient
+	testS3Client *MockS3
 
 	views uint = 0
 
@@ -26,10 +37,9 @@ var (
 	assetName        string       = "Test Asset"
 	assetNameUpdated string       = "Test UPDATE Asset"
 	assetDescription string       = "An asset for integration testing for PSQL Repo"
-	assetLink        string       = "https://example.com"
 	assetVersion     int          = 1
-	asset            models.Asset = models.Asset{Name: &assetName, Description: &assetDescription, Link: &assetLink}
-	assetUpdated     models.Asset = models.Asset{Name: &assetNameUpdated, Version: &assetVersion}
+	asset            models.Asset = models.Asset{Name: &assetName, Description: &assetDescription, Key: &assetName, ThumbnailKey: &assetName}
+	assetUpdated     models.Asset = models.Asset{Name: &assetNameUpdated, Version: &assetVersion, Key: &assetName, ThumbnailKey: &assetName}
 )
 
 func ResetDB() {
@@ -129,7 +139,6 @@ func ResetDB() {
 		"id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 		"name" TEXT NOT NULL,
 		"description" TEXT,
-		"link" VARCHAR(255) NOT NULL,
 		"tags" TEXT[],
 		"version" INTEGER NOT NULL DEFAULT 1,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -137,7 +146,9 @@ func ResetDB() {
 		"upvotes" INTEGER NOT NULL DEFAULT 1,
 		"downvotes" INTEGER NOT NULL DEFAULT 1,		
 		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
-		"views" INTEGER NOT NULL DEFAULT 0
+		"views" INTEGER NOT NULL DEFAULT 0,
+		"object_key" VARCHAR(255) GENERATED ALWAYS AS ('asset-' || asset.assets.id) STORED,
+		"thumbnail_key" VARCHAR(255) GENERATED ALWAYS AS ('asset-thumbnail-' || asset.assets.id) STORED
 		);
 
 		CREATE TABLE demo.demos (
@@ -145,7 +156,6 @@ func ResetDB() {
 		"title" TEXT NOT NULL,
 		"description" TEXT,
 		"tags" TEXT[],
-		"link" VARCHAR(255) NOT NULL,
 		"user_id" UUID NOT NULL,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -153,7 +163,9 @@ func ResetDB() {
 		"downvotes" INTEGER NOT NULL DEFAULT 1,
 		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
 		"views" INTEGER NOT NULL DEFAULT 0,
-		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
+		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
+		"object_key" VARCHAR(255) GENERATED ALWAYS AS ('demo-' || demo.demos.id) STORED,
+		"thumbnail_key" VARCHAR(255) GENERATED ALWAYS AS ('demo-thumbnail-' || demo.demos.id) STORED
 		);
 
 		CREATE OR REPLACE FUNCTION increment_version()
@@ -170,7 +182,6 @@ func ResetDB() {
 		FOR EACH ROW
 		WHEN ((OLD.name IS DISTINCT FROM NEW.name) 
 		OR (OLD.description IS DISTINCT FROM NEW.description)
-		OR (OLD.link IS DISTINCT FROM NEW.link)
 		OR (OLD.tags IS DISTINCT FROM NEW.tags))
 		EXECUTE FUNCTION increment_version();
 
@@ -266,13 +277,13 @@ func init() {
 }
 
 func TestCreateAsset(t *testing.T) {
-	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
-	_, err := r.CreateAsset(asset)
+	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!"), objectUploader: testS3Client}
+	_, err := r.CreateAsset(asset, nil, nil)
 	assert.NoError(t, err)
 }
 
 func TestFindAssetByID(t *testing.T) {
-	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!"), objectUploader: testS3Client}
 	asset, err := r.FindAssetByID(assetID)
 	if assert.NoError(t, err) { // Test view incrementation
 		assert.Equal(t, uint(1), *asset.Views)
@@ -280,7 +291,7 @@ func TestFindAssetByID(t *testing.T) {
 }
 
 func TestFindAssetByIDNoRows(t *testing.T) {
-	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!"), objectUploader: testS3Client}
 	_, err := r.FindAssetByID(39)
 	if assert.Error(t, err) {
 		assert.Equal(t, r.NotFoundErr(), err)
@@ -288,7 +299,7 @@ func TestFindAssetByIDNoRows(t *testing.T) {
 }
 
 func TestFindAssets(t *testing.T) {
-	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!"), objectUploader: testS3Client}
 	_, err := r.FindAssets(nil, 0, "")
 	assert.NoError(t, err)
 
@@ -299,17 +310,17 @@ func TestFindAssetsByQuery(t *testing.T) {
 		assetTitleAlt       string       = "The Magnificent Seven"
 		assetDescriptionAlt string       = `Marx was skint but he had sense, Engels lent him the necessary pence`
 		assetTagsAlt        []string     = []string{"Cheeseboiger", "Rock the Casbah"}
-		assetAlt            models.Asset = models.Asset{Name: &assetTitleAlt, Description: &assetDescriptionAlt, Link: &assetLink, Tags: &assetTagsAlt}
+		assetAlt            models.Asset = models.Asset{Name: &assetTitleAlt, Description: &assetDescriptionAlt, Tags: &assetTagsAlt, Key: &assetTitleAlt, ThumbnailKey: &assetTitleAlt}
 
 		assetTitleAltRu       string       = "Стук"
 		assetDescriptionAltRu string       = `Я скажу одно лишь слово: "Cheeseboiger"`
-		assetAltRu            models.Asset = models.Asset{Name: &assetTitleAltRu, Description: &assetDescriptionAltRu, Link: &assetLink}
+		assetAltRu            models.Asset = models.Asset{Name: &assetTitleAltRu, Description: &assetDescriptionAltRu, Key: &assetTitleAltRu, ThumbnailKey: &assetTitleAltRu}
 	)
 
-	r := PsqlAssetRepository{databaseClient: testDBClient}
+	r := PsqlAssetRepository{databaseClient: testDBClient, objectUploader: testS3Client}
 
 	for q, d := range map[string]models.Asset{"seven": assetAlt, "стук": assetAltRu} {
-		resultAsset, err := r.CreateAsset(d)
+		resultAsset, err := r.CreateAsset(d, nil, nil)
 		assert.NoError(t, err)
 
 		queryAssets, err := r.FindAssets([]string{q}, 0, "")
@@ -344,15 +355,14 @@ func TestFindAssetsByQuery(t *testing.T) {
 }
 
 func TestUpdateAsset(t *testing.T) {
-	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!"), objectUploader: testS3Client}
 
 	oldAsset, err := r.FindAssetByID(assetID)
 	assert.NoError(t, err)
 
-	resultAsset, err := r.UpdateAsset(assetID, assetUpdated)
+	resultAsset, err := r.UpdateAsset(assetID, assetUpdated, nil, nil)
 	if assert.NoError(t, err) {
 		assert.Equal(t, oldAsset.CreatedAt, resultAsset.CreatedAt)
-		assert.Equal(t, oldAsset.Link, resultAsset.Link)
 		assert.Equal(t, oldAsset.Rating, resultAsset.Rating)
 		assert.Equal(t, oldAsset.Views, resultAsset.Views)
 
@@ -367,7 +377,7 @@ func TestUpdateAsset(t *testing.T) {
 }
 
 func TestUpdateAssetMultiple(t *testing.T) {
-	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!"), objectUploader: testS3Client}
 
 	for i := 2; i < 6; i++ {
 		newName := *assetUpdated.Name + " New"
@@ -378,10 +388,9 @@ func TestUpdateAssetMultiple(t *testing.T) {
 		oldAsset, err := r.FindAssetByID(assetID)
 		assert.NoError(t, err)
 
-		resultAsset, err := r.UpdateAsset(assetID, assetUpdated)
+		resultAsset, err := r.UpdateAsset(assetID, assetUpdated, nil, nil)
 		if assert.NoError(t, err) {
 			assert.Equal(t, oldAsset.CreatedAt, resultAsset.CreatedAt)
-			assert.Equal(t, oldAsset.Link, resultAsset.Link)
 			assert.Equal(t, oldAsset.Rating, resultAsset.Rating)
 			assert.Equal(t, oldAsset.Views, resultAsset.Views)
 
@@ -397,15 +406,15 @@ func TestUpdateAssetMultiple(t *testing.T) {
 }
 
 func TestUpdateAssetConflict(t *testing.T) {
-	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
-	_, err := r.UpdateAsset(assetID, assetUpdated)
+	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!"), objectUploader: testS3Client}
+	_, err := r.UpdateAsset(assetID, assetUpdated, nil, nil)
 	if assert.Error(t, err) {
 		assert.Equal(t, r.conflictErr, err)
 	}
 }
 
 func TestDeleteAsset(t *testing.T) {
-	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!")}
+	r := PsqlAssetRepository{databaseClient: testDBClient, conflictErr: errors.New("Record conflict!"), objectUploader: testS3Client}
 	err := r.DeleteAsset(assetID)
 	if assert.NoError(t, err) {
 		teardownAsset(&r)
