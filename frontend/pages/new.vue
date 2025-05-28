@@ -115,7 +115,7 @@ useHead({
     <Navbar></Navbar>
     <div id="centering-containter">
         <div id="editor-area">
-            <input id="game-title-input" type="text" v-model="gameName"></input>
+            <input id="game-title-input" class="game-title" type="text" v-model="gameName"></input>
             <div id="tab-navigation" style="display: flex;">
                 <button @click="currentTab = 0" class="button">Editor</button>
                 <button @click="currentTab = 1"
@@ -137,14 +137,6 @@ useHead({
 <style lang="scss" scoped>
 .tab-hidden {
     display: none;
-}
-
-#game-title-input {
-    border: none;
-    border-bottom: solid 2px black;
-    font-size: 28px;
-    font-weight: bold;
-    margin: 3px 10px;
 }
 
 #site-actions {
