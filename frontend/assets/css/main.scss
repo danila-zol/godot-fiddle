@@ -1,0 +1,25 @@
+@use '~/assets/scss/colors';
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap');
+
+body {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    min-height: 100%;
+}
+
+* {
+    padding: 0;
+    margin: 0;
+    /* box-sizing: border-box; */
+}
+
+button {
+    background-color: colors.$active-button-color;
+    font-size: large;
+    padding: 3px 10px;
+}
+
+.button-disabled {
+    background-color: colors.$disabled-button-color;
+}

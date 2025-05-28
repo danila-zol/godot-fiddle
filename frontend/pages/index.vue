@@ -4,22 +4,18 @@ import NewGameCard from '~/components/NewGameCard.vue';
 const runConf = useRuntimeConfig()
 let topDemosUrl = runConf.public.apiRoot + runConf.public.apiDemosPrefix + "?t=1"
 let newDemosUrl = runConf.public.apiRoot + runConf.public.apiDemosPrefix + "?t=1"
-let topDemos = await fetch(topDemosUrl)
-    .then(
-        res => res.json()
-    ).then(
-        res => JSON.parse(res)
-    ).catch(
-        err => Array(3).fill(SAMPLE_GAME)
-    )
-let newDemos = await fetch(newDemosUrl)
-    .then(
-        res => res.json()
-    ).then(
-        res => JSON.parse(res)
-    ).catch(
-        err => Array(8).fill(SAMPLE_GAME)
-    )
+
+let { data: topDemos, error: tderr} = await useFetch(topDemosUrl)
+let { data: newDemos, error: nderr } = await useFetch(newDemosUrl)
+
+if (tderr.value) {
+    topDemos = Array(3).fill(SAMPLE_GAME)
+}
+
+if (nderr.value) {
+    newDemos = Array(8).fill(SAMPLE_GAME)
+}
+
 </script>
 
 <template>
