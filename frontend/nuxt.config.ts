@@ -17,6 +17,7 @@ export default defineNuxtConfig({
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp"
     }},
-    '/new' : {ssr: false}
+    '/new' : {ssr: false},
+    '/games/*': {ssr: false}
   },
 })

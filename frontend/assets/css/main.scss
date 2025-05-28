@@ -23,3 +23,11 @@ button {
 .button-disabled {
     background-color: colors.$disabled-button-color;
 }
+
+.game-title {
+    border: none;
+    border-bottom: solid 2px black;
+    font-size: 28px;
+    font-weight: bold;
+    margin: 3px 10px;
+}
