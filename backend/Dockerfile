@@ -21,6 +21,9 @@ FROM scratch
 
 COPY --from=builder /usr/src/app/docs/ ./
 COPY --from=builder /usr/src/app/bin/api ./
-COPY --from=builder /usr/src/app/.env ./
+COPY --from=builder /usr/src/app/internal/enforcer/psqlCasbinClient/rbac_model.conf ./
+
+# For S3 operations
+COPY --from=alpine /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 CMD [ "/api" ]

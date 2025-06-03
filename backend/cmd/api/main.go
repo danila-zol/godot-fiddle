@@ -43,10 +43,10 @@ type databaseClientCreator interface {
 }
 
 func getEnv() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		panic("Error loading .env file")
-	}
+	godotenv.Load(".env")
+	// if err != nil {
+	// 	panic("Error loading .env file")
+	// }
 }
 
 // @title						Game Hangar
