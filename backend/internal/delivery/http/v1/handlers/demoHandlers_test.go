@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"gamehangar/internal/domain/models"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"slices"
-	"strings"
 	"testing"
 
 	// "github.com/go-playground/validator/v10"
@@ -31,22 +34,33 @@ var (
 		notFoundErr: errors.New("Not Found"),
 	}
 
+	// mockFileUploader mockObjectUploader
+	// mockURI          string = "https://example.com"
+	// mockFileInfo     os.FileInfo
+	// mockFileContents []byte
+
 	// genericUUID uuid.UUID = uuid.New()
 
 	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
 
-	demoJSON               = `{"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `"}`
-	demoJSONExpected       = `{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"
-	demoJSONExpectedMany   = `[{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}]` + "\n"
-	demoQuery              = `cheeseboiger`
-	demoJSONQueryExpected  = `[{"id":1,"title":"cheeseboiger","link":"link.com","tags":null,"userID":"` + genericUUID.String() + `"},{"id":2,"title":"demo two","link":"example.com","tags":["cheeseboiger"],"userID":"` + genericUUID.String() + `"}]` + "\n"
-	demoJSONUpdate         = `{"title":"Updated cool demo","threadID":1}`
-	demoJSONUpdateExpected = `{"id":1,"title":"Updated cool demo","description":"A very nice demo to use in your game!","link":"https://example.com","userID":"` + genericUUID.String() + `","threadID":1}` + "\n"
+	// queryTags         = `cheeseboiger`
+	// queryLimit uint64 = 1
+	// queryOrder        = `newest-updated`
+
+	demoJSON                   = `{"title":"Cool demo","description":"A very nice demo to use in your game!","userID":"` + genericUUID.String() + `"}`
+	demoJSONExpected           = `{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","userID":"` + genericUUID.String() + `","threadID":1,"key":"` + mockURI + `","thumbnailKey":"` + mockURI + `"}` + "\n"
+	demoJSONExpectedMany       = `[{"id":1,"title":"Cool demo","description":"A very nice demo to use in your game!","userID":"` + genericUUID.String() + `","threadID":1,"key":"` + mockURI + `","thumbnailKey":"` + mockURI + `"}]` + "\n"
+	demoJSONQueryExpected      = `[{"id":1,"title":"cheeseboiger","tags":null,"userID":"` + genericUUID.String() + `","key":"` + mockURI + `","thumbnailKey":"` + mockURI + `"},{"id":2,"title":"demo two","tags":["cheeseboiger"],"userID":"` + genericUUID.String() + `","key":null,"thumbnailKey":null}]` + "\n"
+	demoJSONQueryExpectedLimit = `[{"id":1,"title":"cheeseboiger","tags":null,"userID":"` + genericUUID.String() + `","key":"` + mockURI + `","thumbnailKey":"` + mockURI + `"}]` + "\n"
+	demoJSONUpdate             = `{"title":"Updated cool demo","threadID":1}`
+	demoJSONUpdateExpected     = `{"id":1,"title":"Updated cool demo","description":"A very nice demo to use in your game!","userID":"` + genericUUID.String() + `","threadID":1,"key":"` + mockURI + `","thumbnailKey":"` + mockURI + `"}` + "\n"
 )
 
-func (r *mockDemoRepo) CreateDemo(demo models.Demo) (*models.Demo, error) {
+func (r *mockDemoRepo) CreateDemo(demo models.Demo, demoFile, demoThumbnail io.Reader) (*models.Demo, error) {
 	id := 1
 	demo.ID = &id
+	demo.Key = &mockURI
+	demo.ThumbnailKey = &mockURI
 	r.data[id] = demo
 	return &demo, nil
 }
@@ -57,38 +71,39 @@ func (r *mockDemoRepo) FindDemoByID(id int) (*models.Demo, error) {
 	}
 	return &a, nil
 }
-func (r *mockDemoRepo) FindDemos() (*[]models.Demo, error) {
-	var a []models.Demo
-	for _, v := range r.data {
-		a = append(a, v)
-	}
-	return &a, nil
-}
-func (r *mockDemoRepo) FindDemosByQuery(query *[]string) (*[]models.Demo, error) {
+func (r *mockDemoRepo) FindDemos(query []string, limit uint64, order string) (*[]models.Demo, error) {
 	var (
 		demoIDs    []int         = []int{1, 2, 3}
 		demoTitles []string      = []string{"cheeseboiger", "demo two", "demo three"}
-		demoLinks  []string      = []string{"link.com", "example.com", "e.com"}
-		demoTags   [][]string    = [][]string{nil, []string{"cheeseboiger"}, nil}
+		demoTags   [][]string    = [][]string{nil, {"cheeseboiger"}, nil}
 		demos      []models.Demo = []models.Demo{
-			{ID: &demoIDs[0], Title: &demoTitles[0], Link: &demoLinks[0], Tags: &demoTags[0], UserID: &genericUUID},
-			{ID: &demoIDs[1], Title: &demoTitles[1], Link: &demoLinks[1], Tags: &demoTags[1], UserID: &genericUUID},
-			{ID: &demoIDs[2], Title: &demoTitles[2], Link: &demoLinks[2], Tags: &demoTags[2], UserID: &genericUUID},
+			{ID: &demoIDs[0], Title: &demoTitles[0], Tags: &demoTags[0], UserID: &genericUUID, Key: &mockURI, ThumbnailKey: &mockURI},
+			{ID: &demoIDs[1], Title: &demoTitles[1], Tags: &demoTags[1], UserID: &genericUUID},
+			{ID: &demoIDs[2], Title: &demoTitles[2], Tags: &demoTags[2], UserID: &genericUUID},
 		}
 		resultDemos []models.Demo
 	)
-	q := *query
-	for _, d := range demos {
-		if *d.Title == q[0] {
-			resultDemos = append(resultDemos, d)
+
+	if len(query) != 0 {
+		for _, d := range demos {
+			if *d.Title == query[0] {
+				resultDemos = append(resultDemos, d)
+			}
+			if slices.Contains(*d.Tags, query[0]) {
+				resultDemos = append(resultDemos, d)
+			}
 		}
-		if slices.Contains(*d.Tags, q[0]) {
-			resultDemos = append(resultDemos, d)
+	} else {
+		for _, v := range r.data {
+			resultDemos = append(resultDemos, v)
 		}
+	}
+	if limit != 0 {
+		resultDemos = resultDemos[:limit]
 	}
 	return &resultDemos, nil
 }
-func (r *mockDemoRepo) UpdateDemo(id int, demo models.Demo) (*models.Demo, error) {
+func (r *mockDemoRepo) UpdateDemo(id int, demo models.Demo, demoFile, demoThumbnail io.Reader) (*models.Demo, error) {
 	var a models.Demo
 	_, ok := r.data[id]
 	if !ok {
@@ -121,11 +136,29 @@ func (s *mockThreadSyncer) PatchThread(demoID int, demo models.Demo) error { ret
 func TestPostDemo(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/game-hangar/v1/demos", strings.NewReader(demoJSON))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	bodyBuffer := new(bytes.Buffer)
+	mw := multipart.NewWriter(bodyBuffer) // see https://pkg.go.dev/mime/multipart
+	mw.WriteField("Title", "Cool demo")
+	mw.WriteField("Description", "A very nice demo to use in your game!")
+	mw.WriteField("UserID", genericUUID.String())
+	projPart, err := mw.CreateFormFile("demoFile", mockFileInfo.Name())
+	if err != nil {
+		panic(err)
+	}
+	projPart.Write(mockFileContents)
+	thumbPart, err := mw.CreateFormFile("demoThumbnail", mockFileInfo.Name())
+	if err != nil {
+		panic(err)
+	}
+	thumbPart.Write(mockFileContents)
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/game-hangar/v1/demos", bodyBuffer)
+	req.Header.Set(echo.HeaderContentType, mw.FormDataContentType())
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt}
+	c.Set("userTier", "freetier") // Required for attachment size check
+	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt, objectUploader: &mockFileUploader}
 
 	// Assertions
 	if assert.NoError(t, h.PostDemo(c)) {
@@ -188,14 +221,31 @@ func TestGetDemos(t *testing.T) {
 func TestPatchDemo(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/demos", strings.NewReader(demoJSONUpdate))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	bodyBuffer := new(bytes.Buffer)
+	mw := multipart.NewWriter(bodyBuffer) // see https://pkg.go.dev/mime/multipart
+	mw.WriteField("Title", "Updated cool demo")
+	mw.WriteField("ThreadID", "1")
+	projPart, err := mw.CreateFormFile("demoFile", mockFileInfo.Name())
+	if err != nil {
+		panic(err)
+	}
+	projPart.Write(mockFileContents)
+	thumbPart, err := mw.CreateFormFile("demoThumbnail", mockFileInfo.Name())
+	if err != nil {
+		panic(err)
+	}
+	thumbPart.Write(mockFileContents)
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/demos", bodyBuffer)
+	req.Header.Set(echo.HeaderContentType, mw.FormDataContentType())
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
 	c.SetParamValues("1")
-	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt}
+	c.Set("userTier", "freetier") // Required for attachment size check
+	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt, objectUploader: &mockFileUploader}
 
 	// Assertions
 	if assert.NoError(t, h.PatchDemo(c)) {
@@ -204,10 +254,10 @@ func TestPatchDemo(t *testing.T) {
 	}
 }
 
-func TestGetDemosByQuery(t *testing.T) {
+func TestGetDemosQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/demos?q="+demoQuery, nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/demos?q=%v", queryTags), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt}
@@ -219,17 +269,49 @@ func TestGetDemosByQuery(t *testing.T) {
 	}
 }
 
+func TestGetDemosQueryLimit(t *testing.T) {
+	// Setup
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/demos?q=%v&l=%v", queryTags, queryLimit), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt}
+
+	// Assertions
+	if assert.NoError(t, h.GetDemos(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, demoJSONQueryExpectedLimit, rec.Body.String())
+	}
+}
+
 func TestPatchDemoNotFound(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/demos", strings.NewReader(demoJSONUpdate))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	bodyBuffer := new(bytes.Buffer)
+	mw := multipart.NewWriter(bodyBuffer) // see https://pkg.go.dev/mime/multipart
+	mw.WriteField("Title", "Updated cool demo")
+	mw.WriteField("ThreadID", "1")
+	projPart, err := mw.CreateFormFile("demoFile", mockFileInfo.Name())
+	if err != nil {
+		panic(err)
+	}
+	projPart.Write(mockFileContents)
+	thumbPart, err := mw.CreateFormFile("demoThumbnail", mockFileInfo.Name())
+	if err != nil {
+		panic(err)
+	}
+	thumbPart.Write(mockFileContents)
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPatch, "/game-hangar/v1/demos", bodyBuffer)
+	req.Header.Set(echo.HeaderContentType, mw.FormDataContentType())
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPath("/:id")
 	c.SetParamNames("id")
 	c.SetParamValues("4")
-	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt}
+	c.Set("userTier", "freetier") // Required for attachment size check
+	h := &DemoHandler{logger: e.Logger, validator: v, repository: &md, syncer: &mt, objectUploader: &mockFileUploader}
 
 	// Assertions
 	if assert.NoError(t, h.PatchDemo(c)) {

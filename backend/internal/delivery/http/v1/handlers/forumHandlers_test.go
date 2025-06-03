@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"gamehangar/internal/domain/models"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"testing"
 
 	// "github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,10 +34,14 @@ var (
 		conflictErr: errors.New("Record conflict!"),
 	}
 
-	// genericUUID uuid.UUID = uuid.New()
+	genericUUID uuid.UUID = uuid.New()
 
-	// notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
-	// conflictResponse = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
+	notFoundResponse = `{"code":404,"message":"Not Found!"}` + "\n"
+	conflictResponse = `{"code":409,"message":"Error: unable to update the record due to an edit conflict, please try again!"}` + "\n"
+
+	queryTags         = `cheeseboiger`
+	queryLimit uint64 = 1
+	queryOrder        = `newest-updated`
 
 	topicJSON               = `{"name":"Cool topic"}`
 	topicJSONExpected       = `{"id":1,"name":"Cool topic","version":1}` + "\n"
@@ -44,21 +50,21 @@ var (
 	topicJSONUpdateInvalid  = `{"name":"Updated cool topic"}`
 	topicJSONUpdateExpected = `{"id":1,"name":"Updated cool topic","version":2}` + "\n"
 
-	threadJSON               = `{"title":"Cool Thread","userID":"` + genericUUID.String() + `","topicID":1}`
-	threadJSONExpected       = `{"id":1,"title":"Cool Thread","userID":"` + genericUUID.String() + `","topicID":1}` + "\n"
-	threadJSONExpectedMany   = `[{"id":1,"title":"Cool Thread","userID":"` + genericUUID.String() + `","topicID":1}]` + "\n"
-	threadQuery              = `cheeseboiger`
-	threadJSONQueryExpected  = `[{"id":1,"title":"cheeseboiger","userID":"` + genericUUID.String() + `","topicID":2,"tags":null},{"id":2,"title":"thread two","userID":"` + genericUUID.String() + `","topicID":2,"tags":["cheeseboiger"]}]` + "\n"
-	threadJSONUpdate         = `{"title":"Updated cool Thread"}`
-	threadJSONUpdateExpected = `{"id":1,"title":"Updated cool Thread","userID":"` + genericUUID.String() + `","topicID":1}` + "\n"
+	threadJSON                   = `{"title":"Cool Thread","userID":"` + genericUUID.String() + `","topicID":1}`
+	threadJSONExpected           = `{"id":1,"title":"Cool Thread","userID":"` + genericUUID.String() + `","topicID":1}` + "\n"
+	threadJSONExpectedMany       = `[{"id":1,"title":"Cool Thread","userID":"` + genericUUID.String() + `","topicID":1}]` + "\n"
+	threadJSONQueryExpected      = `[{"id":1,"title":"cheeseboiger","userID":"` + genericUUID.String() + `","topicID":2,"tags":null},{"id":2,"title":"thread two","userID":"` + genericUUID.String() + `","topicID":2,"tags":["cheeseboiger"]}]` + "\n"
+	threadJSONQueryExpectedLimit = `[{"id":1,"title":"cheeseboiger","userID":"` + genericUUID.String() + `","topicID":2,"tags":null}]` + "\n"
+	threadJSONUpdate             = `{"title":"Updated cool Thread"}`
+	threadJSONUpdateExpected     = `{"id":1,"title":"Updated cool Thread","userID":"` + genericUUID.String() + `","topicID":1}` + "\n"
 
-	messageJSON               = `{"title":"Cool message","userID":"` + genericUUID.String() + `","threadID":1}`
-	messageJSONExpected       = `{"id":1,"threadID":1,"userID":"` + genericUUID.String() + `","title":"Cool message"}` + "\n"
-	messageJSONExpectedMany   = `[{"id":1,"threadID":1,"userID":"` + genericUUID.String() + `","title":"Cool message"}]` + "\n"
-	messageQuery              = `cheeseboiger`
-	messageJSONQueryExpected  = `[{"id":1,"threadID":2,"userID":"` + genericUUID.String() + `","title":"cheeseboiger","tags":null},{"id":2,"threadID":2,"userID":"` + genericUUID.String() + `","title":"message two","tags":["cheeseboiger"]}]` + "\n"
-	messageJSONUpdate         = `{"title":"Updated cool message"}`
-	messageJSONUpdateExpected = `{"id":1,"threadID":1,"userID":"` + genericUUID.String() + `","title":"Updated cool message"}` + "\n"
+	messageJSON                   = `{"title":"Cool message","userID":"` + genericUUID.String() + `","threadID":1}`
+	messageJSONExpected           = `{"id":1,"threadID":1,"userID":"` + genericUUID.String() + `","title":"Cool message"}` + "\n"
+	messageJSONExpectedMany       = `[{"id":1,"threadID":1,"userID":"` + genericUUID.String() + `","title":"Cool message"}]` + "\n"
+	messageJSONQueryExpected      = `[{"id":1,"threadID":2,"userID":"` + genericUUID.String() + `","title":"cheeseboiger","tags":null},{"id":2,"threadID":2,"userID":"` + genericUUID.String() + `","title":"message two","tags":["cheeseboiger"]}]` + "\n"
+	messageJSONQueryExpectedLimit = `[{"id":1,"threadID":2,"userID":"` + genericUUID.String() + `","title":"cheeseboiger","tags":null}]` + "\n"
+	messageJSONUpdate             = `{"title":"Updated cool message"}`
+	messageJSONUpdateExpected     = `{"id":1,"threadID":1,"userID":"` + genericUUID.String() + `","title":"Updated cool message"}` + "\n"
 )
 
 func (r *mockForumRepo) CreateTopic(topic models.Topic) (*models.Topic, error) {
@@ -125,14 +131,7 @@ func (r *mockForumRepo) CreateThread(thread models.Thread) (*models.Thread, erro
 	}
 	return &resultThread, nil
 }
-func (r *mockForumRepo) FindThreads() (*[]models.Thread, error) {
-	var t []models.Thread
-	for _, v := range r.threadData {
-		t = append(t, v)
-	}
-	return &t, nil
-}
-func (r *mockForumRepo) FindThreadsByQuery(query *[]string) (*[]models.Thread, error) {
+func (r *mockForumRepo) FindThreads(query []string, limit uint64, order string) (*[]models.Thread, error) {
 	var (
 		topicID      int             = 2
 		threadIDs    []int           = []int{1, 2, 3}
@@ -145,14 +144,22 @@ func (r *mockForumRepo) FindThreadsByQuery(query *[]string) (*[]models.Thread, e
 		}
 		resultThreads []models.Thread
 	)
-	q := *query
-	for _, t := range threads {
-		if *t.Title == q[0] {
-			resultThreads = append(resultThreads, t)
+	if len(query) != 0 {
+		for _, t := range threads {
+			if *t.Title == query[0] {
+				resultThreads = append(resultThreads, t)
+			}
+			if slices.Contains(*t.Tags, query[0]) {
+				resultThreads = append(resultThreads, t)
+			}
 		}
-		if slices.Contains(*t.Tags, q[0]) {
-			resultThreads = append(resultThreads, t)
+	} else {
+		for _, v := range r.threadData {
+			resultThreads = append(resultThreads, v)
 		}
+	}
+	if limit != 0 {
+		resultThreads = resultThreads[:limit]
 	}
 	return &resultThreads, nil
 }
@@ -203,34 +210,35 @@ func (r *mockForumRepo) FindMessageByID(id int) (*models.Message, error) {
 	}
 	return &message, nil
 }
-func (r *mockForumRepo) FindMessages() (*[]models.Message, error) {
-	var t []models.Message
-	for _, v := range r.messageData {
-		t = append(t, v)
-	}
-	return &t, nil
-}
-func (r *mockForumRepo) FindMessagesByQuery(query *[]string) (*[]models.Message, error) {
+func (r *mockForumRepo) FindMessages(query []string, limit uint64, order string) (*[]models.Message, error) {
 	var (
-		threadID      int              = 2
+		topicID       int              = 2
 		messageIDs    []int            = []int{1, 2, 3}
 		messageTitles []string         = []string{"cheeseboiger", "message two", "message three"}
 		messageTags   [][]string       = [][]string{nil, []string{"cheeseboiger"}, nil}
 		messages      []models.Message = []models.Message{
-			{ID: &messageIDs[0], Title: &messageTitles[0], UserID: &genericUUID, ThreadID: &threadID, Tags: &messageTags[0]},
-			{ID: &messageIDs[1], Title: &messageTitles[1], UserID: &genericUUID, ThreadID: &threadID, Tags: &messageTags[1]},
-			{ID: &messageIDs[2], Title: &messageTitles[2], UserID: &genericUUID, ThreadID: &threadID, Tags: &messageTags[2]},
+			{ID: &messageIDs[0], ThreadID: &topicID, UserID: &genericUUID, Title: &messageTitles[0], Tags: &messageTags[0]},
+			{ID: &messageIDs[1], ThreadID: &topicID, UserID: &genericUUID, Title: &messageTitles[1], Tags: &messageTags[1]},
+			{ID: &messageIDs[2], ThreadID: &topicID, UserID: &genericUUID, Title: &messageTitles[2], Tags: &messageTags[2]},
 		}
 		resultMessages []models.Message
 	)
-	for _, m := range messages {
-		q := *query
-		if *m.Title == q[0] {
+	if len(query) != 0 {
+		for _, m := range messages {
+			if *m.Title == query[0] {
+				resultMessages = append(resultMessages, m)
+			}
+			if slices.Contains(*m.Tags, query[0]) {
+				resultMessages = append(resultMessages, m)
+			}
+		}
+	} else {
+		for _, m := range r.messageData {
 			resultMessages = append(resultMessages, m)
 		}
-		if slices.Contains(*m.Tags, q[0]) {
-			resultMessages = append(resultMessages, m)
-		}
+	}
+	if limit != 0 {
+		resultMessages = resultMessages[:limit]
 	}
 	return &resultMessages, nil
 }
@@ -520,10 +528,10 @@ func TestGetThreadByIDNotFound(t *testing.T) {
 	}
 }
 
-func TestGetThreadsByQuery(t *testing.T) {
+func TestGetThreadsQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/threads?q="+threadQuery, nil)
+	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/threads?q="+queryTags, nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &ForumHandler{logger: e.Logger, validator: v, repository: &mf}
@@ -532,6 +540,21 @@ func TestGetThreadsByQuery(t *testing.T) {
 	if assert.NoError(t, h.GetThreads(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, threadJSONQueryExpected, rec.Body.String())
+	}
+}
+
+func TestGetThreadsQueryLimit(t *testing.T) {
+	// Setup
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/threads?q=%v&l=%v&o=%v", queryTags, queryLimit, queryOrder), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	h := &ForumHandler{logger: e.Logger, validator: v, repository: &mf}
+
+	// Assertions
+	if assert.NoError(t, h.GetThreads(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, threadJSONQueryExpectedLimit, rec.Body.String())
 	}
 }
 
@@ -692,10 +715,10 @@ func TestGetMessageByIDNotFound(t *testing.T) {
 	}
 }
 
-func TestGetMessagesByQuery(t *testing.T) {
+func TestGetMessagesQuery(t *testing.T) {
 	// Setup
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/messages?q="+messageQuery, nil)
+	req := httptest.NewRequest(http.MethodGet, "/game-hangar/v1/messages?q="+queryTags, nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := &ForumHandler{logger: e.Logger, validator: v, repository: &mf}
@@ -704,6 +727,21 @@ func TestGetMessagesByQuery(t *testing.T) {
 	if assert.NoError(t, h.GetMessages(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, messageJSONQueryExpected, rec.Body.String())
+	}
+}
+
+func TestGetMessagesQueryLimit(t *testing.T) {
+	// Setup
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/game-hangar/v1/messages?q=%v&l=%v&o=%v", queryTags, queryLimit, queryOrder), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	h := &ForumHandler{logger: e.Logger, validator: v, repository: &mf}
+
+	// Assertions
+	if assert.NoError(t, h.GetMessages(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, messageJSONQueryExpectedLimit, rec.Body.String())
 	}
 }
 
