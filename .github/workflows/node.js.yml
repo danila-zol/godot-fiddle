@@ -26,4 +26,4 @@ jobs:
       with:
         name: gamehangar-build
         path: |
-          .output
+          /home/runner/work/godot-fiddle/godot-fiddle/frontend/.output
