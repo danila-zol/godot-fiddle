@@ -16,7 +16,7 @@ let forceGameCanvasReload = ref(0)
 
 let gameName = defineModel({ default: "Новое демо" })
 
-window.editor = null;
+let editor = shallowRef(null);
 let game = shallowRef(null);
 window.video_driver = '';
 
@@ -44,7 +44,7 @@ function Execute(args) {
             game.value.start({ 'args': args, 'canvas': gameCanvas })
         })
     } else {
-        editor = new Engine(editorConfig)
+        editor.value = new Engine(editorConfig)
         editor.init().then(function () {
             editor.start({ 'args': args, 'canvas': editorCanvas })
         });
@@ -93,7 +93,7 @@ onMounted(() => {
 })
 
 let loadEngine = () => {
-    editor = new Engine(editorConfig)
+    editor.value = new Engine(editorConfig)
     editor.init(engineBinaryPath)
         .then(() => {
             const args = ['--project-manager', '--single-window']
@@ -115,13 +115,13 @@ useHead({
 
 // Cleanup
 onBeforeRouteLeave(() => {
-    if (game) {
+    if (game.value) {
         game.requestQuit();
         game.value = undefined
     }
-    if (window.editor) {
+    if (editor.value) {
         editor.requestQuit()
-        window.editor = undefined
+        editor.value = undefined
     }
 })
 </script>
@@ -141,6 +141,7 @@ onBeforeRouteLeave(() => {
                     <button>Сохранить</button>
                 </div>
             </div>
+            <p v-if="!editor.value">Godot загружается</p>
             <canvas id="editor-canvas" width="1200" height="800" :class="{ 'tab-hidden': currentTab !== 0 }"></canvas>
             <p v-if="currentTab === 1 && game === null">The game is not currently running</p>
             <canvas id="game-canvas" width="800" height="600" :class="{ 'tab-hidden': currentTab !== 1 }"

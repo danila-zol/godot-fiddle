@@ -50,6 +50,12 @@ useHead({
     ]
 })
 
+onMounted(() => {
+    if (typeof Engine == 'function') {
+        loadEngine()
+    }
+})
+
 definePageMeta({
     validate: async (route) => {
         return typeof route.params.id === 'string' && /^\d+$/.test(route.params.id)
@@ -70,6 +76,7 @@ onBeforeRouteLeave(() => {
     <div class="centering-containter">
         <p class="game-title" style="font-size: 34px;">{{ gameTitle }}</p>
         <div id="game-area">
+            <p v-if="!game.value">Godot загружается</p>
             <canvas id="game-canvas" width="800" height="600"></canvas>
             <p style="font-size: 24px;font-weight: bold;width:95%;margin: 0 10px;">Описание</p>
             <p class="game-description">{{ gameDescription }}</p>
