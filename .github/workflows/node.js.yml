@@ -17,14 +17,12 @@ jobs:
         working-directory: "frontend"
     steps:
     - uses: actions/checkout@v4
-    - run: npm install
+    - run: npm ci
     - run: npm run build
-    - run: pwd
-    - run: ls -al
-    - run: ls -al .output
     - name: Archive production artifacts
       uses: actions/upload-artifact@v4
       with:
         name: gamehangar-build
         path: |
-          /home/runner/work/godot-fiddle/godot-fiddle/frontend/.output
+          .output
+        include-hidden-files: true
