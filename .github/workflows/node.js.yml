@@ -17,7 +17,7 @@ jobs:
         working-directory: "frontend"
     steps:
     - uses: actions/checkout@v4
-    - run: apt install nodejs npm
+    - run: sudo apt install nodejs npm
     - run: npm install
     - run: npm run build
     - name: Archive production artifacts
