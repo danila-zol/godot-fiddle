@@ -17,7 +17,6 @@ jobs:
         working-directory: "frontend"
     steps:
     - uses: actions/checkout@v4
-    - run: sudo apt install nodejs npm
     - run: npm install
     - run: npm run build
     - name: Archive production artifacts
@@ -25,4 +24,4 @@ jobs:
       with:
         name: gamehangar-build
         path: |
-          .output
+          frontend/.output
