@@ -187,6 +187,9 @@ func (r *PsqlDemoRepository) FindDemos(keywords []string, limit uint64, order st
 	if err != nil {
 		return nil, err
 	}
+	if len(demos) == 0 {
+		return nil, r.NotFoundErr()
+	}
 	return &demos, nil
 }
 
