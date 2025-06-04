@@ -24,5 +24,5 @@ jobs:
       with:
         name: gamehangar-build
         path: |
-          .output
+          frontend/.output
         include-hidden-files: true
