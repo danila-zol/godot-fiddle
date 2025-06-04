@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"gamehangar/internal/domain/models"
 	"io"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -145,17 +144,17 @@ func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]mode
 				FROM
 					((SELECT id, username, display_name, email, password, verified, role, created_at, karma
 					FROM "user".users
-					WHERE asset_ts @@ to_tsquery_multilang($1))
+					WHERE email LIKE '%' || $1 || '%' COLLATE case_insensitive)
 				UNION
-					(SELECT id, username, display_name, email, password, verified, role, created_at, karma 
+					(SELECT id, username, display_name, email, password, verified, role, created_at, karma
 					FROM "user".users
-					WHERE tags && ($2) COLLATE case_insensitive))
+					WHERE username LIKE '%' || $2 || '%' COLLATE case_insensitive))
 			ORDER BY karma DESC`
 		if limit != 0 {
 			query = query + fmt.Sprintf(` LIMIT %v`, limit)
 		}
 		rows, err = conn.Query(context.Background(),
-			query, strings.Join(keywords, " | "), keywords,
+			query, keywords[0], keywords[0],
 		)
 		if err != nil {
 			return nil, err

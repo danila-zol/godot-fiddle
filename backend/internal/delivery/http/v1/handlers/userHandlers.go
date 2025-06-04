@@ -38,17 +38,17 @@ func NewUserHandler(e *echo.Echo, repo UserRepository, v *validator.Validate, o 
 	}
 }
 
-//	@Summary	Fetches a user by its ID.
-//	@Tags		Users
-//	@Accept		text/plain
-//	@Produce	application/json
-//	@Param		id	path		string	true	"Get User of ID"
-//	@Success	200	{object}	models.User
-//	@Failure	400	{object}	HTTPError
-//	@Failure	404	{object}	HTTPError
-//	@Failure	422	{object}	HTTPError
-//	@Failure	500	{object}	HTTPError
-//	@Router		/v1/users/{id} [get]
+// @Summary	Fetches a user by its ID.
+// @Tags		Users
+// @Accept		text/plain
+// @Produce	application/json
+// @Param		id	path		string	true	"Get User of ID"
+// @Success	200	{object}	models.User
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
+// @Router		/v1/users/{id} [get]
 func (h *UserHandler) GetUserById(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
@@ -80,16 +80,16 @@ func (h *UserHandler) GetUserById(c echo.Context) error {
 	return c.JSON(http.StatusOK, &user)
 }
 
-//	@Summary	Fetches all users.
-//	@Tags		Users
-//	@Produce	application/json
-//	@Param		q	query		[]string	false	"Keyword Query"
-//	@Param		l	query		int			false	"Record number limit"
-//	@Success	200	{object}	models.User
-//	@Failure	400	{object}	HTTPError
-//	@Failure	404	{object}	HTTPError
-//	@Failure	500	{object}	HTTPError
-//	@Router		/v1/users [get]
+// @Summary	Fetches all users.
+// @Tags		Users
+// @Produce	application/json
+// @Param		q	query		string	false	"Keyword Query"
+// @Param		l	query		int		false	"Record number limit"
+// @Success	200	{object}	models.User
+// @Failure	400	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
+// @Router		/v1/users [get]
 func (h *UserHandler) GetUsers(c echo.Context) error {
 	var (
 		err   error
@@ -130,21 +130,21 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 	return c.JSON(http.StatusOK, &users)
 }
 
-//	@Summary	Updates a user.
-//	@Tags		Users
-//	@Accept		multipart/form-data
-//	@Produce	application/json
-//	@Param		id		path		string		true	"Update User of ID"
-//	@param		User	formData	models.User	true	"Update User"
-//	@param		picFile	formData	file		false	"Profile picture"
-//	@Success	200		{object}	models.User
-//	@Failure	400		{object}	HTTPError
-//	@Failure	403		{object}	HTTPError
-//	@Failure	404		{object}	HTTPError
-//	@Failure	413		{object}	HTTPError
-//	@Failure	422		{object}	HTTPError
-//	@Failure	500		{object}	HTTPError
-//	@Router		/v1/users/{id} [patch]
+// @Summary	Updates a user.
+// @Tags		Users
+// @Accept		multipart/form-data
+// @Produce	application/json
+// @Param		id		path		string		true	"Update User of ID"
+// @param		User	formData	models.User	true	"Update User"
+// @param		picFile	formData	file		false	"Profile picture"
+// @Success	200		{object}	models.User
+// @Failure	400		{object}	HTTPError
+// @Failure	403		{object}	HTTPError
+// @Failure	404		{object}	HTTPError
+// @Failure	413		{object}	HTTPError
+// @Failure	422		{object}	HTTPError
+// @Failure	500		{object}	HTTPError
+// @Router		/v1/users/{id} [patch]
 func (h *UserHandler) PatchUser(c echo.Context) error {
 	var user models.User
 
@@ -245,17 +245,17 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, &updUser)
 }
 
-//	@Summary	Deletes the specified user.
-//	@Tags		Users
-//	@Accept		text/plain
-//	@Produce	text/plain
-//	@Param		id	path		string	true	"Delete User of ID"
-//	@Success	200	{string}	string
-//	@Failure	403	{object}	HTTPError
-//	@Failure	404	{object}	HTTPError
-//	@Failure	422	{object}	HTTPError
-//	@Failure	500	{object}	HTTPError
-//	@Router		/v1/users/{id} [delete]
+// @Summary	Deletes the specified user.
+// @Tags		Users
+// @Accept		text/plain
+// @Produce	text/plain
+// @Param		id	path		string	true	"Delete User of ID"
+// @Success	200	{string}	string
+// @Failure	403	{object}	HTTPError
+// @Failure	404	{object}	HTTPError
+// @Failure	422	{object}	HTTPError
+// @Failure	500	{object}	HTTPError
+// @Router		/v1/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c echo.Context) error {
 	id := c.Param("id")
 	err := h.validator.Var(id, "required,uuid4")
@@ -282,18 +282,18 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	return c.String(http.StatusOK, "User successfully deleted!")
 }
 
-//	@Summary	Creates a new role.
-//	@Tags		Roles
-//	@Accept		application/json
-//	@Produce	application/json
-//	@Param		Role	header		string	true	"Create Role"
-//	@Success	201		{string}	string
-//	@Failure	400		{object}	HTTPError
-//	@Failure	403		{object}	HTTPError
-//	@Failure	404		{object}	HTTPError
-//	@Failure	422		{object}	HTTPError
-//	@Failure	500		{object}	HTTPError
-//	@Router		/v1/roles [post]
+// @Summary	Creates a new role.
+// @Tags		Roles
+// @Accept		application/json
+// @Produce	application/json
+// @Param		Role	header		string	true	"Create Role"
+// @Success	201		{string}	string
+// @Failure	400		{object}	HTTPError
+// @Failure	403		{object}	HTTPError
+// @Failure	404		{object}	HTTPError
+// @Failure	422		{object}	HTTPError
+// @Failure	500		{object}	HTTPError
+// @Router		/v1/roles [post]
 func (h *UserHandler) PostRole(c echo.Context) error {
 
 	roleSlice, ok := c.Request().Header["Role"]
@@ -329,19 +329,19 @@ func (h *UserHandler) PostRole(c echo.Context) error {
 	return c.String(http.StatusCreated, "Role successfully created!")
 }
 
-//	@Summary	Deletes the specified role.
-//	@Tags		Roles
-//	@Accept		text/plain
-//	@Produce	text/plain
-//	@Security	ApiSessionCookie
-//	@param		sessionID	header		string	false	"Session ID"
-//	@Param		Role		header		string	true	"Delete Role"
-//	@Success	200			{string}	string
-//	@Failure	403			{object}	HTTPError
-//	@Failure	404			{object}	HTTPError
-//	@Failure	422			{object}	HTTPError
-//	@Failure	500			{object}	HTTPError
-//	@Router		/v1/roles [delete]
+// @Summary	Deletes the specified role.
+// @Tags		Roles
+// @Accept		text/plain
+// @Produce	text/plain
+// @Security	ApiSessionCookie
+// @param		sessionID	header		string	false	"Session ID"
+// @Param		Role		header		string	true	"Delete Role"
+// @Success	200			{string}	string
+// @Failure	403			{object}	HTTPError
+// @Failure	404			{object}	HTTPError
+// @Failure	422			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
+// @Router		/v1/roles [delete]
 func (h *UserHandler) DeleteRole(c echo.Context) error {
 	roleSlice, ok := c.Request().Header["Role"]
 	if !ok {
@@ -384,20 +384,20 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 	return c.String(http.StatusOK, "Role successfully deleted!")
 }
 
-//	@Summary	Registers a new user and creates a session.
-//	@Tags		Login
-//	@Accept		multipart/form-data
-//	@Produce	application/json
-//	@Param		User		formData	models.User	true	"Create User"
-//	@param		password	header		string		true	"Password"
-//	@param		profilePic	formData	file		false	"Profile picture"
-//	@Success	201			{object}	models.User
-//	@Failure	400			{object}	HTTPError
-//	@Failure	404			{object}	HTTPError
-//	@Failure	413			{object}	HTTPError
-//	@Failure	422			{object}	HTTPError
-//	@Failure	500			{object}	HTTPError
-//	@Router		/v1/register [post]
+// @Summary	Registers a new user and creates a session.
+// @Tags		Login
+// @Accept		multipart/form-data
+// @Produce	application/json
+// @Param		User		formData	models.User	true	"Create User"
+// @param		password	header		string		true	"Password"
+// @param		profilePic	formData	file		false	"Profile picture"
+// @Success	201			{object}	models.User
+// @Failure	400			{object}	HTTPError
+// @Failure	404			{object}	HTTPError
+// @Failure	413			{object}	HTTPError
+// @Failure	422			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
+// @Router		/v1/register [post]
 func (h *UserHandler) Register(c echo.Context) error {
 	var user models.User
 
@@ -518,16 +518,16 @@ func (h *UserHandler) Register(c echo.Context) error {
 	return c.JSON(http.StatusCreated, &newUser)
 }
 
-//	@Summary	Verifies the authenticated User.
-//	@Tags		Login
-//	@Accept		text/plain
-//	@Produce	text/plain
-//	@Security	ApiSessionCookie
-//	@param		sessionID	header		string	false	"Session ID"
-//	@Success	200			{string}	string
-//	@Failure	401			{object}	HTTPError
-//	@Failure	500			{object}	HTTPError
-//	@Router		/v1/verify [get]
+// @Summary	Verifies the authenticated User.
+// @Tags		Login
+// @Accept		text/plain
+// @Produce	text/plain
+// @Security	ApiSessionCookie
+// @param		sessionID	header		string	false	"Session ID"
+// @Success	200			{string}	string
+// @Failure	401			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
+// @Router		/v1/verify [get]
 func (h *UserHandler) Verify(c echo.Context) error {
 	var s string
 
@@ -577,18 +577,18 @@ func (h *UserHandler) Verify(c echo.Context) error {
 	return c.String(http.StatusOK, "User verified")
 }
 
-//	@Summary	Resets User password and deletes all their Sessions
-//	@Tags		Login
-//	@Accept		text/plain
-//	@Produce	text/plain
-//	@Security	ApiSessionCookie
-//	@param		password	header		string	true	"New Password"
-//	@param		id			path		string	true	"User ID"
-//	@Success	200			{string}	string
-//	@Failure	400			{object}	HTTPError
-//	@Failure	422			{object}	HTTPError
-//	@Failure	500			{object}	HTTPError
-//	@Router		/v1/reset-password/{id} [patch]
+// @Summary	Resets User password and deletes all their Sessions
+// @Tags		Login
+// @Accept		text/plain
+// @Produce	text/plain
+// @Security	ApiSessionCookie
+// @param		password	header		string	true	"New Password"
+// @param		id			path		string	true	"User ID"
+// @Success	200			{string}	string
+// @Failure	400			{object}	HTTPError
+// @Failure	422			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
+// @Router		/v1/reset-password/{id} [patch]
 func (h *UserHandler) ResetPassword(c echo.Context) error {
 	passwordSlice, ok := c.Request().Header["Password"]
 	if !ok {
@@ -645,18 +645,18 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 	return c.String(http.StatusOK, "User password reset!")
 }
 
-//	@Summary	Logs the User in and creates a new Session.
-//	@Tags		Login
-//	@Accept		application/json
-//	@Produce	text/plain
-//	@param		email		header		string	false	"Email"
-//	@param		username	header		string	false	"Username"
-//	@param		password	header		string	true	"Password"
-//	@Success	200			{string}	string
-//	@Failure	400			{object}	HTTPError
-//	@Failure	422			{object}	HTTPError
-//	@Failure	500			{object}	HTTPError
-//	@Router		/v1/login [post]
+// @Summary	Logs the User in and creates a new Session.
+// @Tags		Login
+// @Accept		application/json
+// @Produce	text/plain
+// @param		email		header		string	false	"Email"
+// @param		username	header		string	false	"Username"
+// @param		password	header		string	true	"Password"
+// @Success	200			{string}	string
+// @Failure	400			{object}	HTTPError
+// @Failure	422			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
+// @Router		/v1/login [post]
 func (h *UserHandler) Login(c echo.Context) error {
 	var username, email, password string
 
@@ -745,20 +745,20 @@ func (h *UserHandler) Login(c echo.Context) error {
 	return c.String(http.StatusOK, "Login successful")
 }
 
-//	@Summary	Invalidates and deletes the specified session.
-//	@Tags		Login
-//	@Accept		text/plain
-//	@Produce	text/plain
-//	@Security	ApiSessionCookie
-//	@param		sessionID	header		string	false	"Session ID"
-//	@Param		id			path		string	true	"Session to invalidate"
-//	@Success	200			{string}	string
-//	@Failure	400			{object}	HTTPError
-//	@Failure	401			{object}	HTTPError
-//	@Failure	403			{object}	HTTPError
-//	@Failure	404			{object}	HTTPError
-//	@Failure	500			{object}	HTTPError
-//	@Router		/v1/logout/{id} [delete]
+// @Summary	Invalidates and deletes the specified session.
+// @Tags		Login
+// @Accept		text/plain
+// @Produce	text/plain
+// @Security	ApiSessionCookie
+// @param		sessionID	header		string	false	"Session ID"
+// @Param		id			path		string	true	"Session to invalidate"
+// @Success	200			{string}	string
+// @Failure	400			{object}	HTTPError
+// @Failure	401			{object}	HTTPError
+// @Failure	403			{object}	HTTPError
+// @Failure	404			{object}	HTTPError
+// @Failure	500			{object}	HTTPError
+// @Router		/v1/logout/{id} [delete]
 func (h *UserHandler) Logout(c echo.Context) error {
 	reqSessionID, _ := uuid.Parse(c.Param("id"))
 	requestedSession, err := h.repository.FindSessionByID(reqSessionID)
