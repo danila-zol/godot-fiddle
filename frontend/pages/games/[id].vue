@@ -55,12 +55,20 @@ definePageMeta({
         return typeof route.params.id === 'string' && /^\d+$/.test(route.params.id)
     }
 })
+
+// Cleanup
+onBeforeRouteLeave(() => {
+    if (game) {
+        game.requestQuit();
+        game.value = undefined
+    }
+})
 </script>
 
 <template>
     <Navbar></Navbar>
-    <div id="centering-containter">
-       <p class="game-title" style="font-size: 34px;">{{ gameTitle }}</p>
+    <div class="centering-containter">
+        <p class="game-title" style="font-size: 34px;">{{ gameTitle }}</p>
         <div id="game-area">
             <canvas id="game-canvas" width="800" height="600"></canvas>
             <p style="font-size: 24px;font-weight: bold;width:95%;margin: 0 10px;">Описание</p>
@@ -70,13 +78,15 @@ definePageMeta({
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/scss/_colors';
+
 .tab-hidden {
     display: none;
 }
 
 #game-title-input {
     border: none;
-    border-bottom: solid 2px black;
+    border-bottom: solid 2px colors.$light-highlight-color-darker;
     font-size: 28px;
     font-weight: bold;
     margin: 3px 10px;
@@ -86,20 +96,13 @@ definePageMeta({
     margin-left: 50px;
 }
 
-#centering-containter {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-}
-
 #game-area {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: column;
     max-width: 80%;
-    background-color: grey;
+    background-color: colors.$base-color;
 }
 
 #game-area canvas {

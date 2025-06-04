@@ -12,7 +12,6 @@ let editorCanvas
 let gameCanvas
 let editorConfig
 let gameConfig
-let isGameRunning = ref(false)
 let forceGameCanvasReload = ref(0)
 
 let gameName = defineModel({ default: "Новое демо" })
@@ -40,7 +39,6 @@ function Execute(args) {
     }
 
     if (is_game) {
-        isGameRunning = true
         game.value = new Engine(gameConfig)
         game.value.init().then(function () {
             game.value.start({ 'args': args, 'canvas': gameCanvas })
@@ -83,8 +81,14 @@ onMounted(() => {
                 gameCanvas = document.getElementById('game-canvas');
                 game.value = null
             })
-            isGameRunning = false
         }
+    }
+
+    // Godot has already been loaded by the previus page the user has navigated
+    // here from. He moved from play to edit for example. We can safely start
+    // Godot
+    if (typeof Engine == 'function') {
+        loadEngine()
     }
 })
 
@@ -96,7 +100,7 @@ let loadEngine = () => {
             editor.start({ 'args': args, 'persistentDrops': true })
         })
 }
-
+ 
 useHead({
     script: [
         {
@@ -109,11 +113,22 @@ useHead({
     ]
 })
 
+// Cleanup
+onBeforeRouteLeave(() => {
+    if (game) {
+        game.requestQuit();
+        game.value = undefined
+    }
+    if (window.editor) {
+        editor.requestQuit()
+        window.editor = undefined
+    }
+})
 </script>
 
 <template>
-    <Navbar></Navbar>
-    <div id="centering-containter">
+    <Navbar :is-ssr="false"></Navbar>
+    <div class="centering-containter">
         <div id="editor-area">
             <input id="game-title-input" class="game-title" type="text" v-model="gameName"></input>
             <div id="tab-navigation" style="display: flex;">
@@ -135,6 +150,8 @@ useHead({
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/scss/colors';
+
 .tab-hidden {
     display: none;
 }
@@ -147,5 +164,9 @@ useHead({
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+#game-title-input {
+    background-color: colors.$light-highlight-color-darker;
 }
 </style>
