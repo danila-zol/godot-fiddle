@@ -9,11 +9,11 @@ let { data: topDemos, error: tderr} = await useFetch(topDemosUrl)
 let { data: newDemos, error: nderr } = await useFetch(newDemosUrl)
 
 if (tderr.value) {
-    topDemos = Array(3).fill(SAMPLE_GAME)
+    topDemos.value = Array(3).fill(SAMPLE_GAME2)
 }
 
 if (nderr.value) {
-    newDemos = Array(8).fill(SAMPLE_GAME)
+    newDemos.value = Array(8).fill(SAMPLE_GAME2)
 }
 
 </script>
