@@ -134,16 +134,16 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 //	@Tags		Users
 //	@Accept		multipart/form-data
 //	@Produce	application/json
-//	@Param		id			path		string		true	"Update User of ID"
-//	@Param		User		formData	models.User	true	"Update User"
-//	@Param		profilePic	formData	file		false	"Profile picture"
-//	@Success	200			{object}	models.User
-//	@Failure	400			{object}	HTTPError
-//	@Failure	403			{object}	HTTPError
-//	@Failure	404			{object}	HTTPError
-//	@Failure	413			{object}	HTTPError
-//	@Failure	422			{object}	HTTPError
-//	@Failure	500			{object}	HTTPError
+//	@Param		id		path		string		true	"Update User of ID"
+//	@param		User	formData	models.User	true	"Update User"
+//	@param		picFile	formData	file		false	"Profile picture"
+//	@Success	200		{object}	models.User
+//	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	413		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
 //	@Router		/v1/users/{id} [patch]
 func (h *UserHandler) PatchUser(c echo.Context) error {
 	var user models.User
@@ -191,7 +191,7 @@ func (h *UserHandler) PatchUser(c echo.Context) error {
 	}
 
 	var profilePicMultipartFile multipart.File
-	profilePicFormFile, err := c.FormFile("profilePic")
+	profilePicFormFile, err := c.FormFile("picFile")
 	if profilePicFormFile != nil {
 		profilePicMultipartFile, err = profilePicFormFile.Open()
 		if err != nil {
@@ -390,7 +390,7 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 //	@Produce	application/json
 //	@Param		User		formData	models.User	true	"Create User"
 //	@param		password	header		string		true	"Password"
-//	@param		file		formData	file		false	"Profile picture"
+//	@param		profilePic	formData	file		false	"Profile picture"
 //	@Success	201			{object}	models.User
 //	@Failure	400			{object}	HTTPError
 //	@Failure	404			{object}	HTTPError
@@ -455,7 +455,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 	user.Password, err = h.userAuthorizer.CreatePasswordHash(password)
 
 	var profilePicMultipartFile multipart.File
-	formFile, err := c.FormFile("file")
+	formFile, err := c.FormFile("profilePic")
 	if formFile != nil {
 		profilePicMultipartFile, err = formFile.Open()
 		if err != nil {

@@ -49,15 +49,16 @@ func getEnv() {
 	// }
 }
 
-// @title						Game Hangar
-// @version					1.0
-// @description				A backend for Game Hangar game prototyping web service
-// @contact.name				Mikhail Pecherkin
-// @contact.email				m.pecherkin.sas@gmail.com
-// @BasePath					/game-hangar
-// @securityDefinitions.apikey	ApiSessionCookie
-// @in							header
-// @name						sessionID
+//	@title						Game Hangar
+//	@version					1.0
+//	@host						d5df6jka59qn3n45eubv.yl4tuxdu.apigw.yandexcloud.net
+//	@description				A backend for Game Hangar game prototyping web service
+//	@contact.name				Mikhail Pecherkin
+//	@contact.email				m.pecherkin.sas@gmail.com
+//	@BasePath					/game-hangar
+//	@securityDefinitions.apikey	ApiSessionCookie
+//	@in							header
+//	@name						sessionID
 func main() {
 	e := echo.New()
 	v := validator.New(validator.WithRequiredStructEnabled())
