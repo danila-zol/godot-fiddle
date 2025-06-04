@@ -144,11 +144,11 @@ func (r *PsqlUserRepository) FindUsers(keywords []string, limit uint64) (*[]mode
 				FROM
 					((SELECT id, username, display_name, email, password, verified, role, created_at, karma
 					FROM "user".users
-					WHERE email LIKE '%' || $1 || '%' COLLATE case_insensitive)
+					WHERE LOWER(email) LIKE '%' || LOWER($1) || '%')
 				UNION
 					(SELECT id, username, display_name, email, password, verified, role, created_at, karma
 					FROM "user".users
-					WHERE username LIKE '%' || $2 || '%' COLLATE case_insensitive))
+					WHERE LOWER(username) LIKE '%' || LOWER($2) || '%'))
 			ORDER BY karma DESC`
 		if limit != 0 {
 			query = query + fmt.Sprintf(` LIMIT %v`, limit)

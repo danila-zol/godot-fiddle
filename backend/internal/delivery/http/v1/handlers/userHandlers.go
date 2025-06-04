@@ -390,7 +390,7 @@ func (h *UserHandler) DeleteRole(c echo.Context) error {
 // @Produce	application/json
 // @Param		User		formData	models.User	true	"Create User"
 // @param		password	header		string		true	"Password"
-// @param		profilePic	formData	file		false	"Profile picture"
+// @param		picFile		formData	file		false	"Profile picture"
 // @Success	201			{object}	models.User
 // @Failure	400			{object}	HTTPError
 // @Failure	404			{object}	HTTPError
@@ -455,7 +455,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 	user.Password, err = h.userAuthorizer.CreatePasswordHash(password)
 
 	var profilePicMultipartFile multipart.File
-	formFile, err := c.FormFile("profilePic")
+	formFile, err := c.FormFile("picFile")
 	if formFile != nil {
 		profilePicMultipartFile, err = formFile.Open()
 		if err != nil {
