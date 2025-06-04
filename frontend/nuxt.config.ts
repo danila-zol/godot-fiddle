@@ -3,6 +3,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
   css: ['~/assets/css/main.scss'],
+
   runtimeConfig: {
     public: {
       docsUrl: "/docs",
@@ -12,12 +13,31 @@ export default defineNuxtConfig({
       enginePath: "/thirdparty/godot/"
     }
   },
-  routeRules : {
-    '/**' : {cors: true, headers: { 
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "require-corp"
-    }},
-    '/new' : {ssr: false},
-    '/games/*': {ssr: false}
+
+  routeRules: {
+    '/**': {
+      headers: {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp"
+      }
+    },
+    '/new': { ssr: false },
+    '/games/*': { ssr: false }
   },
+
+  app: {
+    head: {
+      link: [
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+      ],
+      htmlAttrs: {
+        lang: "ru"
+      },
+      title: "ИгроЦех - сервер игр на Godot",
+      meta: [
+        { name: "description", content: "ИгроЦех - сервер игр на Godot" }
+      ]
+    }
+  }
 })
