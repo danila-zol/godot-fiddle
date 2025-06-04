@@ -25,17 +25,18 @@ func NewForumHandler(e *echo.Echo, repo ForumRepository, v *validator.Validate) 
 	}
 }
 
-// @Summary	Creates a new topic.
-// @Tags		Topics
-// @Accept		application/json
-// @Produce	application/json
-// @Param		Topic	body		models.Topic	true	"Create Topic"
-// @Success	201	{object}	models.Topic
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/topics [post]
+//	@Summary	Creates a new topic.
+//	@Tags		Topics
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		Topic	body		models.Topic	true	"Create Topic"
+//	@Success	201		{object}	models.Topic
+//	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
+//	@Router		/v1/topics [post]
 func (h *ForumHandler) PostTopic(c echo.Context) error {
 	var topic models.Topic
 
@@ -72,17 +73,17 @@ func (h *ForumHandler) PostTopic(c echo.Context) error {
 	return c.JSON(http.StatusCreated, &newTopic)
 }
 
-// @Summary	Fetches a topic by its ID.
-// @Tags		Topics
-// @Accept		text/plain
-// @Produce	application/json
-// @Param		id	path		int	true	"Get Topic of ID"
-// @Success	200	{object}	models.Topic
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/topics/{id} [get]
+//	@Summary	Fetches a topic by its ID.
+//	@Tags		Topics
+//	@Accept		text/plain
+//	@Produce	application/json
+//	@Param		id	path		int	true	"Get Topic of ID"
+//	@Success	200	{object}	models.Topic
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/topics/{id} [get]
 func (h *ForumHandler) GetTopicByID(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
@@ -114,14 +115,14 @@ func (h *ForumHandler) GetTopicByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, &topic)
 }
 
-// @Summary	Fetches all topics.
-// @Tags		Topics
-// @Produce	application/json
-// @Success	200	{object}	models.Topic
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/topics [get]
+//	@Summary	Fetches all topics.
+//	@Tags		Topics
+//	@Produce	application/json
+//	@Success	200	{object}	models.Topic
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/topics [get]
 func (h *ForumHandler) GetTopics(c echo.Context) error {
 	topics, err := h.repository.FindTopics()
 	if err != nil {
@@ -141,19 +142,20 @@ func (h *ForumHandler) GetTopics(c echo.Context) error {
 	return c.JSON(http.StatusOK, &topics)
 }
 
-// @Summary	Updates an topic.
-// @Tags		Topics
-// @Accept		application/json
-// @Produce	application/json
-// @Param		id		path		int			true	"Update Topic of ID"
-// @Param		Topic	body		models.Topic	true	"Update Topic"
-// @Success	200		{object}	models.Topic
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	409	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/topics/{id} [patch]
+//	@Summary	Updates an topic.
+//	@Tags		Topics
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		id		path		int				true	"Update Topic of ID"
+//	@Param		Topic	body		models.Topic	true	"Update Topic"
+//	@Success	200		{object}	models.Topic
+//	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	409		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
+//	@Router		/v1/topics/{id} [patch]
 func (h *ForumHandler) PatchTopic(c echo.Context) error {
 	var topic models.Topic
 	p := c.Param("id")
@@ -217,16 +219,17 @@ func (h *ForumHandler) PatchTopic(c echo.Context) error {
 	return c.JSON(http.StatusOK, &updTopic)
 }
 
-// @Summary	Deletes the specified topic.
-// @Tags		Topics
-// @Accept		text/plain
-// @Produce	text/plain
-// @Param		id	path		int	true	"Delete Topic of ID"
-// @Success	200	{string}	string
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/topics/{id} [delete]
+//	@Summary	Deletes the specified topic.
+//	@Tags		Topics
+//	@Accept		text/plain
+//	@Produce	text/plain
+//	@Param		id	path		int	true	"Delete Topic of ID"
+//	@Success	200	{string}	string
+//	@Failure	403	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/topics/{id} [delete]
 func (h *ForumHandler) DeleteTopic(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
@@ -261,17 +264,18 @@ func (h *ForumHandler) DeleteTopic(c echo.Context) error {
 	return c.String(http.StatusOK, "Topic sucessfully deleted!")
 }
 
-// @Summary	Creates a new thread.
-// @Tags		Threads
-// @Accept		application/json
-// @Produce	application/json
-// @Param		Thread	body		models.Thread	true	"Create Thread"
-// @Success	201	{object}	models.Thread
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/threads [post]
+//	@Summary	Creates a new thread.
+//	@Tags		Threads
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		Thread	body		models.Thread	true	"Create Thread"
+//	@Success	201		{object}	models.Thread
+//	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
+//	@Router		/v1/threads [post]
 func (h *ForumHandler) PostThread(c echo.Context) error {
 	var thread models.Thread
 
@@ -309,17 +313,17 @@ func (h *ForumHandler) PostThread(c echo.Context) error {
 	return c.JSON(http.StatusCreated, &newThread)
 }
 
-// @Summary	Fetches a thread by its ID.
-// @Tags		Threads
-// @Accept		text/plain
-// @Produce	application/json
-// @Param		id	path		int	true	"Get Thread of ID"
-// @Success	200	{object}	models.Thread
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/threads/{id} [get]
+//	@Summary	Fetches a thread by its ID.
+//	@Tags		Threads
+//	@Accept		text/plain
+//	@Produce	application/json
+//	@Param		id	path		int	true	"Get Thread of ID"
+//	@Success	200	{object}	models.Thread
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/threads/{id} [get]
 func (h *ForumHandler) GetThreadByID(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
@@ -351,25 +355,57 @@ func (h *ForumHandler) GetThreadByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, &thread)
 }
 
-// @Summary	Fetches all threads.
-// @Tags		Threads
-// @Produce	application/json
-// @Param		q	query		[]string	false	"Keyword Query"
-// @Success	200	{object}	models.Thread
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/threads [get]
+//	@Summary	Fetches all threads.
+//	@Tags		Threads
+//	@Produce	application/json
+//	@Param		q	query		[]string	false	"Keyword Query"
+//	@Param		l	query		int			false	"Record number limit"
+//	@Param		o	query		string		false	"Record ordering. Default newest updated"	Enums(newest-updated, highest-rated, most-views)
+//	@Success	200	{object}	models.Thread
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/threads [get]
 func (h *ForumHandler) GetThreads(c echo.Context) error {
-	var err error
-	var threads *[]models.Thread
+	var (
+		err     error
+		limit   uint64
+		order   string
+		threads *[]models.Thread
+	)
 
-	tags := c.Request().URL.Query()["q"]
-	if len(tags) != 0 {
-		threads, err = h.repository.FindThreadsByQuery(&tags)
-	} else {
-		threads, err = h.repository.FindThreads()
+	l := c.Request().URL.Query()["l"]
+	if l != nil {
+		err = h.validator.Var(l[0], "omitnil,number,min=0")
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetThreads repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		limit, err = strconv.ParseUint(l[0], 10, 64)
 	}
+	tags := c.Request().URL.Query()["q"]
+
+	o := c.Request().URL.Query()["o"]
+	if o != nil {
+		err = h.validator.Var(o[0], `oneof=newest-updated highest-rated most-views`)
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetAssets repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		order = o[0]
+	} else {
+		order = "newest-updated"
+	}
+
+	threads, err = h.repository.FindThreads(tags, limit, order)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
@@ -387,18 +423,19 @@ func (h *ForumHandler) GetThreads(c echo.Context) error {
 	return c.JSON(http.StatusOK, &threads)
 }
 
-// @Summary	Updates an thread.
-// @Tags		Threads
-// @Accept		application/json
-// @Produce	application/json
-// @Param		id		path		int			true	"Update Thread of ID"
-// @Param		Thread	body		models.Thread	true	"Update Thread"
-// @Success	200		{object}	models.Thread
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/threads/{id} [patch]
+//	@Summary	Updates an thread.
+//	@Tags		Threads
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		id		path		int				true	"Update Thread of ID"
+//	@Param		Thread	body		models.Thread	true	"Update Thread"
+//	@Success	200		{object}	models.Thread
+//	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
+//	@Router		/v1/threads/{id} [patch]
 func (h *ForumHandler) PatchThread(c echo.Context) error {
 	var thread models.Thread
 	p := c.Param("id")
@@ -454,16 +491,17 @@ func (h *ForumHandler) PatchThread(c echo.Context) error {
 	return c.JSON(http.StatusOK, &updThread)
 }
 
-// @Summary	Deletes the specified thread.
-// @Tags		Threads
-// @Accept		text/plain
-// @Produce	text/plain
-// @Param		id	path		int	true	"Delete Thread of ID"
-// @Success	200	{string}	string
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/threads/{id} [delete]
+//	@Summary	Deletes the specified thread.
+//	@Tags		Threads
+//	@Accept		text/plain
+//	@Produce	text/plain
+//	@Param		id	path		int	true	"Delete Thread of ID"
+//	@Success	200	{string}	string
+//	@Failure	403	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/threads/{id} [delete]
 func (h *ForumHandler) DeleteThread(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
@@ -498,17 +536,18 @@ func (h *ForumHandler) DeleteThread(c echo.Context) error {
 	return c.String(http.StatusOK, "Thread sucessfully deleted!")
 }
 
-// @Summary	Creates a new message.
-// @Tags		Messages
-// @Accept		application/json
-// @Produce	application/json
-// @Param		Message	body		models.Message	true	"Create Message"
-// @Success	201	{object}	models.Message
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/messages [post]
+//	@Summary	Creates a new message.
+//	@Tags		Messages
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		Message	body		models.Message	true	"Create Message"
+//	@Success	201		{object}	models.Message
+//	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
+//	@Router		/v1/messages [post]
 func (h *ForumHandler) PostMessage(c echo.Context) error {
 	var message models.Message
 
@@ -546,17 +585,17 @@ func (h *ForumHandler) PostMessage(c echo.Context) error {
 	return c.JSON(http.StatusCreated, &newMessage)
 }
 
-// @Summary	Fetches a message by its ID.
-// @Tags		Messages
-// @Accept		text/plain
-// @Produce	application/json
-// @Param		id	path		int	true	"Get Message of ID"
-// @Success	200	{object}	models.Message
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/messages/{id} [get]
+//	@Summary	Fetches a message by its ID.
+//	@Tags		Messages
+//	@Accept		text/plain
+//	@Produce	application/json
+//	@Param		id	path		int	true	"Get Message of ID"
+//	@Success	200	{object}	models.Message
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/messages/{id} [get]
 func (h *ForumHandler) GetMessageByID(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")
@@ -588,25 +627,57 @@ func (h *ForumHandler) GetMessageByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, &message)
 }
 
-// @Summary	Fetches all messages.
-// @Tags		Messages
-// @Produce	application/json
-// @Param		q	query		[]string	false	"Keyword Query"
-// @Success	200	{object}	models.Message
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/messages [get]
+//	@Summary	Fetches all messages.
+//	@Tags		Messages
+//	@Produce	application/json
+//	@Param		q	query		[]string	false	"Keyword Query"
+//	@Param		l	query		int			false	"Record number limit"
+//	@Param		o	query		string		false	"Record ordering. Default newest updated"	Enums(newest-updated, highest-rated, most-views)
+//	@Success	200	{object}	models.Message
+//	@Failure	400	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/messages [get]
 func (h *ForumHandler) GetMessages(c echo.Context) error {
-	var err error
-	var messages *[]models.Message
+	var (
+		err      error
+		limit    uint64
+		order    string
+		messages *[]models.Message
+	)
 
-	tags := c.Request().URL.Query()["q"]
-	if len(tags) != 0 {
-		messages, err = h.repository.FindMessagesByQuery(&tags)
-	} else {
-		messages, err = h.repository.FindMessages()
+	l := c.Request().URL.Query()["l"]
+	if l != nil {
+		err = h.validator.Var(l[0], "omitnil,number,min=0")
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetMessages repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		limit, err = strconv.ParseUint(l[0], 10, 64)
 	}
+	tags := c.Request().URL.Query()["q"]
+
+	o := c.Request().URL.Query()["o"]
+	if o != nil {
+		err = h.validator.Var(o[0], `oneof=newest-updated highest-rated most-views`)
+		if err != nil {
+			e := HTTPError{
+				Code:    http.StatusUnprocessableEntity,
+				Message: "Error in GetAssets repository: " + err.Error(),
+			}
+			h.logger.Print(&e)
+			return c.JSON(http.StatusUnprocessableEntity, &e)
+		}
+		order = o[0]
+	} else {
+		order = "newest-updated"
+	}
+
+	messages, err = h.repository.FindMessages(tags, limit, order)
 	if err != nil {
 		if err == h.repository.NotFoundErr() {
 			e := HTTPError{Code: http.StatusNotFound, Message: "Not Found!"}
@@ -624,16 +695,16 @@ func (h *ForumHandler) GetMessages(c echo.Context) error {
 	return c.JSON(http.StatusOK, &messages)
 }
 
-// @Summary	Fetches all messages in the thread of ID.
-// @Tags		Messages
-// @Accept	text/plain
-// @Produce	application/json
-// @Param		threadID	path		int	true	"Get Messages of Thread ID"
-// @Success	200	{object}	models.Message
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/messages/thread/{threadID} [get]
+//	@Summary	Fetches all messages in the thread of ID.
+//	@Tags		Messages
+//	@Accept		text/plain
+//	@Produce	application/json
+//	@Param		threadID	path		int	true	"Get Messages of Thread ID"
+//	@Success	200			{object}	models.Message
+//	@Failure	400			{object}	HTTPError
+//	@Failure	404			{object}	HTTPError
+//	@Failure	500			{object}	HTTPError
+//	@Router		/v1/messages/thread/{threadID} [get]
 func (h *ForumHandler) GetMessagesByThreadID(c echo.Context) error {
 	p := c.Param("threadID")
 	err := h.validator.Var(p, "required,number")
@@ -665,18 +736,19 @@ func (h *ForumHandler) GetMessagesByThreadID(c echo.Context) error {
 	return c.JSON(http.StatusOK, &messages)
 }
 
-// @Summary	Updates an message.
-// @Tags		Messages
-// @Accept		application/json
-// @Produce	application/json
-// @Param		id		path		int			true	"Update Message of ID"
-// @Param		Message	body		models.Message	true	"Update Message"
-// @Success	200		{object}	models.Message
-// @Failure	400	{object}	HTTPError
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/messages/{id} [patch]
+//	@Summary	Updates an message.
+//	@Tags		Messages
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		id		path		int				true	"Update Message of ID"
+//	@Param		Message	body		models.Message	true	"Update Message"
+//	@Success	200		{object}	models.Message
+//	@Failure	400		{object}	HTTPError
+//	@Failure	403		{object}	HTTPError
+//	@Failure	404		{object}	HTTPError
+//	@Failure	422		{object}	HTTPError
+//	@Failure	500		{object}	HTTPError
+//	@Router		/v1/messages/{id} [patch]
 func (h *ForumHandler) PatchMessage(c echo.Context) error {
 	var message models.Message
 	p := c.Param("id")
@@ -732,16 +804,17 @@ func (h *ForumHandler) PatchMessage(c echo.Context) error {
 	return c.JSON(http.StatusOK, &updMessage)
 }
 
-// @Summary	Deletes the specified message.
-// @Tags		Messages
-// @Accept		text/plain
-// @Produce	text/plain
-// @Param		id	path		int	true	"Delete Message of ID"
-// @Success	200	{string}	string
-// @Failure	404	{object}	HTTPError
-// @Failure	422	{object}	HTTPError
-// @Failure	500	{object}	HTTPError
-// @Router		/v1/messages/{id} [delete]
+//	@Summary	Deletes the specified message.
+//	@Tags		Messages
+//	@Accept		text/plain
+//	@Produce	text/plain
+//	@Param		id	path		int	true	"Delete Message of ID"
+//	@Success	200	{string}	string
+//	@Failure	403	{object}	HTTPError
+//	@Failure	404	{object}	HTTPError
+//	@Failure	422	{object}	HTTPError
+//	@Failure	500	{object}	HTTPError
+//	@Router		/v1/messages/{id} [delete]
 func (h *ForumHandler) DeleteMessage(c echo.Context) error {
 	p := c.Param("id")
 	err := h.validator.Var(p, "required,number")

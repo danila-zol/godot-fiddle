@@ -5,8 +5,10 @@ import (
 	"gamehangar/internal/config/psqlDatabseConfig"
 	"gamehangar/internal/database/psqlDatabase"
 	"gamehangar/internal/domain/models"
+	"gamehangar/internal/enforcer/psqlCasbinClient"
 	"gamehangar/internal/repository/psqlRepository"
 	"gamehangar/pkg/ternMigrate"
+	"io"
 	"os"
 	"testing"
 
@@ -14,45 +16,58 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type MockS3 struct{}
+
+func (s *MockS3) PutObject(objectKey string, file io.Reader) error { return nil }
+func (s *MockS3) GetObjectLink(objectKey string) (*string, error) {
+	l := "https://example.com"
+	return &l, nil
+}
+func (s *MockS3) DeleteObject(objectKey string) error { return nil }
+
 var (
+	independent bool = false
+
 	threadSyncer    *ThreadSyncer
 	forumRepository *psqlRepository.PsqlForumRepository
 	demoRepository  *psqlRepository.PsqlDemoRepository
+	testS3Client    *MockS3
 
-	topicID int = 1
+	topicID int
 	// roleID string
 	// userID string
 
 	demoTitle        string      = "Test Demo"
 	demoTitleUpdated string      = "Test UPDATE Demo"
 	demoDescription  string      = "An demo for integration testing for PSQL Repo"
-	demoLink         string      = "https://example.com"
 	demoTags         []string    = []string{"TEST", "test"}
-	demo             models.Demo = models.Demo{Title: &demoTitle, Description: &demoDescription, Link: &demoLink, Tags: &demoTags}
+	demo             models.Demo = models.Demo{Title: &demoTitle, Description: &demoDescription, Tags: &demoTags}
 	demoUpdated      models.Demo = models.Demo{Title: &demoTitleUpdated}
 )
 
 func init() {
+	var err error
 	wd, _ := os.Getwd()
-	err := godotenv.Load(wd + "/../../.env")
-	if err != nil {
-		panic("Error loading .env file:" + err.Error() + ": " + wd)
-	}
-	databaseConfig, err := psqlDatabseConfig.PsqlConfig{}.NewConfig(
-		psqlDatabase.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"),
-	)
-	if err != nil {
-		panic("Error loading PSQL database Config")
-	}
-	testDBClient, err = psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
-		os.Getenv("PSQL_CONNSTRING"), ternMigrate.Migrator{}, databaseConfig,
-	)
-	if err != nil {
-		panic("Error setting up new DatabaseClient")
+	if independent || 1 == 1 { // HACK!
+		err := godotenv.Load(wd + "/../../.env")
+		if err != nil {
+			panic("Error loading .env file:" + err.Error() + ": " + wd)
+		}
+		databaseConfig, err := psqlDatabseConfig.PsqlConfig{}.NewConfig(
+			psqlDatabase.MigrationFiles, os.Getenv("PSQL_MIGRATE_ROOT_DIR"),
+		)
+		if err != nil {
+			panic("Error loading PSQL database Config")
+		}
+		testDBClient, err = psqlDatabase.PsqlDatabase{}.NewDatabaseClient(
+			os.Getenv("PSQL_CONNSTRING"), ternMigrate.Migrator{}, databaseConfig,
+		)
+		if err != nil {
+			panic("Error setting up new DatabaseClient")
+		}
 	}
 	c, _ := testDBClient.AcquireConn() // WARNING! Integration tests DROP TABLEs
 	_, err = c.Exec(context.Background(), `
-		DROP SCHEMA IF EXISTS "user" CASCADE;
 		DROP SCHEMA IF EXISTS "demo" CASCADE;
 		DROP SCHEMA IF EXISTS "forum" CASCADE;
 
@@ -60,36 +75,12 @@ func init() {
 
 		DROP COLLATION IF EXISTS case_insensitive;
 
-		CREATE SCHEMA IF NOT EXISTS "user";
-
-		CREATE TABLE "user".roles (
-		"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-		"name" VARCHAR(255) NOT NULL
-		-- "permissions" VARCHAR(64)[]
-		);
-
-		CREATE TABLE "user".users (
-		"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-		"username" VARCHAR(255) NOT NULL UNIQUE,
-		"display_name" VARCHAR(255),
-		"email" VARCHAR(255) NOT NULL UNIQUE,
-		"password" VARCHAR(255) NOT NULL,
-		"verified" BOOLEAN NOT NULL DEFAULT false,
-		"role_id" UUID NOT NULL REFERENCES "user".roles (id) ON DELETE RESTRICT,
-		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"karma" INTEGER NOT NULL DEFAULT 0
-		);
-
-		CREATE TABLE "user".sessions (
-		"id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-		"user_id" UUID NOT NULL REFERENCES "user".users (id) ON DELETE CASCADE
-		);
-
 		CREATE SCHEMA IF NOT EXISTS forum;
 
 		CREATE TABLE forum.topics (
 		"id"  INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-		"name" VARCHAR(255) NOT NULL
+		"name" VARCHAR(255) NOT NULL,
+		"version" INTEGER NOT NULL DEFAULT 1
 		);
 
 		CREATE TABLE forum.threads (
@@ -100,8 +91,10 @@ func init() {
 		"tags" VARCHAR(255)[],
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE TABLE forum.messages (
@@ -113,8 +106,10 @@ func init() {
 		"tags" VARCHAR(255)[],
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
+		"views" INTEGER NOT NULL DEFAULT 0
 		);
 
 		CREATE SCHEMA IF NOT EXISTS demo;
@@ -124,13 +119,16 @@ func init() {
 		"title" TEXT NOT NULL,
 		"description" TEXT,
 		"tags" TEXT[],
-		"link" VARCHAR(255) NOT NULL,
 		"user_id" UUID NOT NULL,
 		"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 		"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-		"upvotes" INTEGER NOT NULL DEFAULT 0,
-		"downvotes" INTEGER NOT NULL DEFAULT 0,
-		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE
+		"upvotes" INTEGER NOT NULL DEFAULT 1,
+		"downvotes" INTEGER NOT NULL DEFAULT 1,
+		"rating" DECIMAL GENERATED ALWAYS AS (upvotes::DECIMAL / downvotes) STORED,
+		"thread_id" INTEGER NOT NULL REFERENCES forum.threads (id) ON DELETE CASCADE,
+		"views" INTEGER NOT NULL DEFAULT 0,
+		"object_key" VARCHAR(255) GENERATED ALWAYS AS ('demo-' || demo.demos.id) STORED,
+		"thumbnail_key" VARCHAR(255) GENERATED ALWAYS AS ('demo-thumbnail-' || demo.demos.id) STORED
 		);
 
 		CREATE COLLATION IF NOT EXISTS case_insensitive (provider = icu, locale = 'und-u-ks-level2', deterministic = false);
@@ -167,26 +165,28 @@ func init() {
 	if err != nil {
 		panic("Error resetting demo schema" + err.Error())
 	}
-	err = c.QueryRow(
-		context.Background(),
-		`INSERT INTO "user".roles (name) VALUES ($1) RETURNING (id)`,
-		"admin").Scan(&roleID)
-	if err != nil {
-		panic("Error resetting demo schema" + err.Error())
+	if independent {
+		err = c.QueryRow(
+			context.Background(),
+			`INSERT INTO "user".users
+			(username, display_name, email, password, role_id)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING (id)`,
+			"mike-pech", "Mike", "test@email.com", "TestPassword", "admin").Scan(&userID)
+		if err != nil {
+			panic("Error resetting demo schema" + err.Error())
+		}
 	}
-	err = c.QueryRow(
-		context.Background(),
-		`INSERT INTO "user".users
-		(username, display_name, email, password, role_id)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING (id)`,
-		"mike-pech", "Mike", "test@email.com", "TestPassword", roleID).Scan(&userID)
+	testEnforcer, err = psqlCasbinClient.CasbinConfig{}.NewCasbinClient(
+		os.Getenv("PSQL_CONNSTRING"),
+		wd+"/../enforcer/psqlCasbinClient/rbac_model.conf",
+	)
 	if err != nil {
-		panic("Error resetting demo schema" + err.Error())
+		panic("Error creating Casbin enforcer: " + err.Error())
 	}
 	demo.UserID = &userID
-	forumRepository = psqlRepository.NewPsqlForumRepository(testDBClient)
-	demoRepository = psqlRepository.NewPsqlDemoRepository(testDBClient)
+	forumRepository = psqlRepository.NewPsqlForumRepository(testDBClient, testEnforcer)
+	demoRepository = psqlRepository.NewPsqlDemoRepository(testDBClient, testS3Client, testEnforcer)
 	threadSyncer = NewThreadSyncer(
 		forumRepository,
 		demoRepository,
@@ -203,7 +203,7 @@ func TestPostThread(t *testing.T) {
 	thread, err := forumRepository.FindThreadByID(*demo.ThreadID)
 	assert.NoError(t, err)
 
-	demoCreated, err := demoRepository.CreateDemo(demo)
+	demoCreated, err := demoRepository.CreateDemo(demo, nil, nil)
 	if assert.NoError(t, err) {
 		assert.Equal(t, demoCreated.ThreadID, thread.ID)
 		assert.Equal(t, demoCreated.Title, thread.Title)
@@ -221,7 +221,7 @@ func TestPatchThread(t *testing.T) {
 	err = threadSyncer.PatchThread(*demoUpdated.ID, demoUpdated)
 	assert.NoError(t, err)
 
-	demoCreated, err := demoRepository.UpdateDemo(*demoUpdated.ID, demoUpdated)
+	demoCreated, err := demoRepository.UpdateDemo(*demoUpdated.ID, demoUpdated, nil, nil)
 	assert.NoError(t, err)
 
 	thread, err := forumRepository.FindThreadByID(*demoCreated.ThreadID)
@@ -240,7 +240,7 @@ func TestPatchThread(t *testing.T) {
 }
 
 func teardownSyncer(rd *psqlRepository.PsqlDemoRepository, rf *psqlRepository.PsqlForumRepository) {
-	remainderDemos, err := rd.FindDemos()
+	remainderDemos, err := rd.FindDemos(nil, 0, "")
 	if err != nil {
 		panic(err)
 	}

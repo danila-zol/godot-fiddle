@@ -2,27 +2,26 @@ package handlers
 
 import (
 	"gamehangar/internal/domain/models"
+	"io"
 
 	"github.com/google/uuid"
 )
 
 type AssetRepository interface {
-	CreateAsset(asset models.Asset) (*models.Asset, error)
-	FindAssets() (*[]models.Asset, error)
+	CreateAsset(asset models.Asset, assetFile, assetThumbnail io.Reader) (*models.Asset, error)
+	FindAssets(query []string, limit uint64, order string) (*[]models.Asset, error)
 	FindAssetByID(id int) (*models.Asset, error)
-	FindAssetsByQuery(query *[]string) (*[]models.Asset, error)
-	UpdateAsset(id int, asset models.Asset) (*models.Asset, error)
+	UpdateAsset(id int, asset models.Asset, assetFile, assetThumbnail io.Reader) (*models.Asset, error)
 	DeleteAsset(id int) error
 	NotFoundErr() error
 	ConflictErr() error
 }
 
 type DemoRepository interface {
-	CreateDemo(demo models.Demo) (*models.Demo, error)
-	FindDemos() (*[]models.Demo, error)
+	CreateDemo(demo models.Demo, demoFile, demoThumbnail io.Reader) (*models.Demo, error)
+	FindDemos(query []string, limit uint64, order string) (*[]models.Demo, error)
 	FindDemoByID(id int) (*models.Demo, error)
-	FindDemosByQuery(query *[]string) (*[]models.Demo, error)
-	UpdateDemo(id int, demo models.Demo) (*models.Demo, error)
+	UpdateDemo(id int, demo models.Demo, demoFile, demoThumbnail io.Reader) (*models.Demo, error)
 	DeleteDemo(id int) error
 	NotFoundErr() error
 }
@@ -35,15 +34,13 @@ type ForumRepository interface {
 	DeleteTopic(id int) error
 
 	CreateThread(thread models.Thread) (*models.Thread, error)
-	FindThreads() (*[]models.Thread, error)
+	FindThreads(query []string, limit uint64, order string) (*[]models.Thread, error)
 	FindThreadByID(id int) (*models.Thread, error)
-	FindThreadsByQuery(query *[]string) (*[]models.Thread, error)
 	UpdateThread(id int, thread models.Thread) (*models.Thread, error)
 	DeleteThread(id int) error
 
 	CreateMessage(message models.Message) (*models.Message, error)
-	FindMessages() (*[]models.Message, error)
-	FindMessagesByQuery(query *[]string) (*[]models.Message, error)
+	FindMessages(query []string, limit uint64, order string) (*[]models.Message, error)
 	FindMessagesByThreadID(threadID int) (*[]models.Message, error)
 	FindMessageByID(id int) (*models.Message, error)
 	UpdateMessage(id int, message models.Message) (*models.Message, error)
@@ -54,16 +51,14 @@ type ForumRepository interface {
 }
 
 type UserRepository interface {
-	CreateUser(user models.User) (*models.User, error)
-	FindUsers() (*[]models.User, error)
+	CreateUser(user models.User, profilePic io.Reader) (*models.User, error)
+	FindUsers(query []string, limit uint64) (*[]models.User, error)
 	FindUserByID(id uuid.UUID) (*models.User, error)
-	UpdateUser(id uuid.UUID, user models.User) (*models.User, error)
+	UpdateUser(id uuid.UUID, user models.User, profilePic io.Reader) (*models.User, error)
 	DeleteUser(id uuid.UUID) error
 
-	CreateRole(role models.Role) (*models.Role, error)
-	FindRoleByID(id uuid.UUID) (*models.Role, error)
-	UpdateRole(id uuid.UUID, role models.Role) (*models.Role, error)
-	DeleteRole(id uuid.UUID) error
+	CreateRole(role string) error
+	DeleteRole(role string) error
 
 	CreateSession(session models.Session) (*models.Session, error)
 	FindSessionByID(id uuid.UUID) (*models.Session, error)
@@ -71,5 +66,4 @@ type UserRepository interface {
 	DeleteAllUserSessions(userid uuid.UUID) error
 
 	NotFoundErr() error
-	ConflictErr() error
 }
