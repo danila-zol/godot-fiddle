@@ -1,11 +1,12 @@
 @use '~/assets/scss/colors';
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap');
+@use '~/assets/scss/font';
 
 body {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 14px;
     font-style: normal;
     min-height: 100%;
+    background-color: colors.$base-background-color;
 }
 
 * {
@@ -26,8 +27,15 @@ button {
 
 .game-title {
     border: none;
-    border-bottom: solid 2px black;
+    border-bottom: solid 2px #577E8F;
     font-size: 28px;
     font-weight: bold;
     margin: 3px 10px;
+}
+
+.centering-containter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
 }

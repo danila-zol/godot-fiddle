@@ -1,5 +1,5 @@
 <script setup>
-const tags = Array(50).fill("bug_games")
+const tags = Array(50).fill("game_tag")
 </script>
 
 <template>

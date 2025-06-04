@@ -1,22 +1,30 @@
 <script setup>
-
 const props = defineProps({
     game: {
         default: SAMPLE_GAME
+    },
+    thumbnailWidth: { default: "50px" },
+    thumbnailHeight: { default: "50px" },
+    gameId: { default: 1 }
+})
+let maxDescriptionLen = 170
+let gameDescriptionCropped = computed(() => {
+    let gameDesc = props.game.description
+    if (gameDesc.length < maxDescriptionLen) {
+        return gameDesc
+    } else {
+        return gameDesc.slice(0, maxDescriptionLen) + " ..."
     }
 })
-
-function newGameCardHover() {
-
-}
 </script>
 
 <template>
-    <div class="new-game-card" @mouseover="newGameCardHover">
-        <img class="new-game-thumbnail" :src="game.thumbnail">
+    <NuxtLink :to="'/games/' + gameId" class="new-game-card">
+        <img class="new-game-thumbnail" alt="Картинка игры" :width="thumbnailWidth" :height="thumbnailHeight"
+            :src="game.thumbnail" fetchpriority=high>
         <p class="new-game-title"> {{ game.title }} </p>
-        <p class="new-game-description"> {{ game.description }} </p>
-    </div>
+        <p class="new-game-description"> {{ gameDescriptionCropped }} </p>
+    </NuxtLink>
 </template>
 
 <style lang="scss" scoped>
@@ -27,16 +35,16 @@ $thumbnail-width: 50px;
 
 .new-game-card {
     display: grid;
-    grid-template-columns: $thumbnail-width auto;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr;
     gap: 3px;
-    background-color: colors.$light-bg-color;
+    background-color: colors.$base-color;
     border: 3px solid;
-    border-color: navy;
+    border-color: colors.$light-highlight-color-darkererer;
 }
 
 .new-game-card:hover {
-    border-color: lightseagreen;
+    border-color: colors.$light-highlight-color-darkerer;
 }
 
 .new-game-title {
@@ -53,14 +61,9 @@ $thumbnail-width: 50px;
     grid-column: span 2;
 }
 
-.new-game-card a {
+.new-game-card {
     text-decoration: none;
     color: black;
     border-style: solid;
-}
-
-.new-game-thumbnail {
-    max-height: $thumbnail-width;
-    max-width: $thumbnail-width;
 }
 </style>

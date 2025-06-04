@@ -1,4 +1,9 @@
 <script setup>
+import { NuxtLink } from '#components';
+
+let props = defineProps({
+    isSsr: { default: true }
+})
 const runtimeConfig = useRuntimeConfig()
 const sections = [
     {
@@ -30,9 +35,10 @@ const sections = [
 
 <template>
     <div id="navbar">
-        <NuxtLink v-for="section in sections" :key="section.name" :to="section.link">
+        <component :is="props.isSsr ? NuxtLink : 'a'" v-for="section in sections" :key="section.name" :to="section.link"
+            :href="section.link">
             {{ section.name }}
-        </NuxtLink>
+        </component>
     </div>
 </template>
 
@@ -42,7 +48,7 @@ const sections = [
 #navbar {
     display: flex;
     color: white;
-    background-color: colors.$darkerer-bg-color;
+    background-color: colors.$navbar-color;
     padding: 10px 0;
     width: 100%;
 }
@@ -57,6 +63,6 @@ const sections = [
 }
 
 #navbar a:hover {
-    color: cyan
+    color: colors.$light-highlight-color
 }
 </style>
