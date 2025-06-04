@@ -2,16 +2,27 @@
 const props = defineProps({
     game: {
         default: SAMPLE_GAME
+    },
+    gameId: { default: 1 }
+})
+let maxDescriptionLen = 400
+let gameDescriptionCropped = computed(() => {
+    let gameDesc = props.game.description
+    if (gameDesc.length < maxDescriptionLen) {
+        return gameDesc
+    } else {
+        return gameDesc.slice(0, maxDescriptionLen) + " ..."
     }
 })
 </script>
 
 <template>
-    <div class="top-game-card">
-        <img class="top-game-thumbnail" :src="game.thumbnail">
+    <NuxtLink :to="'/games/' + gameId" class="top-game-card">
+        <img class="top-game-thumbnail" alt="Картинка игры" width="300px" height="300px" :src="game.thumbnail"
+            fetchpriority=high>
         <p class="top-game-title"> {{ game.title }} </p>
-        <p class="top-game-description"> {{ game.description }} </p>
-    </div>
+        <p class="top-game-description"> {{ gameDescriptionCropped }} </p>
+    </NuxtLink>
 </template>
 
 <style lang="scss" scoped>
@@ -20,13 +31,13 @@ const props = defineProps({
 .top-game-card {
     display: flex;
     flex-direction: column;
-    background-color: colors.$light-bg-color;
+    background-color: colors.$base-color;
     border: 4px solid;
-    border-color: navy;
+    border-color: colors.$light-highlight-color-darkererer;
 }
 
 .top-game-card:hover {
-    border-color: crimson;
+    border-color: colors.$light-highlight-color-darkerer;
 }
 
 .top-game-title {
@@ -39,14 +50,9 @@ const props = defineProps({
     font-size: 14px;
 }
 
-.top-game-card a {
+.top-game-card {
     text-decoration: none;
     color: black;
     border-style: solid;
-}
-
-.top-game-thumbnail {
-    max-height: 300px;
-    max-width: 300px;
 }
 </style>
