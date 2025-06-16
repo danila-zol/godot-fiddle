@@ -8,11 +8,11 @@ let newDemosUrl = runConf.public.apiRoot + runConf.public.apiDemosPrefix + "?t=1
 let { data: topDemos, error: tderr} = await useFetch(topDemosUrl)
 let { data: newDemos, error: nderr } = await useFetch(newDemosUrl)
 
-if (tderr.value) {
+if (tderr.value || !data.description) {
     topDemos.value = Array(3).fill(SAMPLE_GAME2)
 }
 
-if (nderr.value) {
+if (nderr.value || !data.description) {
     newDemos.value = Array(8).fill(SAMPLE_GAME2)
 }
 
